@@ -1,6 +1,5 @@
 (ns mbwatch.mbsyncrc
   (:require [clojure.string :as string]
-            [mbwatch.util :as u]
             [schema.core :as s :refer [both defschema either enum eq one
                                        optional-key pair pred]]))
 
@@ -41,28 +40,28 @@
   "Default path of mbsyncrc."
   (str (System/getProperty "user.home") \/ ".mbsyncrc"))
 
-(u/defn- paragraphs :- [[String]]
+(s/defn ^:private paragraphs :- [[String]]
   [s :- String]
   (map string/split-lines (string/split s #"\n(\s*\n)+")))
 
-(u/defn- filter-paragraph :- [FilteredLine]
+(s/defn ^:private filter-paragraph :- [FilteredLine]
   [p :- [String]]
   (->> p
        (map string/trim)
        (remove #(or (empty? %) (= (first %) \#)))))
 
-(u/defn- filter-paragraphs :- [[FilteredLine]]
+(s/defn ^:private filter-paragraphs :- [[FilteredLine]]
   [s :- String]
   (->> (paragraphs s)
        (map filter-paragraph)
        (remove empty?)))
 
-(u/defn- split-config-line :- Entry
+(s/defn ^:private split-config-line :- Entry
   [line :- FilteredLine]
   (let [[k v] (string/split line #"\s+" 2)]
     [(string/lower-case k) v]))
 
-(u/defn- tokenize-paragraph :- Token
+(s/defn ^:private tokenize-paragraph :- Token
   [p :- [FilteredLine]]
   (let [[l & ls] p
         [section-type section-name] (split-config-line l)]
@@ -72,11 +71,11 @@
       "channel"      [:channel      section-name (map split-config-line ls)]
       [:general nil p])))
 
-(u/defn- tokenize :- [Token]
+(s/defn ^:private tokenize :- [Token]
   [s :- String]
   (map tokenize-paragraph (filter-paragraphs s)))
 
-(u/defn- parse-tokens :- Mbsyncrc
+(s/defn ^:private parse-tokens :- Mbsyncrc
   [tokens :- [Token]]
   (reduce
     (fn [m [stype sname sbody]]
