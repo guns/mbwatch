@@ -50,7 +50,7 @@
        (map string/trim)
        (remove #(or (empty? %) (= (first %) \#)))))
 
-(s/defn ^:private filter-paragraphs :- [[FilteredLine]]
+(s/defn ^:private par-split :- [[FilteredLine]]
   [s :- String]
   (->> (paragraphs s)
        (map filter-paragraph)
@@ -73,7 +73,7 @@
 
 (s/defn ^:private tokenize :- [Token]
   [s :- String]
-  (map tokenize-paragraph (filter-paragraphs s)))
+  (map tokenize-paragraph (par-split s)))
 
 (s/defn ^:private parse-tokens :- Mbsyncrc
   [tokens :- [Token]]
