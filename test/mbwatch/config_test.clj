@@ -1,14 +1,14 @@
-(ns mbwatch.mbsyncrc-test
+(ns mbwatch.config-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer [is]]
-            [mbwatch.mbsyncrc :as m]
+            [mbwatch.config :as c]
             [schema.test :as s]))
 
 (def sample-mbsyncrc
   (slurp (io/resource "mbsyncrc")))
 
 (s/deftest test-parse
-  (is (= (m/parse sample-mbsyncrc)
+  (is (= (c/parse sample-mbsyncrc)
          {:general ["Create Both"
                     "Expunge Both"]
           :imapstore {"FOO-imap" {"host" "imap.example.com"

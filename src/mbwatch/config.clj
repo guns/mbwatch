@@ -1,4 +1,4 @@
-(ns mbwatch.mbsyncrc
+(ns mbwatch.config
   (:require [clojure.string :as string]
             [schema.core :as s :refer [both defschema either enum eq one
                                        optional-key pair pred]]))
