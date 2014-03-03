@@ -1,0 +1,56 @@
+#
+# Test mbsyncrc
+#
+
+Create Both
+Expunge Both
+
+#
+# IMAP accounts
+#
+
+IMAPStore FOO-imap
+Host imap.example.com
+User foo@example.com
+UseIMAPS yes
+RequireSSL yes
+PassCmd "cat test-resources/foo@example.com.pass"
+
+IMAPStore BAR-imap
+Host imap.example.com
+User bar@example.com
+Port 993
+UseIMAPS yes
+RequireSSL yes
+Pass "H'|&z]0pIcU2?T/(<!zaIq[wW\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\""
+
+#
+# Maildirs
+#
+
+MaildirStore FOO-mdir
+Path test-resources/maildir/foo-mdir/
+
+MaildirStore BAR-mdir
+Path test-resources/maildir/bar-mdir/
+
+#
+# Channels
+#
+
+Channel FOO-chan
+Master :FOO-imap:
+Slave :FOO-mdir:
+Patterns *
+
+Channel BAR-chan
+Master :BAR-imap:
+Slave :BAR-mdir:
+
+Channel FOO-BAR-chan
+Master :FOO-mdir:
+Slave :BAR-mdir:
+Patterns *
+Sync All
+Create Both
+Expunge Both
