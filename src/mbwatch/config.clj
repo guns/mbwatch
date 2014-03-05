@@ -22,21 +22,27 @@
   (pair LowerCaseWord "name"
         FilteredLine "value"))
 
-(defschema Token
-  (either
-    [(one (enum :imapstore :maildirstore :channel) "section type")
-     (one Word "section name")
-     (one [Entry] "config key-value entries")]
+(defschema MapSectionToken
+  [(one (enum :imapstore :maildirstore :channel) "section type")
+   (one Word "section name")
+   (one [Entry] "config key-value entries")])
 
-    [(one (eq :general) "section type")
-     (one (eq nil) "nil")
-     (one [FilteredLine] "general config lines")]))
+(defschema GeneralSectionToken
+  [(one (eq :general) "section type")
+   (one (eq nil) "nil")
+   (one [FilteredLine] "general config lines")])
+
+(defschema Token
+  (either GeneralSectionToken MapSectionToken))
+
+(defschema MapSectionValue
+  {Word {LowerCaseWord FilteredLine}})
 
 (defschema Sections
   {(optional-key :general)      [FilteredLine]
-   (optional-key :imapstore)    {Word {LowerCaseWord FilteredLine}}
-   (optional-key :maildirstore) {Word {LowerCaseWord FilteredLine}}
-   (optional-key :channel)      {Word {LowerCaseWord FilteredLine}}})
+   (optional-key :imapstore)    MapSectionValue
+   (optional-key :maildirstore) MapSectionValue
+   (optional-key :channel)      MapSectionValue})
 
 (defschema PortNumber
   (pred #(and (integer? %) (< 0 % 0x1000))))
@@ -49,7 +55,8 @@
 
 (s/defrecord Config
   [sections    :- Sections
-   credentials :- {Word IMAPCredentials}])
+   credentials :- {Word IMAPCredentials}
+   text        :- String])
 
 (def ^:const default-path
   "Default path of mbsyncrc."
@@ -120,29 +127,46 @@
    storm if multiple PassCmds call out to gpg.
 
    https://bugs.gnupg.org/gnupg/issue1109"
-  [imapstores :- {Word {LowerCaseWord FilteredLine}}]
+  [imapstores :- MapSectionValue]
   (reduce-kv
     (fn [m store-name imap]
       (assoc m store-name (parse-credentials imap)))
     {} imapstores))
 
+(s/defn ^:private replace-passcmd :- MapSectionValue
+  [imapstore   :- MapSectionValue
+   credentials :- {Word IMAPCredentials}]
+  (reduce-kv
+    (fn [m k v]
+      (assoc m k (-> (dissoc v "passcmd")
+                     (assoc "pass" (pr-str (get-in credentials [k :pass]))))))
+    {} imapstore))
+
+(s/defn ^:private render-section :- [String]
+  [sections :- Sections
+   type     :- (:schema (first MapSectionToken))]
+  (mapcat (fn [[v kvs]]
+            (-> [(str (name type) \space v)]
+                (into (mapv (partial string/join \space) (sort-by key kvs)))
+                (conj "")))
+          (sort-by key (get sections type))))
+
+(s/defn ^:private render :- String
+  [sections    :- Sections
+   credentials :- {Word IMAPCredentials}]
+  (let [s (update-in sections [:imapstore] #(replace-passcmd % credentials))
+        r (partial render-section s)]
+    (string/join \newline (concat (:general s)
+                                  [""]
+                                  (r :imapstore)
+                                  (r :maildirstore)
+                                  (r :channel)))))
+
 (s/defn parse :- Config
   [s :- String]
-  (let [rc (parse-tokens (tokenize s))]
+  (let [sections (parse-tokens (tokenize s))
+        credentials (map-credentials (:imapstore sections))]
     (strict-map->Config
-      {:sections rc
-       :credentials (map-credentials (:imapstore rc))})))
-
-(s/defn render :- String
-  "Render an mbsyncrc map into a string."
-  [rc :- Mbsyncrc]
-  (letfn [(to-lines [kw]
-            (mapcat (fn [[k kvs]]
-                      (into [(string/join \space [(name kw) k])]
-                            (conj (mapv #(string/join \space %) kvs) "")))
-                    (get rc kw)))]
-    (string/join \newline (concat (:general rc)
-                                  [""]
-                                  (to-lines :imapstore)
-                                  (to-lines :maildirstore)
-                                  (to-lines :channel)))))
+      {:sections sections
+       :credentials credentials
+       :text (render sections credentials)})))

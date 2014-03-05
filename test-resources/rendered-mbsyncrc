@@ -1,0 +1,40 @@
+Create Both
+Expunge Both
+
+imapstore BAR-imap
+host imap.example.com
+pass "H'|&z]0pIcU2?T/(<!zaIq[wW\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\""
+port 993
+requiressl yes
+useimaps yes
+user bar@example.com
+
+imapstore FOO-imap
+host imap.example.com
+pass "@Y9GZa G!Dsl ZQ'PC(Gj5#6`-Sv->$xH0s{5|bMgq/0.R&g.u714\"; F3aN"
+requiressl yes
+useimaps yes
+user foo@example.com
+
+maildirstore BAR-mdir
+path test-resources/maildir/bar-mdir/
+
+maildirstore FOO-mdir
+path test-resources/maildir/foo-mdir/
+
+channel BAR-chan
+master :BAR-imap:
+slave :BAR-mdir:
+
+channel FOO-BAR-chan
+create Both
+expunge Both
+master :FOO-mdir:
+patterns *
+slave :BAR-mdir:
+sync All
+
+channel FOO-chan
+master :FOO-imap:
+patterns *
+slave :FOO-mdir:
