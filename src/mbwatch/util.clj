@@ -29,3 +29,12 @@
     (if (and (> len 1) (= \" (.charAt s 0) (.charAt s (dec len))))
       (string/replace (subs s 1 (dec len)) #"\\(.)" "$1")
       s)))
+
+(defn shell-escape
+  "Adapted from Ruby's Shellwords#shellescape()"
+  [s]
+  (if (empty? s)
+    "''"
+    (-> s
+        (string/replace #"([^A-Za-z0-9_\-.,:\/@\n])" "\\\\$1")
+        (string/replace #"\n" "'\n'"))))

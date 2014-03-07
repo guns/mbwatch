@@ -1,5 +1,6 @@
 (ns mbwatch.util-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.java.shell :refer [sh]]
+            [clojure.test :refer [deftest is]]
             [mbwatch.util :as u]))
 
 (deftest test-chomp
@@ -15,3 +16,8 @@
   (is (empty? (u/dequote "\"\"")))
   (is (= "ab\\c\"" (u/dequote "\"ab\\\\c\\\"\"")))
   (is (= "ab\\c" (u/dequote "ab\\c"))))
+
+(deftest test-shell-escape
+  (let [s (apply str (map char (range 0x01 0x80)))]
+    (is (= (:out (sh "ruby" "-rshellwords" "-e" "print $stdin.read.shellescape" :in s))
+           (u/shell-escape s)))))
