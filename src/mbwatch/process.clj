@@ -1,8 +1,7 @@
 (ns mbwatch.process
   (:require [clojure.java.io :as io]
             [mbwatch.schema :refer [VOID]]
-            [schema.core :as s :refer [enum]])
-  (:import (java.io Writer)))
+            [schema.core :as s :refer [enum]]))
 
 (s/defn spawn :- Process
   "Asynchronously launch a process."
@@ -21,7 +20,7 @@
   "Dump a process's stdout or stderr into writer."
   [proc   :- Process
    stream :- (enum :out :err)
-   writer :- Writer]
+   writer :- s/Any]
   (io/copy (case stream
              :out (.getInputStream proc)
              :err (.getErrorStream proc))
