@@ -8,6 +8,7 @@
                  [org.clojure/tools.cli "0.3.1"]
                  [com.sun.mail/imap "1.5.1"]
                  [com.sun.mail/mailapi "1.5.1"]
-                 [prismatic/schema "0.2.1"]]
+                 [prismatic/schema "0.2.1"]
+                 [com.stuartsierra/component "0.2.1"]]
   :profiles {:dev {:jvm-opts ["-Djavax.net.ssl.trustStore=test-resources/gmail.ks"]
                    :resource-paths ["test-resources"]}})
