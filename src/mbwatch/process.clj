@@ -1,6 +1,6 @@
 (ns mbwatch.process
   (:require [clojure.java.io :as io]
-            [mbwatch.schemata :refer [VOID]]
+            [mbwatch.schema :refer [VOID]]
             [schema.core :as s :refer [enum]])
   (:import (java.io Writer)))
 
