@@ -1,6 +1,6 @@
 (ns mbwatch.process
   (:require [clojure.java.io :as io]
-            [mbwatch.schema :refer [VOID]]
+            [mbwatch.types :refer [VOID]]
             [schema.core :as s :refer [enum]]))
 
 (s/defn spawn :- Process

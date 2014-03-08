@@ -1,4 +1,4 @@
-(ns mbwatch.schema
+(ns mbwatch.types
   (:require [schema.core :refer [defschema eq]]))
 
 (defschema VOID
