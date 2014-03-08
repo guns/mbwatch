@@ -1,5 +1,6 @@
 (ns mbwatch.util
-  (:require [clojure.string :as string]))
+  (:require [clojure.core.async :refer [<!! >!! thread]]
+            [clojure.string :as string]))
 
 (defn chomp
   "Like Ruby's String#chomp, remove either trailing newlines or a constant
@@ -38,3 +39,21 @@
     (-> s
         (string/replace #"([^A-Za-z0-9_\-.,:\/@\n])" "\\\\$1")
         (string/replace #"\n" "'\n'"))))
+
+(defmacro thread-loop
+  {:require [#'thread]}
+  [bindings & body]
+  `(thread (loop ~bindings ~@body)))
+
+(def ^:private poison ::poison)
+
+(defn poison-chan
+  "Send a poison value on wr-chan and wait for a response on rd-chan."
+  [wr-chan rd-chan]
+  (>!! wr-chan poison)
+  (<!! rd-chan))
+
+(defmacro with-chan-value [[sym form] & body]
+  `(let [~sym ~form]
+     (when (and ~sym (not= ~sym ~poison))
+       ~@body)))
