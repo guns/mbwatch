@@ -9,6 +9,13 @@
             [schema.core :as s :refer [maybe]])
   (:import (org.joda.time DateTime)))
 
+(s/defn join-mbargs :- String
+  [mbchan :- String
+   mboxes :- [String]]
+  (if (seq mboxes)
+    (str mbchan \: (string/join \, mboxes))
+    (str mbchan)))
+
 (s/defn spawn-sync :- Process
   "Asynchronously launch an mbsync process to sync a single mail channel. The
    config string is passed to mbsync via `cat` and bash's <(/dev/fd) feature
@@ -16,13 +23,9 @@
   [config :- String
    mbchan :- String
    mboxes :- [String]]
-  (let [sync-arg (shell-escape
-                   (if (seq mboxes)
-                     (str mbchan \: (string/join \, mboxes))
-                     (str mbchan)))]
-    (process/spawn
-      "bash" "-c" (str "exec mbsync -c <(cat) " sync-arg)
-      :in config)))
+  (process/spawn
+    "bash" "-c" (str "exec mbsync -c <(cat) " (shell-escape (join-mbargs mbchan mboxes)))
+    :in config))
 
 (s/defrecord MbsyncEventStart
   [mbchan :- String
