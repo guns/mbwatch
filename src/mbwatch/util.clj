@@ -40,6 +40,24 @@
         (string/replace #"([^A-Za-z0-9_\-.,:\/@\n])" "\\\\$1")
         (string/replace #"\n" "'\n'"))))
 
+(defn human-duration [seconds]
+  (let [h (quot seconds 3600)
+        m (quot (rem seconds 3600) 60)
+        s (rem seconds 60)
+        xs (cond-> []
+             (pos? h) (conj (format "%s hour%s"   h (if (= h 1) "" \s)))
+             (pos? m) (conj (format "%s minute%s" m (if (= m 1) "" \s)))
+             (pos? s) (conj (format "%s second%s" s (if (= s 1) "" \s))))]
+    (case (count xs)
+      0 "zero seconds"
+      1 (first xs)
+      2 (apply format "%s and %s" xs)
+      3 (apply format "%s, %s, and %s" xs))))
+
+;;
+;; core.async helpers
+;;
+
 (defmacro thread-loop
   {:require [#'thread]}
   [bindings & body]
