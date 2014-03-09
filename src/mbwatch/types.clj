@@ -1,5 +1,9 @@
 (ns mbwatch.types
-  (:require [schema.core :as s :refer [defschema eq]])
+  (:require [clojure.core.async :refer [<!!]]
+            [clojure.core.async.impl.protocols :refer [ReadPort]]
+            [com.stuartsierra.component :refer [Lifecycle]]
+            [mbwatch.util :refer [poison-chan thread-loop with-chan-value]]
+            [schema.core :as s :refer [defschema eq]])
   (:import (org.joda.time DateTime)))
 
 (defschema VOID
@@ -14,6 +18,9 @@
 (def ^:const NOTICE  5) ; /* normal but significant condition */
 (def ^:const INFO    6) ; /* informational */
 (def ^:const DEBUG   7) ; /* debug-level messages */
+
+(def ^:private log-levels
+  (mapv str '[EMERG ALERT CRIT ERR WARNING NOTICE INFO DEBUG]))
 
 (defprotocol ILogLevel
   (log-level [this]))
@@ -34,3 +41,24 @@
 
 (defprotocol ItemLogger
   (log [this ^LogItem log-item]))
+
+(s/defrecord LoggerComponent
+  [level    :- s/Int
+   logger   :- ItemLogger
+   log-chan :- ReadPort]
+
+  Lifecycle
+
+  (start [this]
+    (printf "↑ Starting LoggerComponent [%s %s]\n" (get log-levels level) (.getCanonicalName (class logger)))
+    (assoc this ::logger
+           (thread-loop []
+             (with-chan-value [obj (<!! log-chan)]
+               (when (<= (log-level obj) level)
+                 (log logger (->log obj)))
+               (recur)))))
+
+  (stop [this]
+    (printf "↓ Stopping LoggerComponent [%s %s]\n" (get log-levels level) (.getCanonicalName (class logger)))
+    (poison-chan log-chan (::logger this))
+    (dissoc this ::logger)))

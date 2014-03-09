@@ -53,7 +53,7 @@
                           (keyword (str "bg" n)) (str "48;5;" n)))
                  {} (range 256))))
 
-(defn- tty-color-count []
+(defn tty-color-count []
   (try
     (Integer/parseInt (re-find #"\d+" (:out (sh "tput" "colors"))))
     (catch Throwable _
@@ -71,10 +71,10 @@
      (if c256 [:fg81] [:cyan])    ; DEBUG
      ]))
 
-(defn- tty? []
+(defn tty? []
   (boolean (System/console)))
 
-(defn- sgr-join [styles]
+(defn sgr-join [styles]
   (string/join \; (mapv sgr styles)))
 
 (defn- ^String wrap [msg sgr-string]
@@ -112,4 +112,5 @@
           msg (cond-> (str "[" ts "] " message)
                 colors (wrap (get colors level)))]
       (.write writer msg)
-      (.write writer "\n"))))
+      (.write writer "\n")
+      (.flush writer))))
