@@ -4,7 +4,7 @@
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.process :as process :refer [dump!]]
-            [mbwatch.types :refer [ERR INFO NOTICE]]
+            [mbwatch.types :refer [ERR ILogLevel INFO NOTICE]]
             [mbwatch.util :refer [poison-chan shell-escape thread-loop
                                   with-chan-value]]
             [schema.core :as s :refer [maybe]])
@@ -32,7 +32,10 @@
   [level  :- s/Int
    mbchan :- String
    mboxes :- [String]
-   start  :- DateTime])
+   start  :- DateTime]
+
+  ILogLevel
+  (log-level [this] level))
 
 (s/defrecord MbsyncEventStop
   [level  :- s/Int
@@ -41,7 +44,10 @@
    start  :- DateTime
    stop   :- DateTime
    status :- Integer
-   error  :- (maybe String)])
+   error  :- (maybe String)]
+
+  ILogLevel
+  (log-level [this] level))
 
 (s/defrecord MbsyncWorker
   [config   :- String

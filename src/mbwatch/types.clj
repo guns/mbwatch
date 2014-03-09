@@ -15,10 +15,22 @@
 (def ^:const INFO    6) ; /* informational */
 (def ^:const DEBUG   7) ; /* debug-level messages */
 
-(s/defrecord LogItem
-  [level     :- s/Int
-   timestamp :- DateTime
-   message   :- String])
+(defprotocol ILogLevel
+  (log-level [this]))
 
 (defprotocol Loggable
   (->log [this] "Returns a new LogItem object"))
+
+(s/defrecord LogItem
+  [level     :- s/Int
+   timestamp :- DateTime
+   message   :- String]
+
+  ILogLevel
+  (log-level [this] level)
+
+  Loggable
+  (->log [this] this))
+
+(defprotocol ItemLogger
+  (log [this ^LogItem log-item]))
