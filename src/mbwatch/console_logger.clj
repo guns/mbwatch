@@ -1,12 +1,12 @@
 (ns mbwatch.console-logger
   (:require [clojure.java.shell :refer [sh]]
             [clojure.string :as string]
+            [mbwatch.logging :refer [IItemLogger Loggable]]
             [mbwatch.mbsync :refer [join-mbargs]]
-            [mbwatch.types :refer [ItemLogger Loggable]]
             [mbwatch.util :refer [human-duration]])
   (:import (java.io Writer)
+           (mbwatch.logging LogItem)
            (mbwatch.mbsync MbsyncEventStart MbsyncEventStop)
-           (mbwatch.types LogItem)
            (org.joda.time DateTime)
            (org.joda.time.format DateTimeFormat DateTimeFormatter)))
 
@@ -81,7 +81,7 @@
   (str "\033[" sgr-string "m" msg "\033[0m"))
 
 ;;
-;; Types and Components
+;; Protocols and Types
 ;;
 
 (extend-protocol Loggable
@@ -105,7 +105,7 @@
   (DateTimeFormat/forPattern "HH:mm:ss"))
 
 (deftype ConsoleLogger [^Writer writer colors]
-  ItemLogger
+  IItemLogger
   (log [this log-item]
     (let [{:keys [level timestamp message]} log-item
           ts (.print timestamp-format ^DateTime timestamp)

@@ -1,12 +1,12 @@
 (ns mbwatch.console-logger-test
   (:require [clojure.test :refer [deftest is]]
             [mbwatch.console-logger :as c]
+            [mbwatch.logging :refer [->log DEBUG ERR]]
             [mbwatch.mbsync :as mb]
-            [mbwatch.types :refer [->log DEBUG ERR]]
             [schema.core :refer [validate]]
             [schema.test :as s])
   (:import (clojure.lang Keyword)
-           (mbwatch.types LogItem)
+           (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
 (deftest test-sgr

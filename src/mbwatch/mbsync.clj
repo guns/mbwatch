@@ -3,8 +3,8 @@
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
+            [mbwatch.logging :refer [ERR ILogLevel INFO NOTICE]]
             [mbwatch.process :as process :refer [dump!]]
-            [mbwatch.types :refer [ERR ILogLevel INFO NOTICE]]
             [mbwatch.util :refer [poison-chan shell-escape thread-loop
                                   with-chan-value]]
             [schema.core :as s :refer [maybe]])
