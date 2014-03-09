@@ -1,6 +1,7 @@
 (ns mbwatch.util
   (:require [clojure.core.async :refer [<!! >!! thread]]
-            [clojure.string :as string]))
+            [clojure.string :as string])
+  (:import (org.joda.time ReadableInstant Seconds)))
 
 (defn chomp
   "Like Ruby's String#chomp, remove either trailing newlines or a constant
@@ -40,19 +41,22 @@
         (string/replace #"([^A-Za-z0-9_\-.,:\/@\n])" "\\\\$1")
         (string/replace #"\n" "'\n'"))))
 
-(defn human-duration [seconds]
-  (let [h (quot seconds 3600)
-        m (quot (rem seconds 3600) 60)
-        s (rem seconds 60)
-        xs (cond-> []
-             (pos? h) (conj (format "%s hour%s"   h (if (= h 1) "" \s)))
-             (pos? m) (conj (format "%s minute%s" m (if (= m 1) "" \s)))
-             (pos? s) (conj (format "%s second%s" s (if (= s 1) "" \s))))]
-    (case (count xs)
-      0 "zero seconds"
-      1 (first xs)
-      2 (apply format "%s and %s" xs)
-      3 (apply format "%s, %s, and %s" xs))))
+(defn human-duration
+  ([seconds]
+   (let [h (quot seconds 3600)
+         m (quot (rem seconds 3600) 60)
+         s (rem seconds 60)
+         xs (cond-> []
+              (pos? h) (conj (format "%s hour%s"   h (if (= h 1) "" \s)))
+              (pos? m) (conj (format "%s minute%s" m (if (= m 1) "" \s)))
+              (pos? s) (conj (format "%s second%s" s (if (= s 1) "" \s))))]
+     (case (count xs)
+       0 "zero seconds"
+       1 (first xs)
+       2 (apply format "%s and %s" xs)
+       3 (apply format "%s, %s, and %s" xs))))
+  ([^ReadableInstant start ^ReadableInstant stop]
+   (human-duration (.getSeconds (Seconds/secondsBetween start stop)))))
 
 ;;
 ;; core.async helpers

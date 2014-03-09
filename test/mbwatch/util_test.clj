@@ -1,7 +1,8 @@
 (ns mbwatch.util-test
   (:require [clojure.java.shell :refer [sh]]
             [clojure.test :refer [deftest is]]
-            [mbwatch.util :as u]))
+            [mbwatch.util :as u])
+  (:import (org.joda.time DateTime)))
 
 (deftest test-chomp
   (is (= ""    (u/chomp "") (u/chomp "" "")))
@@ -27,4 +28,6 @@
   (is (= "1 second" (u/human-duration 1)))
   (is (= "59 seconds" (u/human-duration 59)))
   (is (= "5 hours, 1 minute, and 35 seconds"
-         (u/human-duration (+ (* 5 60 60) (* 1 60) 35)))))
+         (u/human-duration (+ (* 5 60 60) (* 1 60) 35))))
+  (let [dt (DateTime.)]
+    (is (= "1 second" (u/human-duration dt (.plus dt 1000))))))
