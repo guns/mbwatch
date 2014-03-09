@@ -4,6 +4,7 @@
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.process :as process :refer [dump!]]
+            [mbwatch.types :refer [ERR INFO NOTICE]]
             [mbwatch.util :refer [poison-chan shell-escape thread-loop
                                   with-chan-value]]
             [schema.core :as s :refer [maybe]])
@@ -28,12 +29,14 @@
     :in config))
 
 (s/defrecord MbsyncEventStart
-  [mbchan :- String
+  [level  :- s/Int
+   mbchan :- String
    mboxes :- [String]
    start  :- DateTime])
 
 (s/defrecord MbsyncEventStop
-  [mbchan :- String
+  [level  :- s/Int
+   mbchan :- String
    mboxes :- [String]
    start  :- DateTime
    stop   :- DateTime
@@ -54,16 +57,24 @@
            (thread-loop []
              (with-chan-value [bs (<!! req-chan)]
                (let [ev (strict-map->MbsyncEventStart
-                          {:mbchan mbchan :mboxes bs :start (DateTime.)})
+                          {:level INFO
+                           :mbchan mbchan
+                           :mboxes bs
+                           :start (DateTime.)})
                      proc (spawn-sync config mbchan bs)]
                  (put! log-chan ev)
+
                  (.waitFor proc)
-                 (put! log-chan (strict-map->MbsyncEventStop
-                                  (assoc ev
-                                         :stop (DateTime.)
-                                         :status (.exitValue proc)
-                                         :error (when-not (zero? (.exitValue proc))
-                                                  (with-out-str (dump! proc :err *out*)))))))
+
+                 (let [v (.exitValue proc)
+                       ev' (strict-map->MbsyncEventStop
+                             (assoc ev
+                                    :level (if (zero? v) NOTICE ERR)
+                                    :stop (DateTime.)
+                                    :status v
+                                    :error (when-not (zero? v)
+                                             (with-out-str (dump! proc :err *out*)))))]
+                   (put! log-chan ev')))
                (recur)))))
 
   (stop [this]
