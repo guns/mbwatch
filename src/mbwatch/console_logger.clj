@@ -106,7 +106,7 @@
 
 (deftype ConsoleLogger [^Writer writer colors]
   IItemLogger
-  (log [this log-item]
+  (log [_ log-item]
     (let [{:keys [level timestamp message]} log-item
           ts (.print timestamp-format ^DateTime timestamp)
           msg (cond-> (str "[" ts "] " message)

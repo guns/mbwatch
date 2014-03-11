@@ -35,7 +35,7 @@
    start  :- DateTime]
 
   ILogLevel
-  (log-level [this] level))
+  (log-level [_] level))
 
 (s/defrecord MbsyncEventStop
   [level  :- s/Int
@@ -47,7 +47,7 @@
    error  :- (maybe String)]
 
   ILogLevel
-  (log-level [this] level))
+  (log-level [_] level))
 
 (s/defrecord MbsyncWorker
   [config   :- String
