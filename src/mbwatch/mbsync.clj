@@ -3,16 +3,18 @@
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
-            [mbwatch.logging :refer [ERR ILogLevel INFO NOTICE WARNING]]
+            [mbwatch.logging :refer [ERR ILogLevel INFO Loggable NOTICE
+                                     WARNING]]
             [mbwatch.process :as process :refer [dump! interruptible-wait]]
             [mbwatch.types :refer [VOID]]
-            [mbwatch.util :refer [poison-chan shell-escape thread-loop
-                                  with-chan-value]]
+            [mbwatch.util :refer [human-duration poison-chan shell-escape
+                                  thread-loop with-chan-value]]
             [schema.core :as s :refer [maybe]]
             [schema.utils :refer [class-schema]])
-  (:import (org.joda.time DateTime)))
+  (:import (mbwatch.logging LogItem)
+           (org.joda.time DateTime)))
 
-(s/defn join-mbargs :- String
+(s/defn ^:private join-mbargs :- String
   [mbchan :- String
    mboxes :- [String]]
   (if (seq mboxes)
@@ -37,7 +39,13 @@
    start  :- DateTime]
 
   ILogLevel
-  (log-level [_] level))
+  (log-level [_] level)
+
+  Loggable
+  (->log [this]
+    (let [{:keys [level mbchan mboxes start]} this
+          msg (format "Starting `mbsync %s`" (join-mbargs mbchan mboxes))]
+      (LogItem. level start msg))))
 
 (s/defrecord MbsyncEventStop
   [level  :- s/Int
@@ -49,7 +57,21 @@
    error  :- (maybe String)]
 
   ILogLevel
-  (log-level [_] level))
+  (log-level [_] level)
+
+  Loggable
+  (->log [this]
+    (let [{:keys [level mbchan mboxes start stop status error]} this
+          mbarg (join-mbargs mbchan mboxes)
+          Δt (human-duration start stop)
+          msg (if (zero? status)
+                (format "Finished `mbsync %s` in %s." mbarg Δt)
+                (if (<= level ERR)
+                  (format "FAILURE: `mbsync %s` aborted in %s with status %d.\n%s"
+                          mbarg Δt status error)
+                  (format "TERMINATED: `mbsync %s` terminated after %s with status %d.\n%s"
+                          mbarg Δt status error)))]
+      (LogItem. level stop msg))))
 
 (declare sync-boxes!)
 

@@ -1,12 +1,8 @@
 (ns mbwatch.console-logger
   (:require [clojure.java.shell :refer [sh]]
             [clojure.string :as string]
-            [mbwatch.logging :refer [ERR IItemLogger Loggable]]
-            [mbwatch.mbsync :refer [join-mbargs]]
-            [mbwatch.util :refer [human-duration]])
+            [mbwatch.logging :refer [IItemLogger]])
   (:import (java.io Writer)
-           (mbwatch.logging LogItem)
-           (mbwatch.mbsync MbsyncEventStart MbsyncEventStop)
            (org.joda.time DateTime)
            (org.joda.time.format DateTimeFormat DateTimeFormatter)))
 
@@ -79,31 +75,6 @@
 
 (defn- ^String wrap [msg sgr-string]
   (str "\033[" sgr-string "m" msg "\033[0m"))
-
-;;
-;; Protocols and Types
-;;
-
-(extend-protocol Loggable
-  MbsyncEventStart
-  (->log [this]
-    (let [{:keys [level mbchan mboxes start]} this
-          msg (format "Starting `mbsync %s`" (join-mbargs mbchan mboxes))]
-      (LogItem. level start msg)))
-
-  MbsyncEventStop
-  (->log [this]
-    (let [{:keys [level mbchan mboxes start stop status error]} this
-          mbarg (join-mbargs mbchan mboxes)
-          Δt (human-duration start stop)
-          msg (if (zero? status)
-                (format "Finished `mbsync %s` in %s." mbarg Δt)
-                (if (<= level ERR)
-                  (format "FAILURE: `mbsync %s` aborted in %s with status %d.\n%s"
-                          mbarg Δt status error)
-                  (format "TERMINATED: `mbsync %s` terminated after %s with status %d.\n%s"
-                          mbarg Δt status error)))]
-      (LogItem. level stop msg))))
 
 (def ^:private ^DateTimeFormatter timestamp-format
   (DateTimeFormat/forPattern "HH:mm:ss"))
