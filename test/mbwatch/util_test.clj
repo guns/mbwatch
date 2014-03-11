@@ -31,3 +31,8 @@
          (u/human-duration (+ (* 5 60 60) (* 1 60) 35))))
   (let [dt (DateTime.)]
     (is (= "1 second" (u/human-duration dt (.plus dt 1000))))))
+
+(deftest test-first-alt
+  (is (= (u/first-alt (do (Thread/sleep 10) :first)
+                      (do (Thread/sleep 20) :second))
+         :first)))

@@ -1,5 +1,5 @@
 (ns mbwatch.util
-  (:require [clojure.core.async :refer [<!! >!! thread]]
+  (:require [clojure.core.async :refer [<!! >!! alts!! chan go thread]]
             [clojure.string :as string])
   (:import (org.joda.time ReadableInstant Seconds)))
 
@@ -59,6 +59,24 @@
    (human-duration (.getSeconds (Seconds/secondsBetween start stop)))))
 
 ;;
+;; Concurrency helpers
+;;
+
+(defmacro sig-wait
+  ([^Object signal]
+   `(locking ~signal (.wait ~signal)))
+  ([^Object signal ^long timeout]
+   `(when (pos? ~timeout)
+      (locking ~signal
+        (.wait ~signal ~timeout)))))
+
+(defmacro sig-notify [^Object signal]
+  `(locking ~signal (.notify ~signal)))
+
+(defmacro sig-notify-all [^Object signal]
+  `(locking ~signal (.notifyAll ~signal)))
+
+;;
 ;; core.async helpers
 ;;
 
@@ -79,3 +97,16 @@
   `(let [~sym ~form]
      (when (and ~sym (not= ~sym ~poison))
        ~@body)))
+
+(defmacro first-alt
+  "Execute all expressions concurrently and return the value of the first to
+   return, prioritized by the given order. All expressions are left to run to
+   completion."
+  {:require [#'go]}
+  [& exprs]
+  (let [n (count exprs)
+        chans (gensym "chans")]
+    `(let [~chans (repeatedly ~n ~chan)]
+       ~@(mapv (fn [i] `(go (~'>! (nth ~chans ~i) ~(nth exprs i))))
+               (range n))
+       (first (~alts!! ~chans :priority true)))))
