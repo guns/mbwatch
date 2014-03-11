@@ -1,7 +1,7 @@
 (ns mbwatch.console-logger
   (:require [clojure.java.shell :refer [sh]]
             [clojure.string :as string]
-            [mbwatch.logging :refer [IItemLogger Loggable]]
+            [mbwatch.logging :refer [ERR IItemLogger Loggable]]
             [mbwatch.mbsync :refer [join-mbargs]]
             [mbwatch.util :refer [human-duration]])
   (:import (java.io Writer)
@@ -98,7 +98,11 @@
           Δt (human-duration start stop)
           msg (if (zero? status)
                 (format "Finished `mbsync %s` in %s." mbarg Δt)
-                (format "FAILURE: `mbsync %s` aborted in %s with status %d.\n%s" mbarg Δt status error))]
+                (if (<= level ERR)
+                  (format "FAILURE: `mbsync %s` aborted in %s with status %d.\n%s"
+                          mbarg Δt status error)
+                  (format "TERMINATED: `mbsync %s` terminated after %s with status %d.\n%s"
+                          mbarg Δt status error)))]
       (LogItem. level stop msg))))
 
 (def ^:private ^DateTimeFormatter timestamp-format
