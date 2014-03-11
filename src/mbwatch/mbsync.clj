@@ -76,11 +76,11 @@
 (declare sync-boxes!)
 
 (s/defrecord MbsyncWorker
-  [config           :- String
-   mbchan           :- String
-   req-chan         :- ReadPort
-   log-chan         :- WritePort
-   interrupt-signal :- Object]
+  [config   :- String
+   mbchan   :- String
+   req-chan :- ReadPort
+   log-chan :- WritePort
+   monitor  :- Object]
 
   Lifecycle
 
@@ -100,7 +100,7 @@
 (s/defn ^:private sync-boxes! :- VOID
   [mbsync-worker-map :- (:schema (class-schema MbsyncWorker))
    mboxes            :- [String]]
-  (let [{:keys [config mbchan req-chan log-chan interrupt-signal]} mbsync-worker-map
+  (let [{:keys [config mbchan req-chan log-chan monitor]} mbsync-worker-map
         ev (strict-map->MbsyncEventStart
              {:level INFO
               :mbchan mbchan
@@ -109,7 +109,7 @@
         proc (spawn-sync config mbchan mboxes)
         _ (put! log-chan ev)
 
-        graceful? (interruptible-wait interrupt-signal proc)
+        graceful? (interruptible-wait monitor proc)
 
         v (.exitValue proc)
         ev' (strict-map->MbsyncEventStop

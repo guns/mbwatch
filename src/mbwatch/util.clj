@@ -63,18 +63,18 @@
 ;;
 
 (defmacro sig-wait
-  ([^Object signal]
-   `(locking ~signal (.wait ~signal)))
-  ([^Object signal ^long timeout]
+  ([^Object monitor]
+   `(locking ~monitor (.wait ~monitor)))
+  ([^Object monitor ^long timeout]
    `(when (pos? ~timeout)
-      (locking ~signal
-        (.wait ~signal ~timeout)))))
+      (locking ~monitor
+        (.wait ~monitor ~timeout)))))
 
-(defmacro sig-notify [^Object signal]
-  `(locking ~signal (.notify ~signal)))
+(defmacro sig-notify [^Object monitor]
+  `(locking ~monitor (.notify ~monitor)))
 
-(defmacro sig-notify-all [^Object signal]
-  `(locking ~signal (.notifyAll ~signal)))
+(defmacro sig-notify-all [^Object monitor]
+  `(locking ~monitor (.notifyAll ~monitor)))
 
 ;;
 ;; core.async helpers

@@ -18,19 +18,19 @@
     proc))
 
 (s/defn interruptible-wait :- Boolean
-  "Run process while waiting on signal. If a notification is received, the
+  "Run process while waiting on monitor. If a notification is received, the
    process is terminated early and false is returned."
-  ([signal proc]
-   (interruptible-wait signal proc true))
-  ([signal    :- Object
+  ([monitor proc]
+   (interruptible-wait monitor proc true))
+  ([monitor   :- Object
     proc      :- Process
     graceful? :- Boolean]
-   (let [wait (future (sig-wait signal) false)]
+   (let [wait (future (sig-wait monitor) false)]
      (if (first-alt (.waitFor proc) (deref wait))
        graceful?
        (do (future-cancel wait)
            (.destroy proc)
-           (recur signal proc false))))))
+           (recur monitor proc false))))))
 
 (s/defn dump! :- VOID
   "Dump a process's stdout or stderr into writer."
