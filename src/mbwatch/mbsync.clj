@@ -9,7 +9,7 @@
             [mbwatch.types :refer [VOID]]
             [mbwatch.util :refer [class-name human-duration poison-chan
                                   shell-escape thread-loop with-chan-value]]
-            [schema.core :as s :refer [maybe]]
+            [schema.core :as s :refer [Int defschema maybe protocol]]
             [schema.utils :refer [class-schema]])
   (:import (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
@@ -33,7 +33,7 @@
     :in mbsyncrc))
 
 (s/defrecord MbsyncEventStart
-  [level  :- s/Int
+  [level  :- Int
    mbchan :- String
    mboxes :- [String]
    start  :- DateTime]
@@ -48,7 +48,7 @@
       (LogItem. level start msg))))
 
 (s/defrecord MbsyncEventStop
-  [level  :- s/Int
+  [level  :- Int
    mbchan :- String
    mboxes :- [String]
    start  :- DateTime

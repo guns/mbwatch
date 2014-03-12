@@ -4,7 +4,7 @@
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.util :refer [class-name poison-chan thread-loop
                                   with-chan-value]]
-            [schema.core :as s])
+            [schema.core :as s :refer [Int]])
   (:import (org.joda.time DateTime)))
 
 ;; From linux/kern_levels.h
@@ -27,7 +27,7 @@
   (->log [this] "Returns a new LogItem object"))
 
 (s/defrecord LogItem
-  [level     :- s/Int
+  [level     :- Int
    timestamp :- DateTime
    message   :- String]
 
@@ -41,7 +41,7 @@
   (log [this ^LogItem log-item]))
 
 (s/defrecord LoggerComponent
-  [level    :- s/Int
+  [level    :- Int
    logger   :- IItemLogger
    log-chan :- ReadPort]
 
