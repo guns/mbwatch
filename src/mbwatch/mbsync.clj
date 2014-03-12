@@ -100,7 +100,7 @@
 (s/defn ^:private sync-boxes! :- VOID
   [mbsync-worker-map :- (:schema (class-schema MbsyncWorker))
    mboxes            :- [String]]
-  (let [{:keys [config mbchan req-chan log-chan monitor]} mbsync-worker-map
+  (let [{:keys [config mbchan log-chan monitor]} mbsync-worker-map
         ev (strict-map->MbsyncEventStart
              {:level INFO
               :mbchan mbchan
