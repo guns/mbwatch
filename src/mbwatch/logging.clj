@@ -2,7 +2,8 @@
   (:require [clojure.core.async :refer [<!!]]
             [clojure.core.async.impl.protocols :refer [ReadPort]]
             [com.stuartsierra.component :refer [Lifecycle]]
-            [mbwatch.util :refer [poison-chan thread-loop with-chan-value]]
+            [mbwatch.util :refer [class-name poison-chan thread-loop
+                                  with-chan-value]]
             [schema.core :as s])
   (:import (org.joda.time DateTime)))
 
@@ -47,7 +48,7 @@
   Lifecycle
 
   (start [this]
-    (printf "↑ Starting LoggerComponent [%s %s]\n" (get log-levels level) (.getCanonicalName (class logger)))
+    (printf "↑ Starting LoggerComponent [%s %s]\n" (get log-levels level) (class-name logger))
     (assoc this ::logger
            (thread-loop []
              (with-chan-value [obj (<!! log-chan)]
@@ -56,6 +57,6 @@
                (recur)))))
 
   (stop [this]
-    (printf "↓ Stopping LoggerComponent [%s %s]\n" (get log-levels level) (.getCanonicalName (class logger)))
+    (printf "↓ Stopping LoggerComponent [%s %s]\n" (get log-levels level) (class-name logger))
     (poison-chan log-chan (::logger this))
     (dissoc this ::logger)))

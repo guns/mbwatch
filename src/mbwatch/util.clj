@@ -58,6 +58,9 @@
   ([^ReadableInstant start ^ReadableInstant stop]
    (human-duration (.getSeconds (Seconds/secondsBetween start stop)))))
 
+(defn class-name [obj]
+  (.getSimpleName (class obj)))
+
 ;;
 ;; Concurrency helpers
 ;;

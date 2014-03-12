@@ -7,8 +7,8 @@
                                      WARNING]]
             [mbwatch.process :as process :refer [dump! interruptible-wait]]
             [mbwatch.types :refer [VOID]]
-            [mbwatch.util :refer [human-duration poison-chan shell-escape
-                                  thread-loop with-chan-value]]
+            [mbwatch.util :refer [class-name human-duration poison-chan
+                                  shell-escape thread-loop with-chan-value]]
             [schema.core :as s :refer [maybe]]
             [schema.utils :refer [class-schema]])
   (:import (mbwatch.logging LogItem)
@@ -85,7 +85,7 @@
   Lifecycle
 
   (start [this]
-    (printf "↑ Starting MbsyncWorker for channel `%s`\n" mbchan)
+    (printf "↑ Starting %s for channel `%s`\n" (class-name this) mbchan)
     (assoc this ::worker
            (thread-loop []
              (with-chan-value [bs (<!! req-chan)]
@@ -93,7 +93,7 @@
                (recur)))))
 
   (stop [this]
-    (printf "↓ Stopping MbsyncWorker for channel `%s`\n" mbchan)
+    (printf "↓ Stopping %s for channel `%s`\n" (class-name this) mbchan)
     (poison-chan req-chan (::worker this))
     (dissoc this ::worker)))
 
