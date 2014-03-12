@@ -54,9 +54,9 @@
    :pass String})
 
 (s/defrecord Config
-  [sections    :- Sections
-   credentials :- {Word IMAPCredentials}
-   text        :- String])
+  [mbsyncrc    :- String
+   sections    :- Sections
+   credentials :- {Word IMAPCredentials}])
 
 (def ^:const default-path
   "Default path of mbsyncrc."
@@ -167,6 +167,6 @@
   (let [sections (parse-tokens (tokenize s))
         credentials (map-credentials (:imapstore sections))]
     (strict-map->Config
-      {:sections sections
-       :credentials credentials
-       :text (render sections credentials)})))
+      {:mbsyncrc (render sections credentials)
+       :sections sections
+       :credentials credentials})))

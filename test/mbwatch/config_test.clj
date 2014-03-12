@@ -47,5 +47,5 @@
                       :user "bar@example.com"
                       :port 993
                       :pass "H'|&z]0pIcU2?T/(<!zaIq[wW\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\""}}))
-  (is (= (:text config)
+  (is (= (:mbsyncrc config)
          (slurp (io/resource "rendered-mbsyncrc")))))

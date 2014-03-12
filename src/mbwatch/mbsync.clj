@@ -25,12 +25,12 @@
   "Asynchronously launch an mbsync process to sync a single mail channel. The
    config string is passed to mbsync via `cat` and bash's <(/dev/fd) feature
    in order to avoid temporary files."
-  [config :- String
-   mbchan :- String
-   mboxes :- [String]]
+  [mbsyncrc :- String
+   mbchan   :- String
+   mboxes   :- [String]]
   (process/spawn
     "bash" "-c" (str "exec mbsync -c <(cat) " (shell-escape (join-mbargs mbchan mboxes)))
-    :in config))
+    :in mbsyncrc))
 
 (s/defrecord MbsyncEventStart
   [level  :- s/Int
@@ -76,7 +76,7 @@
 (declare sync-boxes!)
 
 (s/defrecord MbsyncWorker
-  [config   :- String
+  [mbsyncrc :- String
    mbchan   :- String
    req-chan :- ReadPort
    log-chan :- WritePort
@@ -100,13 +100,13 @@
 (s/defn ^:private sync-boxes! :- VOID
   [mbsync-worker-map :- (:schema (class-schema MbsyncWorker))
    mboxes            :- [String]]
-  (let [{:keys [config mbchan log-chan monitor]} mbsync-worker-map
+  (let [{:keys [mbsyncrc mbchan log-chan monitor]} mbsync-worker-map
         ev (strict-map->MbsyncEventStart
              {:level INFO
               :mbchan mbchan
               :mboxes mboxes
               :start (DateTime.)})
-        proc (spawn-sync config mbchan mboxes)
+        proc (spawn-sync mbsyncrc mbchan mboxes)
         _ (put! log-chan ev)
 
         graceful? (interruptible-wait monitor proc)
