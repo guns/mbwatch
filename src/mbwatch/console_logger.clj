@@ -57,9 +57,9 @@
 
 (def default-colors
   (let [c256 (= (tty-color-count) 256)]
-    [[:red :inverse :underline]   ; EMERG
+    [[:red :inverse :bold]        ; EMERG
      [:red :inverse]              ; ALERT
-     [:red :underline]            ; CRIT
+     [:red :bold]                 ; CRIT
      [:red]                       ; ERR
      [:magenta]                   ; WARNING
      (if c256 [:fg83] [:green])   ; NOTICE
