@@ -20,10 +20,8 @@
 (def ^:private log-levels
   (mapv str '[EMERG ALERT CRIT ERR WARNING NOTICE INFO DEBUG]))
 
-(defprotocol ILogLevel
-  (log-level [this]))
-
 (defprotocol Loggable
+  (log-level [this] "Returns this object's logging level")
   (->log [this] "Returns a new LogItem object"))
 
 (s/defrecord LogItem
@@ -31,10 +29,10 @@
    timestamp :- DateTime
    message   :- String]
 
-  ILogLevel
+  Loggable
+
   (log-level [this] level)
 
-  Loggable
   (->log [this] this))
 
 (defprotocol IItemLogger

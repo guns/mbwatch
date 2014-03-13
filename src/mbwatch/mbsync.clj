@@ -3,8 +3,7 @@
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
-            [mbwatch.logging :refer [ERR ILogLevel INFO Loggable NOTICE
-                                     WARNING]]
+            [mbwatch.logging :refer [ERR INFO Loggable NOTICE WARNING]]
             [mbwatch.process :as process :refer [dump! interruptible-wait]]
             [mbwatch.types :refer [VOID]]
             [mbwatch.util :refer [class-name human-duration poison-chan
@@ -38,10 +37,10 @@
    mboxes :- [String]
    start  :- DateTime]
 
-  ILogLevel
+  Loggable
+
   (log-level [_] level)
 
-  Loggable
   (->log [this]
     (let [{:keys [level mbchan mboxes start]} this
           msg (format "Starting `mbsync %s`" (join-mbargs mbchan mboxes))]
@@ -56,10 +55,10 @@
    status :- Integer
    error  :- (maybe String)]
 
-  ILogLevel
+  Loggable
+
   (log-level [_] level)
 
-  Loggable
   (->log [this]
     (let [{:keys [level mbchan mboxes start stop status error]} this
           mbarg (join-mbargs mbchan mboxes)
