@@ -1,31 +1,29 @@
 (ns mbwatch.console-logger-test
   (:require [clojure.test :refer [deftest is]]
             [mbwatch.console-logger :as c]
-            [mbwatch.logging :refer [->log DEBUG ERR]]
-            [mbwatch.mbsync :as mb]
-            [schema.core :refer [validate]]
-            [schema.test :as s])
+            [mbwatch.logging]
+            [schema.core :refer [validate]])
   (:import (clojure.lang Keyword)
+           (java.io StringWriter)
            (mbwatch.logging LogItem)
-           (org.joda.time DateTime)))
+           (org.joda.time DateTime)
+           (org.joda.time.format DateTimeFormat)))
 
 (deftest test-sgr
   (is (validate {Keyword String} c/sgr)))
 
-(s/deftest test-Loggable
-  (let [dt (DateTime.)]
-    (is (= (->log (mb/strict-map->MbsyncEventStart
-                    {:level DEBUG
-                     :mbchan "test"
-                     :mboxes []
-                     :start dt}))
-           (LogItem. DEBUG dt "Starting `mbsync test`")))
-    (is (= (->log (mb/strict-map->MbsyncEventStop
-                    {:level ERR
-                     :mbchan "test"
-                     :mboxes []
-                     :start dt
-                     :stop dt
-                     :status 1
-                     :error "ERROR"}))
-           (LogItem. ERR dt "FAILURE: `mbsync test` aborted in zero seconds with status 1.\nERROR")))))
+(deftest test-sgr-join
+  (is (= "" (c/sgr-join nil) (c/sgr-join [])))
+  (is (= "31;48;5;100" (c/sgr-join [:red :bg100])))
+  (is (= "31;48;5;100" (c/sgr-join [31 "48;5;100"]))))
+
+(deftest test-ConsoleLogger
+  (let [s (StringWriter.)
+        dt (DateTime.)
+        dt-str (.print (DateTimeFormat/forPattern "HH:mm:ss") dt)
+        item (LogItem. 0 dt "Hello world.")]
+    (.log (c/->ConsoleLogger s [[:red]]) item)
+    (is (= (format "\033[31m[%s] Hello world.\033[0m\n" dt-str) (str s)))
+    (.setLength (.getBuffer s) 0)
+    (.log (c/->ConsoleLogger s nil) item)
+    (is (= (format "[%s] Hello world.\n" dt-str) (str s)))))

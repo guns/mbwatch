@@ -2,8 +2,7 @@
   (:require [clojure.java.shell :refer [sh]]
             [clojure.string :as string]
             [mbwatch.logging :refer [IItemLogger]])
-  (:import (java.io Writer)
-           (org.joda.time DateTime)
+  (:import (org.joda.time DateTime)
            (org.joda.time.format DateTimeFormat DateTimeFormatter)))
 
 ;;
@@ -71,21 +70,27 @@
   (boolean (System/console)))
 
 (defn sgr-join [styles]
-  (string/join \; (mapv sgr styles)))
+  (string/join \; (mapv #(if (keyword? %) (sgr %) %) styles)))
 
 (defn- ^String wrap [msg sgr-string]
-  (str "\033[" sgr-string "m" msg "\033[0m"))
+  (if (seq sgr-string)
+    (str "\033[" sgr-string "m" msg "\033[0m")
+    msg))
 
 (def ^:private ^DateTimeFormatter timestamp-format
   (DateTimeFormat/forPattern "HH:mm:ss"))
 
-(deftype ConsoleLogger [^Writer writer colors]
+(deftype ConsoleLogger [^Appendable stream colors]
   IItemLogger
   (log [_ log-item]
     (let [{:keys [level timestamp message]} log-item
           ts (.print timestamp-format ^DateTime timestamp)
-          msg (cond-> (str "[" ts "] " message)
-                colors (wrap (get colors level)))]
-      (.write writer msg)
-      (.write writer "\n")
-      (.flush writer))))
+          msg (wrap (str "[" ts "] " message) (get colors level))]
+      (.append stream msg)
+      (.append stream \newline))))
+
+(defn ^ConsoleLogger ->ConsoleLogger
+  ([^Appendable stream]
+   (ConsoleLogger. stream (mapv sgr-join default-colors)))
+  ([^Appendable stream colors]
+   (ConsoleLogger. stream (mapv sgr-join colors))))
