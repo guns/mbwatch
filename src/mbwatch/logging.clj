@@ -4,7 +4,7 @@
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.util :refer [class-name poison-chan thread-loop
                                   with-chan-value]]
-            [schema.core :as s :refer [Int]])
+            [schema.core :as s :refer [Int maybe]])
   (:import (org.joda.time DateTime)))
 
 ;; From linux/kern_levels.h
@@ -47,16 +47,17 @@
 (defprotocol IItemLogger
   (log [this ^LogItem log-item]))
 
-(s/defrecord LoggerComponent
-  [level    :- Int
-   logger   :- IItemLogger
-   log-chan :- ReadPort]
+(s/defrecord LoggingService
+  [level      :- Int
+   logger     :- IItemLogger
+   log-chan   :- ReadPort
+   state-chan :- (maybe ReadPort)]
 
   Lifecycle
 
   (start [this]
-    (printf "↑ Starting LoggerComponent [%s %s]\n" (get log-levels level) (class-name logger))
-    (assoc this ::logger
+    (printf "↑ Starting %s [%s %s]\n" (class-name this) (get log-levels level) (class-name logger))
+    (assoc this :state-chan
            (thread-loop []
              (with-chan-value [obj (<!! log-chan)]
                (when (<= (log-level obj) level)
@@ -64,6 +65,6 @@
                (recur)))))
 
   (stop [this]
-    (printf "↓ Stopping LoggerComponent [%s %s]\n" (get log-levels level) (class-name logger))
-    (poison-chan log-chan (::logger this))
-    (dissoc this ::logger)))
+    (printf "↓ Stopping %s [%s %s]\n" (class-name this) (get log-levels level) (class-name logger))
+    (poison-chan log-chan state-chan)
+    (dissoc this :state-chan)))
