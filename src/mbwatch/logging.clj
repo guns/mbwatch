@@ -31,9 +31,18 @@
 
   Loggable
 
-  (log-level [this] level)
+  (log-level [_] level)
 
   (->log [this] this))
+
+(extend-protocol Loggable
+  ;; Fallback implementation
+  Object
+
+  (log-level [_] NOTICE)
+
+  (->log [this]
+    (LogItem. NOTICE (DateTime.) (str this))))
 
 (defprotocol IItemLogger
   (log [this ^LogItem log-item]))
