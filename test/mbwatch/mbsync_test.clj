@@ -21,7 +21,7 @@
         start (m/strict-map->MbsyncEventStart
                 {:level DEBUG
                  :mbchan "test"
-                 :mboxes []
+                 :mboxes ["INBOX"]
                  :start dt})
         stop (m/strict-map->MbsyncEventStop
                {:level ERR
@@ -34,6 +34,6 @@
     (is (= DEBUG (log-level start)))
     (is (= ERR (log-level stop)))
     (is (= (->log start)
-           (LogItem. DEBUG dt "Starting `mbsync test`")))
+           (LogItem. DEBUG dt "Starting `mbsync test:INBOX`")))
     (is (= (->log stop)
            (LogItem. ERR dt "FAILURE: `mbsync test` aborted in zero seconds with status 1.\nERROR")))))

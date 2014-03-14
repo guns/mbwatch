@@ -1,17 +1,26 @@
 (ns mbwatch.mbsync
-  (:require [clojure.core.async :refer [<!! put!]]
+  (:require [clojure.core.async :refer [<!! >!! chan put! unique]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
-            [mbwatch.logging :refer [ERR INFO Loggable NOTICE WARNING]]
+            [mbwatch.config]
+            [mbwatch.logging :refer [DEBUG ERR INFO Loggable NOTICE WARNING]]
             [mbwatch.process :as process :refer [dump! interruptible-wait]]
             [mbwatch.types :refer [VOID]]
             [mbwatch.util :refer [class-name human-duration poison-chan
-                                  shell-escape thread-loop with-chan-value]]
-            [schema.core :as s :refer [Int defschema maybe protocol]]
+                                  shell-escape sig-notify-all thread-loop
+                                  with-chan-value]]
+            [schema.core :as s :refer [Int defschema either eq maybe
+                                       protocol]]
             [schema.utils :refer [class-schema]])
-  (:import (mbwatch.logging LogItem)
+  (:import (java.io StringWriter)
+           (mbwatch.config Config)
+           (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
+
+(def ^:const ^:private CHAN_SIZE
+  "TODO: Move to Config?"
+  0x100)
 
 (s/defn ^:private join-mbargs :- String
   [mbchan :- String
@@ -65,36 +74,54 @@
           Δt (human-duration start stop)
           msg (if (zero? status)
                 (format "Finished `mbsync %s` in %s." mbarg Δt)
-                (if (<= level ERR)
-                  (format "FAILURE: `mbsync %s` aborted in %s with status %d.\n%s"
-                          mbarg Δt status error)
-                  (format "TERMINATED: `mbsync %s` terminated after %s with status %d.\n%s"
-                          mbarg Δt status error)))]
+                (let [buf (StringBuffer.)
+                      fail (if (<= level ERR)
+                             (format "FAILURE: `mbsync %s` aborted in %s with status %d."
+                                     mbarg Δt status)
+                             (format "TERMINATED: `mbsync %s` terminated after %s with status %d."
+                                     mbarg Δt status))]
+                  (.append buf fail)
+                  (when error
+                    (.append buf \newline)
+                    (.append buf error))
+                  (str buf)))]
       (LogItem. level stop msg))))
 
 (declare sync-boxes!)
 
 (s/defrecord MbsyncWorker
-  [mbsyncrc :- String
-   mbchan   :- String
-   req-chan :- ReadPort
-   log-chan :- WritePort
-   monitor  :- Object]
+  [mbsyncrc   :- String
+   mbchan     :- String
+   req-chan   :- ReadPort
+   log-chan   :- WritePort
+   monitor    :- Object
+   state-chan :- (maybe (protocol ReadPort))]
 
   Lifecycle
 
   (start [this]
-    (printf "↑ Starting %s for channel `%s`\n" (class-name this) mbchan)
-    (assoc this ::worker
+    (put! log-chan this)
+    (assoc this :state-chan
            (thread-loop []
              (with-chan-value [bs (<!! req-chan)]
                (sync-boxes! this bs)
                (recur)))))
 
   (stop [this]
-    (printf "↓ Stopping %s for channel `%s`\n" (class-name this) mbchan)
-    (poison-chan req-chan (::worker this))
-    (dissoc this ::worker)))
+    (put! log-chan this)
+    (poison-chan req-chan state-chan)
+    (dissoc this :state-chan))
+
+  Loggable
+
+  (log-level [_] DEBUG)
+
+  (->log [this]
+    (let [msg (format "%s %s for channel `%s`"
+                      (if state-chan "↓ Stopping" "↑ Starting")
+                      (class-name this)
+                      mbchan)]
+      (LogItem. DEBUG (DateTime.) msg))))
 
 (s/defn ^:private sync-boxes! :- VOID
   [mbsync-worker-map :- (:schema (class-schema MbsyncWorker))
@@ -116,6 +143,93 @@
                      :level (if graceful? (if (zero? v) NOTICE ERR) WARNING)
                      :stop (DateTime.)
                      :status v
-                     :error (when-not (zero? v)
-                              (with-out-str (dump! proc :err *out*)))))]
-    (put! log-chan ev')))
+                     :error (when (and graceful? (not (zero? v)))
+                              (let [s (StringWriter.)]
+                                (dump! proc :err s)
+                                (str s)))))]
+    (put! log-chan ev')
+    nil))
+
+(declare handle-mbsync-command)
+
+(s/defrecord MbsyncMaster
+  [config     :- Config
+   cmd-chan   :- ReadPort
+   log-chan   :- WritePort
+   state-chan :- (maybe (protocol ReadPort))]
+
+  Lifecycle
+
+  (start [this]
+    (put! log-chan this)
+    (assoc this :state-chan
+           (thread-loop [workers {}]
+             (when-let [ws (handle-mbsync-command (<!! cmd-chan) workers this)]
+               (recur ws)))))
+
+  (stop [this]
+    (put! log-chan this)
+    (>!! cmd-chan ::stop)
+    (<!! state-chan)
+    (dissoc this :state-chan))
+
+  Loggable
+
+  (log-level [_] DEBUG)
+
+  (->log [this]
+    (LogItem. DEBUG (DateTime.) (str (if state-chan "↓ Stopping " "↑ Starting ")
+                                     (class-name this)))))
+
+(s/defn ^:private stop-workers :- [MbsyncWorker]
+  [workers :- [MbsyncWorker]]
+  (doall
+    (pmap (fn [^MbsyncWorker w]
+            (sig-notify-all (.monitor w))
+            (.stop w))
+          workers)))
+
+(defschema MbsyncCommand
+  (either {String [String]} ; Sync {mbchan [mbox]}
+          (eq :term)        ; Terminate current sync processes
+          (eq ::stop)       ; Terminate syncs and kill workers
+          (eq nil)          ; Same as ::stop
+          ))
+
+(s/defn ^:private new-mbsync-worker :- MbsyncWorker
+  [mbchan            :- String
+   mbsync-master-map :- (:schema (class-schema MbsyncMaster))]
+  (let [{:keys [config log-chan]} mbsync-master-map]
+    (map->MbsyncWorker
+      {:mbsyncrc (:mbsyncrc config)
+       :mbchan mbchan
+       :req-chan (unique (chan CHAN_SIZE))
+       :log-chan log-chan
+       :monitor (Object.)})))
+
+(s/defn ^:private dispatch-syncs :- {String MbsyncWorker}
+  "Dispatch sync jobs to MbsyncWorker instances. Creates a new channel worker
+   if it does not exist."
+  [sync-req          :- {String [String]}
+   workers           :- {String MbsyncWorker}
+   mbsync-master-map :- (:schema (class-schema MbsyncMaster))]
+  (reduce-kv
+    (fn [ws ch bs]
+      (let [ws (if (contains? ws ch)
+                 ws
+                 (assoc ws ch (.start (new-mbsync-worker ch mbsync-master-map))))]
+        (put! (get-in ws [ch :req-chan]) bs)
+        ws))
+    workers sync-req))
+
+(s/defn ^:private handle-mbsync-command :- (maybe {String MbsyncWorker})
+  [command           :- MbsyncCommand
+   workers           :- {String MbsyncWorker}
+   mbsync-master-map :- (:schema (class-schema MbsyncMaster))]
+  (case command
+    nil    (do (stop-workers (vals workers)) nil)
+    ::stop (do (stop-workers (vals workers)) nil)
+    :term  (do (doseq [^MbsyncWorker w (vals workers)]
+                 (sig-notify-all (.monitor w)))
+               workers)
+    (dispatch-syncs command workers mbsync-master-map)))
