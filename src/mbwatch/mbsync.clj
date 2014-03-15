@@ -1,4 +1,29 @@
 (ns mbwatch.mbsync
+  "The MbsyncMaster component takes an MbsyncCommand from a channel, then
+   sends mail synchronization jobs to an MbsyncWorker via a UniqueBuffer
+   channel, spawning a new worker if necessary. Each worker is responsible for
+   syncing a single mbsync channel.
+
+   The workers shell out to `mbsync`, passing a parsed configuration string
+   via `bash -c 'mbsync -c <(cat)'`. These child processes can be terminated
+   by MbsyncMaster at any time.
+
+   Calling .stop on MbsyncMaster also stops all MbsyncWorkers.
+
+       ─── MbsyncCommand ──┐
+                           │
+                           │
+                           ▼
+                    ┌──────────────┐              ─┐
+                    │ MbsyncMaster │               │
+                    └──────┬───────┘               │
+                           │                       │
+               ┌───────────┴──────────┐            ├── Loggable ───▶
+               ▼                      ▼            │
+        ┌──────────────┐       ┌──────────────┐    │
+        │ MbsyncWorker │   …   │ MbsyncWorker │    │
+        └──────────────┘       └──────────────┘   ─┘
+   "
   (:require [clojure.core.async :refer [<!! >!! chan put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [clojure.string :as string]
