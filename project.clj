@@ -3,7 +3,7 @@
   :main mbwatch.core
   :license {:name "MIT License"
             :url "http://opensource.org/licenses/MIT"}
-  :dependencies [[org.clojure/clojure "1.6.0-beta2"]
+  :dependencies [[org.clojure/clojure "1.6.0-RC1"]
                  [org.clojure/core.async "0.1.278.0-76b25b-alpha"]
                  [org.clojure/tools.cli "0.3.1"]
                  [com.sun.mail/imap "1.5.1"]
