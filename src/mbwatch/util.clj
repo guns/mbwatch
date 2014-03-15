@@ -1,7 +1,7 @@
 (ns mbwatch.util
   (:require [clojure.core.async :refer [<!! >!! alts!! chan go thread]]
             [clojure.string :as string])
-  (:import (org.joda.time ReadableInstant Seconds)))
+  (:import (org.joda.time Instant ReadableInstant Seconds)))
 
 (defn chomp
   "Like Ruby's String#chomp, remove either trailing newlines or a constant
@@ -60,6 +60,9 @@
 
 (defn class-name [obj]
   (.getSimpleName (class obj)))
+
+(defn to-ms [datetime]
+  (.getMillis (Instant. datetime)))
 
 ;;
 ;; Concurrency helpers
