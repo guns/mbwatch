@@ -39,6 +39,7 @@
                                        protocol]]
             [schema.utils :refer [class-schema]])
   (:import (java.io StringWriter)
+           (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.config Config)
            (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
@@ -119,7 +120,7 @@
    mbchan     :- String
    req-chan   :- ReadPort
    log-chan   :- WritePort
-   monitor    :- Object
+   monitor    :- AtomicBoolean
    state-chan :- (maybe (protocol ReadPort))]
 
   Lifecycle
@@ -128,9 +129,10 @@
     (put! log-chan this)
     (assoc this :state-chan
            (thread-loop []
-             (with-chan-value [bs (<!! req-chan)]
-               (sync-boxes! this bs)
-               (recur)))))
+             (when (.get monitor)
+               (with-chan-value [bs (<!! req-chan)]
+                 (sync-boxes! this bs)
+                 (recur))))))
 
   (stop [this]
     (put! log-chan this)
@@ -210,8 +212,10 @@
   [workers :- [MbsyncWorker]]
   (doall
     (pmap (fn [^MbsyncWorker w]
-            (sig-notify-all (.monitor w))
-            (.stop w))
+            (let [mon ^AtomicBoolean (.monitor w)]
+              (.set mon false)
+              (sig-notify-all mon)
+              (.stop w)))
           workers)))
 
 (defschema MbsyncCommand
@@ -230,7 +234,7 @@
        :mbchan mbchan
        :req-chan (chan (->UniqueBuffer CHAN_SIZE))
        :log-chan log-chan
-       :monitor (Object.)})))
+       :monitor (AtomicBoolean. true)})))
 
 (s/defn ^:private dispatch-syncs :- {String MbsyncWorker}
   "Dispatch sync jobs to MbsyncWorker instances. Creates a new channel worker
