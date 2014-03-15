@@ -1,6 +1,7 @@
 (ns mbwatch.types
   (:require [clojure.core.async.impl.protocols :refer [Buffer]]
-            [schema.core :refer [defschema eq]])
+            [clojure.string :as string]
+            [schema.core :as s :refer [Int defschema eq]])
   (:import (clojure.lang Counted)
            (java.util LinkedList)))
 
@@ -26,5 +27,25 @@
   (count [this]
     (.size buf)))
 
-(defn ^UniqueBuffer ->UniqueBuffer [n]
+(s/defn ->UniqueBuffer :- UniqueBuffer
+  [n :- Int]
   (UniqueBuffer. (LinkedList.) n))
+
+(s/defrecord Passwd
+  [name   :- String
+   passwd :- String
+   uid    :- Int
+   gid    :- Int
+   gecos  :- String
+   dir    :- String
+   shell  :- String])
+
+(s/defn parse-passwd :- [Passwd]
+  [s :- String]
+  (mapv (fn [line]
+          (-> (string/split line #"(?<!\\):" 7)
+              (as-> ls (mapv #(string/replace % #"\\(.)" "$1") ls))
+              (update-in [2] #(Integer/parseInt %))
+              (update-in [3] #(Integer/parseInt %))
+              ((fn [[a b c d e f g]] (Passwd. a b c d e f g)))))
+        (string/split-lines s)))
