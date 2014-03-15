@@ -13,8 +13,8 @@
        ─── MbsyncCommand ──┐
                            │
                            │
-                           ▼
-                    ┌──────────────┐              ─┐
+                           ▼                       ┐
+                    ┌──────────────┐               │
                     │ MbsyncMaster │               │
                     └──────┬───────┘               │
                            │                       │
@@ -22,7 +22,8 @@
                ▼                      ▼            │
         ┌──────────────┐       ┌──────────────┐    │
         │ MbsyncWorker │   …   │ MbsyncWorker │    │
-        └──────────────┘       └──────────────┘   ─┘
+        └──────────────┘       └──────────────┘    │
+                                                   ┘
    "
   (:require [clojure.core.async :refer [<!! >!! chan put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]

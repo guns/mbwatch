@@ -1,4 +1,5 @@
 (ns mbwatch.console-logger
+  "Contains ConsoleLogger, an implementation of mbwatch.logging.IItemLogger."
   (:require [clojure.java.shell :refer [sh]]
             [clojure.string :as string]
             [mbwatch.logging :refer [IItemLogger]])
