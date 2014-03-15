@@ -47,7 +47,7 @@
 
 (def ^:const ^:private CHAN_SIZE
   "TODO: Move to Config?"
-  0x100)
+  0x1000)
 
 (s/defn ^:private join-mbargs :- String
   [mbchan :- String

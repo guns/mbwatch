@@ -10,9 +10,9 @@
   (:import (com.stuartsierra.component SystemMap)
            (mbwatch.config Config)))
 
-(def ^:private CHAN_SIZE
+(def ^:const ^:private CHAN_SIZE
   "TODO: Move to Config?"
-  0x100)
+  0x1000)
 
 (s/defn new-system :- SystemMap
   [config   :- Config
