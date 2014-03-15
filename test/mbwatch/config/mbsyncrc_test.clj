@@ -49,8 +49,11 @@
                         :pass "H'|&z]0pIcU2?T/(<!zaIq[wW\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\""}}))
     (is (= (:channels->maildirstores mbsyncrc)
            {"FOO-chan" {:inbox "test-resources/maildir/foo-mdir/INBOX"
-                        :path "test-resources/maildir/foo-mdir/"}
+                        :path "test-resources/maildir/foo-mdir/"
+                        :flatten "/"}
             "BAR-chan" {:inbox "/home/guns/Maildir"
-                        :path "test-resources/maildir/bar-mdir/"}
+                        :path "test-resources/maildir/bar-mdir/"
+                        :flatten "/"}
             "FOO-BAR-chan" {:inbox "/home/guns/Maildir"
-                            :path "test-resources/maildir/bar-mdir/"}}))))
+                            :path "test-resources/maildir/bar-mdir/"
+                            :flatten "/"}}))))

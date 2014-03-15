@@ -3,7 +3,7 @@
   (:require [clojure.java.shell :refer [sh]]
             [clojure.string :as string]
             [mbwatch.util :refer [chomp dequote]]
-            [schema.core :as s :refer [both defschema either enum eq one
+            [schema.core :as s :refer [both defschema either enum eq maybe one
                                        optional-key pair pred]])
   (:import (clojure.lang IPersistentSet)))
 
@@ -56,8 +56,9 @@
    :pass String})
 
 (defschema Maildirstore
-  {:inbox FilteredLine
-   :path  FilteredLine})
+  {:inbox   FilteredLine
+   :path    FilteredLine
+   :flatten FilteredLine})
 
 (s/defrecord Mbsyncrc
   [text                    :- String
@@ -150,7 +151,8 @@
     (fn [m store-name mdirmap]
       (assoc m store-name
              {:inbox (or (mdirmap "inbox") default-mbsync-inbox)
-              :path (mdirmap "path")}))
+              :path (mdirmap "path")
+              :flatten (or (mdirmap "flatten") "/")}))
     {} stores))
 
 (s/defn ^:private map-slave-maildirstores :- {Word Maildirstore}
