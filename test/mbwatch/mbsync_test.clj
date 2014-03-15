@@ -30,7 +30,8 @@
                 :start dt
                 :stop dt
                 :status 1
-                :error "ERROR"})]
+                :error "ERROR"
+                :maildir {:inbox "inbox/" :path "path/"}})]
     (is (= DEBUG (log-level start)))
     (is (= ERR (log-level stop)))
     (is (= (->log start)

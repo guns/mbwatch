@@ -29,6 +29,7 @@
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
+            [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.config]
             [mbwatch.logging :refer [DEBUG ERR INFO Loggable NOTICE WARNING]]
             [mbwatch.process :as process :refer [dump! interruptible-wait]]
@@ -83,13 +84,14 @@
       (LogItem. level start msg))))
 
 (s/defrecord MbsyncEventStop
-  [level  :- Int
-   mbchan :- String
-   mboxes :- [String]
-   start  :- DateTime
-   stop   :- DateTime
-   status :- Integer
-   error  :- (maybe String)]
+  [level   :- Int
+   mbchan  :- String
+   mboxes  :- [String]
+   start   :- DateTime
+   stop    :- DateTime
+   status  :- Integer
+   error   :- (maybe String)
+   maildir :- Maildirstore]
 
   Loggable
 
@@ -118,6 +120,7 @@
 
 (s/defrecord MbsyncWorker
   [mbsyncrc   :- String
+   maildir    :- Maildirstore
    mbchan     :- String
    req-chan   :- ReadPort
    log-chan   :- WritePort
@@ -154,7 +157,7 @@
 (s/defn ^:private sync-boxes! :- VOID
   [mbsync-worker-map :- (:schema (class-schema MbsyncWorker))
    mboxes            :- [String]]
-  (let [{:keys [mbsyncrc mbchan log-chan monitor]} mbsync-worker-map
+  (let [{:keys [mbsyncrc maildir mbchan log-chan monitor]} mbsync-worker-map
         ev (strict-map->MbsyncEventStart
              {:level INFO
               :mbchan mbchan
@@ -174,7 +177,8 @@
                      :error (when (and graceful? (not (zero? v)))
                               (let [s (StringWriter.)]
                                 (dump! proc :err s)
-                                (str s)))))]
+                                (str s)))
+                     :maildir maildir))]
     (put! log-chan ev')
     nil))
 
@@ -232,6 +236,7 @@
   (let [{:keys [config log-chan]} mbsync-master-map]
     (map->MbsyncWorker
       {:mbsyncrc (-> config :mbsyncrc :text)
+       :maildir (get-in config [:mbsyncrc :channels->maildirstores mbchan])
        :mbchan mbchan
        :req-chan (chan (->UniqueBuffer CHAN_SIZE))
        :log-chan log-chan
