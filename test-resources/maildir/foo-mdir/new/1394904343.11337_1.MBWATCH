@@ -1,0 +1,14 @@
+From: =?utf-8?B?4piFIOKdpCBDYXJvbCDinaQg4piFIDxjYXJvbEBleGFtcGxlLmNvbT4=?=
+To: Bob <bob@example.com>
+Subject: My public key
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Date: Sat, 15 Mar 2014 12:25:43 -0500
+
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: GnuPG v2.0.20 (GNU/Linux)
+
+SCREW+YOU/BOB==
+
+-----END PGP PUBLIC KEY BLOCK-----
