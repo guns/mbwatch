@@ -3,7 +3,8 @@
             [clojure.string :as string]
             [mbwatch.util :refer [chomp dequote]]
             [schema.core :as s :refer [both defschema either enum eq one
-                                       optional-key pair pred]]))
+                                       optional-key pair pred]])
+  (:import (clojure.lang IPersistentSet)))
 
 (defschema Word
   (pred #(and (string? %)
@@ -56,7 +57,8 @@
 (s/defrecord Config
   [mbsyncrc    :- String
    sections    :- Sections
-   credentials :- {Word IMAPCredentials}])
+   credentials :- {Word IMAPCredentials}
+   channels    :- IPersistentSet])
 
 (def ^:const default-path
   "Default path of mbsyncrc."
@@ -169,4 +171,5 @@
     (strict-map->Config
       {:mbsyncrc (render sections credentials)
        :sections sections
+       :channels (-> sections :channel keys set)
        :credentials credentials})))

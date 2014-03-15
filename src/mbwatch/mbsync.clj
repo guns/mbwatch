@@ -238,14 +238,19 @@
   [sync-req          :- {String [String]}
    workers           :- {String MbsyncWorker}
    mbsync-master-map :- (:schema (class-schema MbsyncMaster))]
-  (reduce-kv
-    (fn [ws ch bs]
-      (let [ws (if (contains? ws ch)
-                 ws
-                 (assoc ws ch (.start (new-mbsync-worker ch mbsync-master-map))))]
-        (put! (get-in ws [ch :req-chan]) bs)
-        ws))
-    workers sync-req))
+  (let [channels (-> mbsync-master-map :config :channels)]
+    (reduce-kv
+      (fn [ws ch bs]
+        (if (contains? channels ch)
+          (let [ws (if (contains? ws ch)
+                     ws
+                     (assoc ws ch (.start (new-mbsync-worker ch mbsync-master-map))))]
+            (put! (get-in ws [ch :req-chan]) bs)
+            ws)
+          (do (put! (:log-chan mbsync-master-map)
+                    (LogItem. WARNING (DateTime.) (format "Unknown channel: `%s`" ch)))
+              ws)))
+      workers sync-req)))
 
 (s/defn ^:private handle-mbsync-command :- (maybe {String MbsyncWorker})
   [command           :- MbsyncCommand
