@@ -5,7 +5,7 @@
   (:import (java.io File)))
 
 (def ^String test-mdir
-  "test-resources/maildir/foo-mdir")
+  "test-resources/maildir/foo-mdir/INBOX")
 
 (s/deftest test-new-messages
   (is (= (count (md/new-messages test-mdir 0))
