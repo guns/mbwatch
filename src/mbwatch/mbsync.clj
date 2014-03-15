@@ -89,9 +89,9 @@
    mboxes  :- [String]
    start   :- DateTime
    stop    :- DateTime
-   status  :- Integer
+   status  :- Int
    error   :- (maybe String)
-   maildir :- Maildirstore]
+   maildir :- (maybe Maildirstore)]
 
   Loggable
 
