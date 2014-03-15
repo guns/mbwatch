@@ -231,7 +231,7 @@
    mbsync-master-map :- (:schema (class-schema MbsyncMaster))]
   (let [{:keys [config log-chan]} mbsync-master-map]
     (map->MbsyncWorker
-      {:mbsyncrc (:mbsyncrc config)
+      {:mbsyncrc (-> config :mbsyncrc :text)
        :mbchan mbchan
        :req-chan (chan (->UniqueBuffer CHAN_SIZE))
        :log-chan log-chan
@@ -243,7 +243,7 @@
   [sync-req          :- {String [String]}
    workers           :- {String MbsyncWorker}
    mbsync-master-map :- (:schema (class-schema MbsyncMaster))]
-  (let [channels (-> mbsync-master-map :config :channels)]
+  (let [channels (-> mbsync-master-map :config :mbsyncrc :channels)]
     (reduce-kv
       (fn [ws ch bs]
         (if (contains? channels ch)
