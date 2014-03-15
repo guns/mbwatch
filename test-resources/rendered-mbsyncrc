@@ -17,6 +17,7 @@ useimaps yes
 user foo@example.com
 
 maildirstore BAR-mdir
+inbox test-resources/maildir/bar-mdir/INBOX
 path test-resources/maildir/bar-mdir/
 
 maildirstore FOO-mdir

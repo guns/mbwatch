@@ -55,15 +55,23 @@
    :user String
    :pass String})
 
+(defschema Maildirstore
+  {:inbox FilteredLine
+   :path  FilteredLine})
+
 (s/defrecord Mbsyncrc
-  [text        :- String
-   sections    :- Sections
-   credentials :- {Word IMAPCredentials}
-   channels    :- IPersistentSet])
+  [text                    :- String
+   sections                :- Sections
+   credentials             :- {Word IMAPCredentials}
+   channels                :- IPersistentSet
+   channels->maildirstores :- {Word Maildirstore}])
 
 (def ^:const default-path
   "Default path of mbsyncrc."
   (str (System/getProperty "user.home") \/ ".mbsyncrc"))
+
+(def ^:private default-mbsync-inbox
+  (str (System/getProperty "user.home") \/ "Maildir"))
 
 (s/defn ^:private paragraphs :- [[String]]
   [s :- String]
@@ -136,6 +144,28 @@
       (assoc m store-name (parse-credentials imap)))
     {} imapstores))
 
+(s/defn ^:private map-maildirstores :- {Word Maildirstore}
+  [stores :- MapSectionValue]
+  (reduce-kv
+    (fn [m store-name mdirmap]
+      (assoc m store-name
+             {:inbox (or (mdirmap "inbox") default-mbsync-inbox)
+              :path (mdirmap "path")}))
+    {} stores))
+
+(s/defn ^:private map-slave-maildirstores :- {Word Maildirstore}
+  [channels      :- MapSectionValue
+   maildirstores :- {Word Maildirstore}]
+  (reduce-kv
+    (fn [m ch-name ch-map]
+      (if-let [mdir (->> (ch-map "slave")
+                         (re-find #"\A:([^:]+):")
+                         second
+                         maildirstores)]
+        (assoc m ch-name mdir)
+        m))
+    {} channels))
+
 (s/defn ^:private replace-passcmd :- MapSectionValue
   [imapstore   :- MapSectionValue
    credentials :- {Word IMAPCredentials}]
@@ -168,9 +198,13 @@
 (s/defn parse :- Mbsyncrc
   [s :- String]
   (let [sections (parse-tokens (tokenize s))
-        credentials (map-credentials (:imapstore sections))]
+        credentials (map-credentials (:imapstore sections))
+        channels->maildirstores (map-slave-maildirstores
+                                  (:channel sections)
+                                  (map-maildirstores (:maildirstore sections)))]
     (strict-map->Mbsyncrc
       {:text (render sections credentials)
        :sections sections
+       :credentials credentials
        :channels (-> sections :channel keys set)
-       :credentials credentials})))
+       :channels->maildirstores channels->maildirstores})))

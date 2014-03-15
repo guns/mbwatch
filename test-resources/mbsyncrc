@@ -32,6 +32,7 @@ MaildirStore FOO-mdir
 Path test-resources/maildir/foo-mdir/
 
 MaildirStore BAR-mdir
+Inbox test-resources/maildir/bar-mdir/INBOX
 Path test-resources/maildir/bar-mdir/
 
 #

@@ -6,6 +6,8 @@
 
 (s/deftest test-parse
   (let [mbsyncrc (mb/parse (slurp (io/resource "mbsyncrc")))]
+    (is (= (:text mbsyncrc)
+           (slurp (io/resource "rendered-mbsyncrc"))))
     (is (= (:sections mbsyncrc)
            {:general ["Create Both"
                       "Expunge Both"]
@@ -21,7 +23,8 @@
                                     "requiressl" "yes"
                                     "pass" "\"H'|&z]0pIcU2?T/(<!zaIq[wW\\\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\\\"\""}}
             :maildirstore {"FOO-mdir" {"path" "test-resources/maildir/foo-mdir/"}
-                           "BAR-mdir" {"path" "test-resources/maildir/bar-mdir/"}}
+                           "BAR-mdir" {"inbox" "test-resources/maildir/bar-mdir/INBOX"
+                                       "path" "test-resources/maildir/bar-mdir/"}}
             :channel {"FOO-chan" {"master" ":FOO-imap:"
                                   "slave" ":FOO-mdir:"
                                   "patterns" "*"}
@@ -33,6 +36,8 @@
                                       "sync" "All"
                                       "create" "Both"
                                       "expunge" "Both"}}}))
+    (is (= (:channels mbsyncrc)
+           #{"FOO-chan" "BAR-chan" "FOO-BAR-chan"}))
     (is (= (:credentials mbsyncrc)
            {"FOO-imap" {:host "imap.example.com"
                         :user "foo@example.com"
@@ -42,5 +47,10 @@
                         :user "bar@example.com"
                         :port 993
                         :pass "H'|&z]0pIcU2?T/(<!zaIq[wW\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\""}}))
-    (is (= (:text mbsyncrc)
-           (slurp (io/resource "rendered-mbsyncrc"))))))
+    (is (= (:channels->maildirstores mbsyncrc)
+           {"FOO-chan" {:inbox "/home/guns/Maildir",
+                        :path "test-resources/maildir/foo-mdir/"},
+            "BAR-chan" {:inbox "test-resources/maildir/bar-mdir/INBOX",
+                        :path "test-resources/maildir/bar-mdir/"},
+            "FOO-BAR-chan" {:inbox "test-resources/maildir/bar-mdir/INBOX",
+                            :path "test-resources/maildir/bar-mdir/"}}))))
