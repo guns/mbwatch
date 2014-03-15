@@ -29,10 +29,10 @@ Pass "H'|&z]0pIcU2?T/(<!zaIq[wW\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\""
 #
 
 MaildirStore FOO-mdir
+Inbox test-resources/maildir/foo-mdir/INBOX
 Path test-resources/maildir/foo-mdir/
 
 MaildirStore BAR-mdir
-Inbox test-resources/maildir/bar-mdir/INBOX
 Path test-resources/maildir/bar-mdir/
 
 #

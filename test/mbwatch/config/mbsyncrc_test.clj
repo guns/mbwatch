@@ -22,9 +22,9 @@
                                     "useimaps" "yes"
                                     "requiressl" "yes"
                                     "pass" "\"H'|&z]0pIcU2?T/(<!zaIq[wW\\\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\\\"\""}}
-            :maildirstore {"FOO-mdir" {"path" "test-resources/maildir/foo-mdir/"}
-                           "BAR-mdir" {"inbox" "test-resources/maildir/bar-mdir/INBOX"
-                                       "path" "test-resources/maildir/bar-mdir/"}}
+            :maildirstore {"FOO-mdir" {"inbox" "test-resources/maildir/foo-mdir/INBOX"
+                                       "path" "test-resources/maildir/foo-mdir/"}
+                           "BAR-mdir" {"path" "test-resources/maildir/bar-mdir/"}}
             :channel {"FOO-chan" {"master" ":FOO-imap:"
                                   "slave" ":FOO-mdir:"
                                   "patterns" "*"}
@@ -48,9 +48,9 @@
                         :port 993
                         :pass "H'|&z]0pIcU2?T/(<!zaIq[wW\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\""}}))
     (is (= (:channels->maildirstores mbsyncrc)
-           {"FOO-chan" {:inbox "/home/guns/Maildir",
-                        :path "test-resources/maildir/foo-mdir/"},
-            "BAR-chan" {:inbox "test-resources/maildir/bar-mdir/INBOX",
-                        :path "test-resources/maildir/bar-mdir/"},
-            "FOO-BAR-chan" {:inbox "test-resources/maildir/bar-mdir/INBOX",
+           {"FOO-chan" {:inbox "test-resources/maildir/foo-mdir/INBOX"
+                        :path "test-resources/maildir/foo-mdir/"}
+            "BAR-chan" {:inbox "/home/guns/Maildir"
+                        :path "test-resources/maildir/bar-mdir/"}
+            "FOO-BAR-chan" {:inbox "/home/guns/Maildir"
                             :path "test-resources/maildir/bar-mdir/"}}))))
