@@ -32,7 +32,7 @@
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.config]
             [mbwatch.logging :refer [DEBUG ERR INFO Loggable NOTICE WARNING]]
-            [mbwatch.process :as process :refer [dump! interruptible-wait]]
+            [mbwatch.process :as process]
             [mbwatch.types :refer [->UniqueBuffer VOID]]
             [mbwatch.util :refer [class-name human-duration poison-chan
                                   shell-escape sig-notify-all thread-loop
@@ -166,7 +166,7 @@
         proc (spawn-sync mbsyncrc mbchan mboxes)
         _ (put! log-chan ev)
 
-        graceful? (interruptible-wait monitor proc)
+        graceful? (process/interruptible-wait monitor proc)
 
         v (.exitValue proc)
         ev' (strict-map->MbsyncEventStop
@@ -176,7 +176,7 @@
                      :status v
                      :error (when (and graceful? (not (zero? v)))
                               (let [s (StringWriter.)]
-                                (dump! proc :err s)
+                                (process/dump! proc :err s)
                                 (str s)))
                      :maildir maildir))]
     (put! log-chan ev')
