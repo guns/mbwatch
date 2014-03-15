@@ -1,12 +1,12 @@
 (ns mbwatch.mbsync
-  (:require [clojure.core.async :refer [<!! >!! chan put! unique]]
+  (:require [clojure.core.async :refer [<!! >!! chan put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.config]
             [mbwatch.logging :refer [DEBUG ERR INFO Loggable NOTICE WARNING]]
             [mbwatch.process :as process :refer [dump! interruptible-wait]]
-            [mbwatch.types :refer [VOID]]
+            [mbwatch.types :refer [->UniqueBuffer VOID]]
             [mbwatch.util :refer [class-name human-duration poison-chan
                                   shell-escape sig-notify-all thread-loop
                                   with-chan-value]]
@@ -203,7 +203,7 @@
     (map->MbsyncWorker
       {:mbsyncrc (:mbsyncrc config)
        :mbchan mbchan
-       :req-chan (unique (chan CHAN_SIZE))
+       :req-chan (chan (->UniqueBuffer CHAN_SIZE))
        :log-chan log-chan
        :monitor (Object.)})))
 
