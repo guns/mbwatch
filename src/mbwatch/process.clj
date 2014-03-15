@@ -2,7 +2,8 @@
   (:require [clojure.java.io :as io]
             [mbwatch.types :refer [VOID]]
             [mbwatch.util :refer [first-alt sig-wait]]
-            [schema.core :as s :refer [enum]]))
+            [schema.core :as s :refer [enum]])
+  (:import (java.io IOException)))
 
 (s/defn spawn :- Process
   "Asynchronously launch a process."
@@ -37,7 +38,9 @@
   [proc   :- Process
    stream :- (enum :out :err)
    writer :- s/Any]
-  (io/copy (case stream
-             :out (.getInputStream proc)
-             :err (.getErrorStream proc))
-           writer))
+  (try
+    (io/copy (case stream
+               :out (.getInputStream proc)
+               :err (.getErrorStream proc))
+             writer)
+    (catch IOException _)))

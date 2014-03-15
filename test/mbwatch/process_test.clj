@@ -1,5 +1,5 @@
 (ns mbwatch.process-test
-  (:require [clojure.test :refer [is]]
+  (:require [clojure.test :refer [is testing]]
             [mbwatch.process :as p]
             [mbwatch.util :refer [sig-notify-all]]
             [schema.test :as s]))
@@ -11,7 +11,11 @@
          (with-out-str
            (p/dump! (p/spawn "sh" "-c" "echo Hello world. >&2") :err *out*))
          (with-out-str
-           (p/dump! (p/spawn "cat" :in "Hello world.\n") :out *out*)))))
+           (p/dump! (p/spawn "cat" :in "Hello world.\n") :out *out*))))
+  (testing "Should not throw IOException"
+    (let [proc (p/spawn "sh" "-c" "echo Hello world.")]
+      (.close (.getInputStream proc))
+      (is (= "" (with-out-str (p/dump! proc :out *out*)))))))
 
 (s/deftest test-interruptible-wait
   (is (true? (p/interruptible-wait (Object.) (p/spawn "true"))))
