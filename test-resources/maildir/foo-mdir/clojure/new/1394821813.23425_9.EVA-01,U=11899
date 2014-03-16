@@ -1,0 +1,105 @@
+Delivered-To: self@sungpae.com
+Received: by 10.14.212.5 with SMTP id x5csp46314eeo;
+        Fri, 14 Mar 2014 11:20:33 -0700 (PDT)
+X-Received: by 10.224.131.193 with SMTP id y1mr11552672qas.86.1394821233082;
+        Fri, 14 Mar 2014 11:20:33 -0700 (PDT)
+Return-Path: <clojure+bncBDYKVKM2TUFRB24QRWMQKGQE5EE43CA@googlegroups.com>
+Received: from mail-qg0-x23f.google.com (mail-qg0-x23f.google.com [2607:f8b0:400d:c04::23f])
+        by mx.google.com with ESMTPS id f6si3879252qap.88.2014.03.14.11.20.32
+        for <self@sungpae.com>
+        (version=TLSv1 cipher=ECDHE-RSA-RC4-SHA bits=128/128);
+        Fri, 14 Mar 2014 11:20:33 -0700 (PDT)
+Received-SPF: pass (google.com: domain of clojure+bncBDYKVKM2TUFRB24QRWMQKGQE5EE43CA@googlegroups.com designates 2607:f8b0:400d:c04::23f as permitted sender)
+Authentication-Results: mx.google.com;
+       spf=pass (google.com: domain of clojure+bncBDYKVKM2TUFRB24QRWMQKGQE5EE43CA@googlegroups.com designates 2607:f8b0:400d:c04::23f as permitted sender) smtp.mail=clojure+bncBDYKVKM2TUFRB24QRWMQKGQE5EE43CA@googlegroups.com;
+       dkim=pass header.i=@googlegroups.com;
+       dmarc=pass (p=NONE dis=NONE) header.from=gmail.com
+Received: by mail-qg0-f63.google.com with SMTP id a108sf605017qge.8
+        for <self@sungpae.com>; Fri, 14 Mar 2014 11:20:32 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=googlegroups.com; s=20120806;
+        h=mime-version:in-reply-to:references:from:date:message-id:subject:to
+         :x-original-sender:x-original-authentication-results:reply-to
+         :precedence:mailing-list:list-id:list-post:list-help:list-archive
+         :sender:list-subscribe:list-unsubscribe:content-type;
+        bh=bNjoOvDJd1ihmh2z73NIJs9AuzahC4dIkd1vMRUdKsw=;
+        b=rbqfXh1w0Lgk6Z+Hl97jl8cjL9XKu78G2lTRHBiJ57ZgZzv6nQ7zV4gMqZlAvpcw4L
+         2HrXDRSolKTWbwYD/8nQu6wJvwk0vEWovOF8Ztg9eyKpM2WfT037JDDa1p5EEoYy0Dzk
+         vU56sY+uBpFur3kctVxVqQ9VZMEyPTQrXHZN0XZZrGQD+1SIAnyo8PkHL3OdpeXXieGk
+         dC3+Tkf9tMNdUGn4OJcsqdtvaroLzi/alDQq4oCe7+/datZr2+kFmq0wZ3o+ZrX8mdlz
+         BXVX8uwnO3BOqMw3BOSxp+nBz2oPyw5m8STdS6Xy6SzTltV4aJiXPkH1auTRiCTihdO8
+         iKoA==
+X-Received: by 10.140.37.168 with SMTP id r37mr64460qgr.13.1394821232582;
+        Fri, 14 Mar 2014 11:20:32 -0700 (PDT)
+X-BeenThere: clojure@googlegroups.com
+Received: by 10.140.102.1 with SMTP id v1ls870532qge.50.gmail; Fri, 14 Mar
+ 2014 11:20:27 -0700 (PDT)
+X-Received: by 10.236.45.41 with SMTP id o29mr3515610yhb.13.1394821227318;
+        Fri, 14 Mar 2014 11:20:27 -0700 (PDT)
+Received: from mail-ob0-x22c.google.com (mail-ob0-x22c.google.com [2607:f8b0:4003:c01::22c])
+        by gmr-mx.google.com with ESMTPS id jd10si610127igb.0.2014.03.14.11.20.27
+        for <clojure@googlegroups.com>
+        (version=TLSv1 cipher=ECDHE-RSA-RC4-SHA bits=128/128);
+        Fri, 14 Mar 2014 11:20:27 -0700 (PDT)
+Received-SPF: pass (google.com: domain of raould@gmail.com designates 2607:f8b0:4003:c01::22c as permitted sender) client-ip=2607:f8b0:4003:c01::22c;
+Received: by mail-ob0-x22c.google.com with SMTP id wm4so2953932obc.3
+        for <clojure@googlegroups.com>; Fri, 14 Mar 2014 11:20:27 -0700 (PDT)
+X-Received: by 10.60.54.202 with SMTP id l10mr7889003oep.29.1394821227088;
+ Fri, 14 Mar 2014 11:20:27 -0700 (PDT)
+MIME-Version: 1.0
+Received: by 10.182.72.7 with HTTP; Fri, 14 Mar 2014 11:20:07 -0700 (PDT)
+In-Reply-To: <CAJvqBXh9PDtOq_ZcNqnh4LcSDLweGjUMj6cffVoWMDiAM5CW5Q@mail.gmail.com>
+References: <CAMtSTXxevmM5NixMDJR6V4403BAg985h=naq-AAiZ+=NdD55NQ@mail.gmail.com>
+ <CAL36E+tA+KTsSPcmxDXNB2xS-fz7D4dNB5o8R6BGaFBiOR5UjA@mail.gmail.com>
+ <CAMtSTXygkFcxR0mq_Fw7JkH_HgMn1wp+cqQM4nyKCMOdmmYjUA@mail.gmail.com>
+ <CAJ7XQb4gmwPxsaaxyAxMo37Sqwoqw338aDaRAjEH-3eQBPkeFA@mail.gmail.com>
+ <CAJvqBXig-J2W678EruVrY=k93bKRHgb+V0d36COojYYVsqB3WA@mail.gmail.com>
+ <CAJ7XQb64fMn9d1cs3rsOw3V3kdz1tzA-c4x+TBoZzvzKZf5tVw@mail.gmail.com>
+ <CAJvqBXg7DHq47GAPciydTEjnkyGAboGyWSRdsmSeekU=UkVP_g@mail.gmail.com>
+ <CAJ7XQb5wwg_g1kFZ5wA-U_hKmtUECY_N5Fc6G9f6nAf+U9sc2w@mail.gmail.com>
+ <CAJvqBXhprcZCKp32Ru-EY+Hp0NZ2wmVVwdpwYb3mS_k+8qZDUw@mail.gmail.com> <CAJvqBXh9PDtOq_ZcNqnh4LcSDLweGjUMj6cffVoWMDiAM5CW5Q@mail.gmail.com>
+From: Raoul Duke <raould@gmail.com>
+Date: Fri, 14 Mar 2014 11:20:07 -0700
+Message-ID: <CAJ7XQb7jRqvBpuJO+y8XQSPjBhsYc+0RseSDfRH_euX7Z2Zhig@mail.gmail.com>
+Subject: Re: STM and persistent data structures performance on mutli-core archs
+To: clojure@googlegroups.com
+X-Original-Sender: raould@gmail.com
+X-Original-Authentication-Results: gmr-mx.google.com;       spf=pass
+ (google.com: domain of raould@gmail.com designates 2607:f8b0:4003:c01::22c as
+ permitted sender) smtp.mail=raould@gmail.com;       dkim=pass
+ header.i=@gmail.com;       dmarc=pass (p=NONE dis=NONE) header.from=gmail.com
+Reply-To: clojure@googlegroups.com
+Precedence: list
+Mailing-list: list clojure@googlegroups.com; contact clojure+owners@googlegroups.com
+List-ID: <clojure.googlegroups.com>
+X-Google-Group-Id: 999298108703
+List-Post: <http://groups.google.com/group/clojure/post>, <mailto:clojure@googlegroups.com>
+List-Help: <http://groups.google.com/support/>, <mailto:clojure+help@googlegroups.com>
+List-Archive: <http://groups.google.com/group/clojure>
+Sender: clojure@googlegroups.com
+List-Subscribe: <http://groups.google.com/group/clojure/subscribe>, <mailto:clojure+subscribe@googlegroups.com>
+List-Unsubscribe: <http://groups.google.com/group/clojure/subscribe>, <mailto:googlegroups-manage+999298108703+unsubscribe@googlegroups.com>
+Content-Type: text/plain; charset=ISO-8859-1
+X-TUID: xajf86gvcNYy
+
+> that closely match or can be massaged to match or 'have sympathy' for the
+> hardware realities.  I think this can get lost when we stray too far.
+
+i wish this were somehow more modeled, composed, and controllable up
+in our ides and source code, rather than being esoteric tweaky options
+in the various inscrutable layers. i want a futuristic JIT that does
+this kind of stuff for me :-) :-)
+
+-- 
+You received this message because you are subscribed to the Google
+Groups "Clojure" group.
+To post to this group, send email to clojure@googlegroups.com
+Note that posts from new members are moderated - please be patient with your first post.
+To unsubscribe from this group, send email to
+clojure+unsubscribe@googlegroups.com
+For more options, visit this group at
+http://groups.google.com/group/clojure?hl=en
+--- 
+You received this message because you are subscribed to the Google Groups "Clojure" group.
+To unsubscribe from this group and stop receiving emails from it, send an email to clojure+unsubscribe@googlegroups.com.
+For more options, visit https://groups.google.com/d/optout.

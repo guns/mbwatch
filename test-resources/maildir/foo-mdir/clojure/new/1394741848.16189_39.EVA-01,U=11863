@@ -1,0 +1,284 @@
+Delivered-To: self@sungpae.com
+Received: by 10.14.212.5 with SMTP id x5csp254076eeo;
+        Thu, 13 Mar 2014 11:24:41 -0700 (PDT)
+X-Received: by 10.14.6.195 with SMTP id 43mr3634790een.101.1394735081088;
+        Thu, 13 Mar 2014 11:24:41 -0700 (PDT)
+Return-Path: <clojure+bncBC32VOV5RYPRBXXPQ6MQKGQEEV5NVHQ@googlegroups.com>
+Received: from mail-ea0-x23f.google.com (mail-ea0-x23f.google.com [2a00:1450:4013:c01::23f])
+        by mx.google.com with ESMTPS id x47si6176062eel.244.2014.03.13.11.24.40
+        for <self@sungpae.com>
+        (version=TLSv1 cipher=ECDHE-RSA-RC4-SHA bits=128/128);
+        Thu, 13 Mar 2014 11:24:41 -0700 (PDT)
+Received-SPF: pass (google.com: domain of clojure+bncBC32VOV5RYPRBXXPQ6MQKGQEEV5NVHQ@googlegroups.com designates 2a00:1450:4013:c01::23f as permitted sender)
+Authentication-Results: mx.google.com;
+       spf=pass (google.com: domain of clojure+bncBC32VOV5RYPRBXXPQ6MQKGQEEV5NVHQ@googlegroups.com designates 2a00:1450:4013:c01::23f as permitted sender) smtp.mail=clojure+bncBC32VOV5RYPRBXXPQ6MQKGQEEV5NVHQ@googlegroups.com;
+       dkim=pass header.i=@googlegroups.com;
+       dmarc=pass (p=NONE dis=NONE) header.from=gmail.com
+Received: by mail-ea0-f191.google.com with SMTP id k10sf88027eaj.8
+        for <self@sungpae.com>; Thu, 13 Mar 2014 11:24:40 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=googlegroups.com; s=20120806;
+        h=mime-version:in-reply-to:references:date:message-id:subject:from:to
+         :x-original-sender:x-original-authentication-results:reply-to
+         :precedence:mailing-list:list-id:list-post:list-help:list-archive
+         :sender:list-subscribe:list-unsubscribe:content-type;
+        bh=XTLp3IEDbKOiB6lMG1tD+T0Dd8fGb1UtHpoj5utGgSg=;
+        b=onppPTFMmKCxI0JKQNE5FxJTMgwcjQuAFaI1wQj5K90PUCoDlJFloOcEbmhL3UP2QP
+         DuVtTLSg+WDKoGGzmgIdK34M0ABVkKc9dMM+MCt5iOFkOdlY9PMBuMWWFPa2b3GLAxqc
+         fvKyl36imMTkzP5TTCqmL1w+ZITtPjXpidEKv9K1eu5u+Bf9t53C1KqBNmNUt+XBIHyt
+         qf6SfXbK3ILF7fnXe8F/XPusvxlzSY5BSJpjVUDptzjR4JZcBb+IMdoSwAzOXVenxFCD
+         HIi34hB39/0dwf6CwgoGZTiKzjcv8jpFP/D9KzcXC26zt2Xe2mw+s3TUMs6GYFo92x+f
+         8f/g==
+X-Received: by 10.180.79.7 with SMTP id f7mr21687wix.14.1394735080547;
+        Thu, 13 Mar 2014 11:24:40 -0700 (PDT)
+X-BeenThere: clojure@googlegroups.com
+Received: by 10.180.72.147 with SMTP id d19ls503369wiv.31.canary; Thu, 13 Mar
+ 2014 11:24:30 -0700 (PDT)
+X-Received: by 10.15.34.194 with SMTP id e42mr1618785eev.0.1394735070056;
+        Thu, 13 Mar 2014 11:24:30 -0700 (PDT)
+Received: from mail-we0-x236.google.com (mail-we0-x236.google.com [2a00:1450:400c:c03::236])
+        by gmr-mx.google.com with ESMTPS id ey7si635990wib.1.2014.03.13.11.24.30
+        for <clojure@googlegroups.com>
+        (version=TLSv1 cipher=ECDHE-RSA-RC4-SHA bits=128/128);
+        Thu, 13 Mar 2014 11:24:30 -0700 (PDT)
+Received-SPF: pass (google.com: domain of tbaldridge@gmail.com designates 2a00:1450:400c:c03::236 as permitted sender) client-ip=2a00:1450:400c:c03::236;
+Received: by mail-we0-f182.google.com with SMTP id p61so1179647wes.41
+        for <clojure@googlegroups.com>; Thu, 13 Mar 2014 11:24:30 -0700 (PDT)
+MIME-Version: 1.0
+X-Received: by 10.180.163.206 with SMTP id yk14mr2759326wib.5.1394735069912;
+ Thu, 13 Mar 2014 11:24:29 -0700 (PDT)
+Received: by 10.194.37.35 with HTTP; Thu, 13 Mar 2014 11:24:29 -0700 (PDT)
+In-Reply-To: <CAMtSTXxevmM5NixMDJR6V4403BAg985h=naq-AAiZ+=NdD55NQ@mail.gmail.com>
+References: <CAMtSTXxevmM5NixMDJR6V4403BAg985h=naq-AAiZ+=NdD55NQ@mail.gmail.com>
+Date: Thu, 13 Mar 2014 12:24:29 -0600
+Message-ID: <CAL36E+tA+KTsSPcmxDXNB2xS-fz7D4dNB5o8R6BGaFBiOR5UjA@mail.gmail.com>
+Subject: Re: STM and persistent data structures performance on mutli-core archs
+From: Timothy Baldridge <tbaldridge@gmail.com>
+To: clojure@googlegroups.com
+X-Original-Sender: tbaldridge@gmail.com
+X-Original-Authentication-Results: gmr-mx.google.com;       spf=pass
+ (google.com: domain of tbaldridge@gmail.com designates 2a00:1450:400c:c03::236
+ as permitted sender) smtp.mail=tbaldridge@gmail.com;       dkim=pass
+ header.i=@gmail.com;       dmarc=pass (p=NONE dis=NONE) header.from=gmail.com
+Reply-To: clojure@googlegroups.com
+Precedence: list
+Mailing-list: list clojure@googlegroups.com; contact clojure+owners@googlegroups.com
+List-ID: <clojure.googlegroups.com>
+X-Google-Group-Id: 999298108703
+List-Post: <http://groups.google.com/group/clojure/post>, <mailto:clojure@googlegroups.com>
+List-Help: <http://groups.google.com/support/>, <mailto:clojure+help@googlegroups.com>
+List-Archive: <http://groups.google.com/group/clojure>
+Sender: clojure@googlegroups.com
+List-Subscribe: <http://groups.google.com/group/clojure/subscribe>, <mailto:clojure+subscribe@googlegroups.com>
+List-Unsubscribe: <http://groups.google.com/group/clojure/subscribe>, <mailto:googlegroups-manage+999298108703+unsubscribe@googlegroups.com>
+Content-Type: multipart/alternative; boundary=00248c0d793865fbe604f48110a1
+X-TUID: VNIFTpgu6kmC
+
+--00248c0d793865fbe604f48110a1
+Content-Type: text/plain; charset=ISO-8859-1
+
+I talked to Martin after a CodeMesh, and had a wonderful discussion with
+him about performance from his side of the issue. From "his side" I mean
+super high performance. You have to get a bit of background on some of his
+work (at least the work he talks about), much of what he does is high
+throughput trading systems. In these systems you will often see small
+messages (50 bytes or so) and the the goal is to process them as quickly as
+possible.
+
+This means that almost everything is secondary to throughput. So let's take
+that generalization and apply it to the more common work I or people like
+me do...here we care mostly about programmer productivity, and making
+simpler systems. Here immutability and STM like concepts (I'm dumping STM
+in with atoms here) work pretty well.
+
+At one point in our conversation Martin mentioned that he was able to get
+about 100,000 messages through his system a second. That's awesome! How
+often do you have 100k messages in your system?
+
+Everything has tradeoffs. One more example was when Martin explained how he
+was able to get a 10x performance boost by pinning a JVM to each socket in
+a server, then pinning that JVM's memory to the RAM sockets closest to that
+CPU socket. Then he carefully setup shared memory message passing via
+burning one core on each CPU to monitor the queues, and moving messages
+only in the directions directly supported by the Hyper Transport bus. Once
+again, that's amazing...once again I've never needed that to ship a
+product.
+
+Sadly, other parts of that talk are very true. Many programmers I've talked
+to don't understand the difference between a hash map and a list, let alone
+understand when they would use them. So I'll fight that battle, and Martin
+can fight his, and I'll apply his work to my problems as the solution fits.
+
+So that's the way I view it. I don't claim to know much at all about
+Martin's work, I just know enough to know that I don't deal with those
+problems. Most servers I work on are idle at least 50% of the time. And
+when they do get overloaded I can just startup more machines.
+
+Timothy
+
+
+On Thu, Mar 13, 2014 at 10:58 AM, Andy C <andy.coolware@gmail.com> wrote:
+
+> Hi,
+>
+> So the other day I came across this presentation:http://www.infoq.com/presentations/top-10-performance-myths
+>
+> The guy seems to be smart and know what he talks about however when at
+> 0:22:35 he touches on performance (or lack of thereof) of persistent data
+> structures on multi-core machines I feel puzzled.
+>
+> He seems to have a point but really does not back it with any details.
+> There is also a claim that STM does not cooperate well with GC. Is it true?
+>
+> Thanks,
+> Andy
+>
+>
+>  --
+> You received this message because you are subscribed to the Google
+> Groups "Clojure" group.
+> To post to this group, send email to clojure@googlegroups.com
+> Note that posts from new members are moderated - please be patient with
+> your first post.
+> To unsubscribe from this group, send email to
+> clojure+unsubscribe@googlegroups.com
+> For more options, visit this group at
+> http://groups.google.com/group/clojure?hl=en
+> ---
+> You received this message because you are subscribed to the Google Groups
+> "Clojure" group.
+> To unsubscribe from this group and stop receiving emails from it, send an
+> email to clojure+unsubscribe@googlegroups.com.
+> For more options, visit https://groups.google.com/d/optout.
+>
+
+
+
+-- 
+"One of the main causes of the fall of the Roman Empire was that-lacking
+zero-they had no way to indicate successful termination of their C
+programs."
+(Robert Firth)
+
+-- 
+You received this message because you are subscribed to the Google
+Groups "Clojure" group.
+To post to this group, send email to clojure@googlegroups.com
+Note that posts from new members are moderated - please be patient with your first post.
+To unsubscribe from this group, send email to
+clojure+unsubscribe@googlegroups.com
+For more options, visit this group at
+http://groups.google.com/group/clojure?hl=en
+--- 
+You received this message because you are subscribed to the Google Groups "Clojure" group.
+To unsubscribe from this group and stop receiving emails from it, send an email to clojure+unsubscribe@googlegroups.com.
+For more options, visit https://groups.google.com/d/optout.
+
+--00248c0d793865fbe604f48110a1
+Content-Type: text/html; charset=ISO-8859-1
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr">I talked to Martin after a CodeMesh, and had a wonderful d=
+iscussion with him about performance from his side of the issue. From &quot=
+;his side&quot; I mean super high performance. You have to get a bit of bac=
+kground on some of his work (at least the work he talks about), much of wha=
+t he does is high throughput trading systems. In these systems you will oft=
+en see small messages (50 bytes or so) and the the goal is to process them =
+as quickly as possible.&nbsp;<br>
+<br>This means that almost everything is secondary to throughput. So let&#3=
+9;s take that generalization and apply it to the more common work I or peop=
+le like me do...here we care mostly about programmer productivity, and maki=
+ng simpler systems. Here immutability and STM like concepts (I&#39;m dumpin=
+g STM in with atoms here) work pretty well.&nbsp;<br>
+<br>At one point in our conversation Martin mentioned that he was able to g=
+et about 100,000 messages through his system a second. That&#39;s awesome! =
+How often do you have 100k messages in your system?<div><br>Everything has =
+tradeoffs. One more example was when Martin explained how he was able to ge=
+t a 10x performance boost by pinning a JVM to each socket in a server, then=
+ pinning that JVM&#39;s memory to the RAM sockets closest to that CPU socke=
+t. Then he carefully setup shared memory message passing via burning one co=
+re on each CPU to monitor the queues, and moving messages only in the direc=
+tions directly supported by the Hyper Transport bus. Once again, that&#39;s=
+ amazing...once again I&#39;ve never needed that to ship a product.&nbsp;<b=
+r>
+<br>Sadly, other parts of that talk are very true. Many programmers I&#39;v=
+e talked to don&#39;t understand the difference between a hash map and a li=
+st, let alone understand when they would use them. So I&#39;ll fight that b=
+attle, and Martin can fight his, and I&#39;ll apply his work to my problems=
+ as the solution fits.&nbsp;<br>
+<br>So that&#39;s the way I view it. I don&#39;t claim to know much at all =
+about Martin&#39;s work, I just know enough to know that I don&#39;t deal w=
+ith those problems. Most servers I work on are idle at least 50% of the tim=
+e. And when they do get overloaded I can just startup more machines.&nbsp;<=
+br>
+<br>Timothy</div></div><div class=3D"gmail_extra"><br><br><div class=3D"gma=
+il_quote">On Thu, Mar 13, 2014 at 10:58 AM, Andy C <span dir=3D"ltr">&lt;<a=
+ href=3D"mailto:andy.coolware@gmail.com" target=3D"_blank">andy.coolware@gm=
+ail.com</a>&gt;</span> wrote:<br>
+<blockquote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1p=
+x #ccc solid;padding-left:1ex"><div dir=3D"ltr"><div><div><div><div>Hi,<br>=
+<br></div>So the other day I came across this presentation:<a href=3D"http:=
+//www.infoq.com/presentations/top-10-performance-myths" target=3D"_blank"> =
+http://www.infoq.com/presentations/top-10-performance-myths</a> <br>
+
+<br>The guy seems to be smart and know what he talks about however when at =
+0:22:35 he touches on performance (or lack of thereof) of persistent data s=
+tructures on multi-core machines I feel puzzled.<br><br></div>He seems to h=
+ave a point but really does not back it with any details. There is also a c=
+laim that STM does not cooperate well with GC. Is it true?<br>
+
+<br></div>Thanks,<br></div>Andy<br><div><div><div><div><div><br><br></div><=
+/div></div></div></div></div>
+
+<p></p>
+
+-- <br>
+You received this message because you are subscribed to the Google<br>
+Groups &quot;Clojure&quot; group.<br>
+To post to this group, send email to <a href=3D"mailto:clojure@googlegroups=
+.com" target=3D"_blank">clojure@googlegroups.com</a><br>
+Note that posts from new members are moderated - please be patient with you=
+r first post.<br>
+To unsubscribe from this group, send email to<br>
+<a href=3D"mailto:clojure%2Bunsubscribe@googlegroups.com" target=3D"_blank"=
+>clojure+unsubscribe@googlegroups.com</a><br>
+For more options, visit this group at<br>
+<a href=3D"http://groups.google.com/group/clojure?hl=3Den" target=3D"_blank=
+">http://groups.google.com/group/clojure?hl=3Den</a><br>
+--- <br>
+You received this message because you are subscribed to the Google Groups &=
+quot;Clojure&quot; group.<br>
+To unsubscribe from this group and stop receiving emails from it, send an e=
+mail to <a href=3D"mailto:clojure+unsubscribe@googlegroups.com" target=3D"_=
+blank">clojure+unsubscribe@googlegroups.com</a>.<br>
+For more options, visit <a href=3D"https://groups.google.com/d/optout" targ=
+et=3D"_blank">https://groups.google.com/d/optout</a>.<br>
+</blockquote></div><br><br clear=3D"all"><div><br></div>-- <br>&ldquo;One o=
+f the main causes of the fall of the Roman Empire was that&ndash;lacking ze=
+ro&ndash;they had no way to indicate successful termination of their C prog=
+rams.&rdquo;<br>(Robert Firth)=20
+</div>
+
+<p></p>
+
+-- <br />
+You received this message because you are subscribed to the Google<br />
+Groups &quot;Clojure&quot; group.<br />
+To post to this group, send email to clojure@googlegroups.com<br />
+Note that posts from new members are moderated - please be patient with you=
+r first post.<br />
+To unsubscribe from this group, send email to<br />
+clojure+unsubscribe@googlegroups.com<br />
+For more options, visit this group at<br />
+<a href=3D"http://groups.google.com/group/clojure?hl=3Den">http://groups.go=
+ogle.com/group/clojure?hl=3Den</a><br />
+--- <br />
+You received this message because you are subscribed to the Google Groups &=
+quot;Clojure&quot; group.<br />
+To unsubscribe from this group and stop receiving emails from it, send an e=
+mail to <a href=3D"mailto:clojure+unsubscribe@googlegroups.com">clojure+uns=
+ubscribe@googlegroups.com</a>.<br />
+For more options, visit <a href=3D"https://groups.google.com/d/optout">http=
+s://groups.google.com/d/optout</a>.<br />
+
+--00248c0d793865fbe604f48110a1--

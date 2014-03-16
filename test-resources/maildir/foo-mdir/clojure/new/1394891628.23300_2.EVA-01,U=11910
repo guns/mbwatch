@@ -1,0 +1,339 @@
+Delivered-To: self@sungpae.com
+Received: by 10.14.212.5 with SMTP id x5csp18278eeo;
+        Sat, 15 Mar 2014 05:57:58 -0700 (PDT)
+X-Received: by 10.181.9.65 with SMTP id dq1mr2289904wid.51.1394888277869;
+        Sat, 15 Mar 2014 05:57:57 -0700 (PDT)
+Return-Path: <clojure+bncBD4ZXFE5XEHRBUE4SGMQKGQEKBGP62I@googlegroups.com>
+Received: from mail-we0-x23c.google.com (mail-we0-x23c.google.com [2a00:1450:400c:c03::23c])
+        by mx.google.com with ESMTPS id j7si5927650wjy.45.2014.03.15.05.57.57
+        for <self@sungpae.com>
+        (version=TLSv1 cipher=ECDHE-RSA-RC4-SHA bits=128/128);
+        Sat, 15 Mar 2014 05:57:57 -0700 (PDT)
+Received-SPF: softfail (google.com: domain of transitioning clojure+bncBD4ZXFE5XEHRBUE4SGMQKGQEKBGP62I@googlegroups.com does not designate 94.23.118.225 as permitted sender) client-ip=94.23.118.225;
+Authentication-Results: mx.google.com;
+       spf=softfail (google.com: domain of transitioning clojure+bncBD4ZXFE5XEHRBUE4SGMQKGQEKBGP62I@googlegroups.com does not designate 94.23.118.225 as permitted sender) smtp.mail=clojure+bncBD4ZXFE5XEHRBUE4SGMQKGQEKBGP62I@googlegroups.com;
+       dkim=pass header.i=@googlegroups.com;
+       dmarc=fail (p=NONE dis=NONE) header.from=gmail.com
+Received: by mail-we0-f188.google.com with SMTP id p61sf208611wes.5
+        for <self@sungpae.com>; Sat, 15 Mar 2014 05:57:57 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=googlegroups.com; s=20120806;
+        h=message-id:date:from:user-agent:mime-version:to:subject:references
+         :in-reply-to:x-original-sender:x-original-authentication-results
+         :reply-to:precedence:mailing-list:list-id:list-post:list-help
+         :list-archive:sender:list-subscribe:list-unsubscribe:content-type;
+        bh=lhZLdxCB4PnNBglNnSe11jUyFvgfQu7frL7XOFvKhQE=;
+        b=uW2XC8G4IHnoLlP61Ap0qYNstieD3TKglxrFp3UTyml3Yq6L7fKcmUaPFq7fg2jedF
+         IjK2oD5zXM5logtba6NidqeZn56yN/qktVy3gXDhlJ8wlwM7bYqMEDRHMNRnK9AAR3e/
+         TO+4H1B5ZxCpYfuVm+dFvXFa8rrZqlH12MTFAjHkLfXmGnFWA2uRGPbhBHivzwiUgBLB
+         /+Sd85sQDDf2/z44JjOvOg+n7/3AkFtK+ICmrB4DBRdXBlze/3zuWJdLukQjIC1TdHZX
+         I5XUsmeRHM+At59Ad+/fhcjgE3b9SGVDhOmU9pgYkeHzdn9046vRhtjAxkXE72gRocGu
+         AbPA==
+X-Received: by 10.152.198.138 with SMTP id jc10mr1210lac.31.1394888277749;
+        Sat, 15 Mar 2014 05:57:57 -0700 (PDT)
+X-BeenThere: clojure@googlegroups.com
+Received: by 10.152.180.4 with SMTP id dk4ls168732lac.71.gmail; Sat, 15 Mar
+ 2014 05:57:52 -0700 (PDT)
+X-Received: by 10.112.160.133 with SMTP id xk5mr5671896lbb.6.1394888272431;
+        Sat, 15 Mar 2014 05:57:52 -0700 (PDT)
+Received: from smtp-out-1-17.monarobase.net (smtp-out-1-17.monarobase.net. [94.23.118.225])
+        by gmr-mx.google.com with ESMTPS id v8si128936wiw.2.2014.03.15.05.57.52
+        for <clojure@googlegroups.com>
+        (version=TLSv1 cipher=RC4-SHA bits=128/128);
+        Sat, 15 Mar 2014 05:57:52 -0700 (PDT)
+Received-SPF: softfail (google.com: domain of transitioning fmjrey@gmail.com does not designate 94.23.118.225 as permitted sender) client-ip=94.23.118.225;
+Received: from ns7005.monarobase.net ([94.23.59.97])
+	by mx1.monarobase.net with esmtpsa (TLSv1:DHE-RSA-AES256-SHA:256)
+	(Exim 4.82)
+	(envelope-from <fmjrey@gmail.com>)
+	id 1WOo9s-0002xj-2q
+	for clojure@googlegroups.com; Sat, 15 Mar 2014 13:57:53 +0100
+Received: from 81-65-250-246.rev.numericable.fr ([81.65.250.246]:40968 helo=[192.168.1.111])
+	by ns7005.monarobase.net with esmtpsa (TLSv1:DHE-RSA-AES128-SHA:128)
+	(Exim 4.80.1)
+	(envelope-from <fmjrey@gmail.com>)
+	id 1WOo9p-0007hL-2K
+	for clojure@googlegroups.com; Sat, 15 Mar 2014 13:57:45 +0100
+Message-ID: <53244E49.5000800@gmail.com>
+Date: Sat, 15 Mar 2014 13:57:45 +0100
+From: =?ISO-8859-1?Q?Fran=E7ois_Rey?= <fmjrey@gmail.com>
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:24.0) Gecko/20100101 Thunderbird/24.3.0
+MIME-Version: 1.0
+To: clojure@googlegroups.com
+Subject: Re: STM and persistent data structures performance on mutli-core
+ archs
+References: <CAMtSTXxevmM5NixMDJR6V4403BAg985h=naq-AAiZ+=NdD55NQ@mail.gmail.com> <1451cd3c-6732-490b-9408-72743155d4b4@googlegroups.com>
+In-Reply-To: <1451cd3c-6732-490b-9408-72743155d4b4@googlegroups.com>
+X-Filter-ID: XtLePq6GTMn8G68F0EmQvfEewbebcUGdWgSk+MRz7JGgrXkvMJYWSRPDUDN+6ynoBXqD0jvARihU
+ wkMOKmOGfK+MZXC9EiJQQK6NRuZ9vxETUJUTCMSy4fvX3sljCh5a9uNo9ld6fdi9YdJxGkbDsP5G
+ 2cm0VrEUv/dLgoJhJ7HH/4S7J4GXZzC5YAextxJeHHASJNUmoOHSoqgqxfHmWaegPmK9lQV+ajWa
+ Fdgfm3eMf3/ry00NyOP9c4mnHRdWzSDTcBiyYxVwkFbHlXWxFjkce9w0vKi4pLoMBcXxexaKi5lz
+ 6pMGkPU9UGZ43BOJcf0zaLuBnWVvaVRu5t3QhA4KjqnriUNCQLHgikmL5sIRFZ4oobg8BBg3Jq+n
+ tzj0kCWAxMssanTlf9+EojFr8Xvpefe3uhLD9dAY2BnSq5fWrLLXnYK/RBpQ5pWoz2YFcbfnGtY1
+ 6oZ32R6pYIlnX4gVPniMTEkNcQfIHm0VTaFoHJVJSyzbj3pmYfG5e6A5YSCE8qaHHNLhUR3LZEEV
+ WuidX4Ts4xdG+C13IyWeZaIHE0DvBSqud/JlFbG63ktdDPAWL0lqEbmGiITJD5GZh4EDom3yeACF
+ CyVMo3qWL7SOxAcHtu/UM3WHPOP10wkk
+X-Originating-IP: 94.23.59.97
+X-SpamExperts-Domain: ns7005.monarobase.net
+X-SpamExperts-Username: 94.23.59.97
+X-SpamExperts-Outgoing-Class: ham
+X-SpamExperts-Outgoing-Evidence: Combined (0.27)
+X-Recommended-Action: accept
+X-Original-Sender: fmjrey@gmail.com
+X-Original-Authentication-Results: gmr-mx.google.com;       spf=softfail
+ (google.com: domain of transitioning fmjrey@gmail.com does not designate
+ 94.23.118.225 as permitted sender) smtp.mail=fmjrey@gmail.com;
+       dmarc=fail (p=NONE dis=NONE) header.from=gmail.com
+Reply-To: clojure@googlegroups.com
+Precedence: list
+Mailing-list: list clojure@googlegroups.com; contact clojure+owners@googlegroups.com
+List-ID: <clojure.googlegroups.com>
+X-Google-Group-Id: 999298108703
+List-Post: <http://groups.google.com/group/clojure/post>, <mailto:clojure@googlegroups.com>
+List-Help: <http://groups.google.com/support/>, <mailto:clojure+help@googlegroups.com>
+List-Archive: <http://groups.google.com/group/clojure>
+Sender: clojure@googlegroups.com
+List-Subscribe: <http://groups.google.com/group/clojure/subscribe>, <mailto:clojure+subscribe@googlegroups.com>
+List-Unsubscribe: <http://groups.google.com/group/clojure/subscribe>, <mailto:googlegroups-manage+999298108703+unsubscribe@googlegroups.com>
+Content-Type: multipart/alternative;
+ boundary="------------030407000005090700010508"
+X-TUID: JS7MHSasM7uN
+
+This is a multi-part message in MIME format.
+--------------030407000005090700010508
+Content-Type: text/plain; charset=ISO-8859-1; format=flowed
+
+Martin's point about immutable and persistent data structures is further 
+developed in his interview on infoq 
+<http://www.infoq.com/interviews/reactive-system-design-martin-thompson>, you 
+can skim to point #9 if you're in a hurry.
+Overall what he says is that in terms of scalability of the development 
+activity, immutability and persistence are great ideas, since we don't 
+have to deal with non-deterministic behaviour any more. When one needs 
+to scale the running system, meaning increasing the rate at which the 
+persistent data structure is updated, these can lead to performance 
+issues in various ways:
+- longer GC pauses because persistency increases the number of objects 
+that are neither very short-lived nor long-lived,
+- contention because the root of the tree of the persistent data 
+structure becomes the focal point of concurrency,
+- increased CPU cache misses since persistent data structures are trees 
+that increasingly span larger non-contiguous and non-sequential parts of 
+memory
+Of these the last point is probably the most painful, since there's no 
+way to deal with it unless one reconsiders the whole persistent data 
+structure.
+In other words increasing the number of threads and cores may eventually 
+lower throughput because the time taken for dealing with these issues 
+(GC pauses, locking, cache misses) grows larger than the time taken for 
+useful computation.
+I can't backup any of this with actual data and experience. However I 
+think this old thread about poor performance on multicore 
+<https://groups.google.com/forum/#%21topic/clojure/48W2eff3caU> does 
+provide a clear picture of the problem, which becomes even clearer with 
+actual stats showing 
+<https://groups.google.com/d/msg/clojure/48W2eff3caU/FBFQp2vrWFgJ>CPUs 
+<https://groups.google.com/d/msg/clojure/48W2eff3caU/FBFQp2vrWFgJ>were 
+83% idle 
+<https://groups.google.com/d/msg/clojure/48W2eff3caU/FBFQp2vrWFgJ>, i.e. 
+waiting for memory.
+
+Also one should view Martin's other vidoes on infoq 
+<http://www.infoq.com/author/Martin-Thompson> to get a better 
+understanding of his arguments. He's actually quite positive about 
+Clojure in general. It's just that depending on the scalability and 
+performance requirements, persistent data structures may not provide a 
+satisfactory answer and could even lower throughput.
+
+
+On 14/03/14 18:01, ?????? ????????? wrote:
+> He talks about simple things actually.
+>
+> When you have any sort of immutable data structure and you want to 
+> change it from multiple threads
+> you just must have a mutable reference which points to the current 
+> version of that data structure.
+> Now, updates to that mutable reference are fundamentally serial. 
+> Whatever synchronization
+> strategy you chose been that optimistic updates (atom) or queuing 
+> (agent) or locks you inevitably
+> will have a contention on a large number of threads. When you will run 
+> on that you will also
+> have hundred ways to solve a problem.
+>
+> There is nothing magical about persistent data structures on 
+> multi-core machines :)
+>
+> ???????, 13 ????? 2014 ?., 20:58:54 UTC+4 ???????????? Andy C ???????:
+>
+>     Hi,
+>
+>     So the other day I came across this
+>     presentation:http://www.infoq.com/presentations/top-10-performance-myths
+>     <http://www.infoq.com/presentations/top-10-performance-myths>
+>
+>     The guy seems to be smart and know what he talks about however
+>     when at 0:22:35 he touches on performance (or lack of thereof) of
+>     persistent data structures on multi-core machines I feel puzzled.
+>
+>     He seems to have a point but really does not back it with any
+>     details. There is also a claim that STM does not cooperate well
+>     with GC. Is it true?
+>
+>     Thanks,
+>     Andy
+>
+
+-- 
+You received this message because you are subscribed to the Google
+Groups "Clojure" group.
+To post to this group, send email to clojure@googlegroups.com
+Note that posts from new members are moderated - please be patient with your first post.
+To unsubscribe from this group, send email to
+clojure+unsubscribe@googlegroups.com
+For more options, visit this group at
+http://groups.google.com/group/clojure?hl=en
+--- 
+You received this message because you are subscribed to the Google Groups "Clojure" group.
+To unsubscribe from this group and stop receiving emails from it, send an email to clojure+unsubscribe@googlegroups.com.
+For more options, visit https://groups.google.com/d/optout.
+
+--------------030407000005090700010508
+Content-Type: text/html; charset=ISO-8859-1
+
+<html>
+  <head>
+    <meta content="text/html; charset=ISO-8859-1"
+      http-equiv="Content-Type">
+  </head>
+  <body bgcolor="#FFFFFF" text="#000000">
+    <div class="moz-cite-prefix">Martin's point about immutable and
+      persistent data structures is further developed in&nbsp;<a
+href="http://www.infoq.com/interviews/reactive-system-design-martin-thompson">his
+        interview on infoq</a>, you can skim to point #9 if you're in a
+      hurry. <br>
+      Overall what he says is that in terms of scalability of the
+      development activity, immutability and persistence are great
+      ideas, since we don't have to deal with non-deterministic
+      behaviour any more. When one needs to scale the running system,
+      meaning increasing the rate at which the persistent data structure
+      is updated, these can lead to performance issues in various ways:<br>
+      - longer GC pauses because persistency increases the number of
+      objects that are neither very short-lived nor long-lived,<br>
+      - contention because the root of the tree of the persistent data
+      structure becomes the focal point of concurrency,<br>
+      - increased CPU cache misses since persistent data structures are
+      trees that increasingly span larger non-contiguous and
+      non-sequential parts of memory<br>
+      Of these the last point is probably the most painful, since
+      there's no way to deal with it unless one reconsiders the whole
+      persistent data structure.<br>
+      In other words increasing the number of threads and cores may
+      eventually lower throughput because the time taken for dealing
+      with these issues (GC pauses, locking, cache misses) grows larger
+      than the time taken for useful computation.<br>
+      I can't backup any of this with actual data and experience.
+      However I think this <a
+        href="https://groups.google.com/forum/#%21topic/clojure/48W2eff3caU">old
+        thread about poor performance on multicore</a> does provide a
+      clear picture of the problem, which becomes even clearer with
+      actual <a
+        href="https://groups.google.com/d/msg/clojure/48W2eff3caU/FBFQp2vrWFgJ">stats
+        showing </a><a
+        href="https://groups.google.com/d/msg/clojure/48W2eff3caU/FBFQp2vrWFgJ">CPUs</a><a
+href="https://groups.google.com/d/msg/clojure/48W2eff3caU/FBFQp2vrWFgJ">
+        were 83% idle</a>, i.e. waiting for memory.<br>
+      <br>
+      Also one should view <a
+        href="http://www.infoq.com/author/Martin-Thompson">Martin's
+        other vidoes on infoq</a> to get a better understanding of his
+      arguments. He's actually quite positive about Clojure in general.
+      It's just that depending on the scalability and performance
+      requirements, persistent data structures may not provide a
+      satisfactory answer and could even lower throughput.<br>
+      <br>
+      <br>
+      On 14/03/14 18:01, &#1069;&#1083;&#1100;&#1076;&#1072;&#1088; &#1043;&#1072;&#1073;&#1076;&#1091;&#1083;&#1083;&#1080;&#1085; wrote:<br>
+    </div>
+    <blockquote
+      cite="mid:1451cd3c-6732-490b-9408-72743155d4b4@googlegroups.com"
+      type="cite">
+      <div dir="ltr">He talks about simple things actually.
+        <div><br>
+        </div>
+        <div>When you have any sort of immutable data structure and you
+          want to change it from multiple threads</div>
+        <div>you just must have a mutable reference which points to the
+          current version of that data structure.</div>
+        <div>Now, updates to that mutable reference are fundamentally
+          serial. Whatever synchronization</div>
+        <div>strategy you chose been that optimistic updates (atom) or
+          queuing (agent) or locks you inevitably</div>
+        <div>will have a contention on a large number of threads. When
+          you will run on that you will also</div>
+        <div>have hundred ways to solve a problem.&nbsp;</div>
+        <div><br>
+        </div>
+        <div>There is nothing magical about persistent data structures
+          on multi-core machines :)</div>
+        <div><br>
+          &#1095;&#1077;&#1090;&#1074;&#1077;&#1088;&#1075;, 13 &#1084;&#1072;&#1088;&#1090;&#1072; 2014&nbsp;&#1075;., 20:58:54 UTC+4 &#1087;&#1086;&#1083;&#1100;&#1079;&#1086;&#1074;&#1072;&#1090;&#1077;&#1083;&#1100; Andy C
+          &#1085;&#1072;&#1087;&#1080;&#1089;&#1072;&#1083;:
+          <blockquote class="gmail_quote" style="margin: 0;margin-left:
+            0.8ex;border-left: 1px #ccc solid;padding-left: 1ex;">
+            <div dir="ltr">
+              <div>
+                <div>
+                  <div>
+                    <div>Hi,<br>
+                      <br>
+                    </div>
+                    So the other day I came across this presentation:<a
+                      moz-do-not-send="true"
+                      href="http://www.infoq.com/presentations/top-10-performance-myths"
+                      target="_blank"
+                      onmousedown="this.href='http://www.google.com/url?q\75http%3A%2F%2Fwww.infoq.com%2Fpresentations%2Ftop-10-performance-myths\46sa\75D\46sntz\0751\46usg\75AFQjCNEiJto4HJQVI_Npt2OY1gGYSzVSxw';return
+                      true;"
+                      onclick="this.href='http://www.google.com/url?q\75http%3A%2F%2Fwww.infoq.com%2Fpresentations%2Ftop-10-performance-myths\46sa\75D\46sntz\0751\46usg\75AFQjCNEiJto4HJQVI_Npt2OY1gGYSzVSxw';return
+                      true;"> http://www.infoq.com/<wbr>presentations/top-10-<wbr>performance-myths</a>
+                    <br>
+                    <br>
+                    The guy seems to be smart and know what he talks
+                    about however when at 0:22:35 he touches on
+                    performance (or lack of thereof) of persistent data
+                    structures on multi-core machines I feel puzzled.<br>
+                    <br>
+                  </div>
+                  He seems to have a point but really does not back it
+                  with any details. There is also a claim that STM does
+                  not cooperate well with GC. Is it true?<br>
+                  <br>
+                </div>
+                Thanks,<br>
+              </div>
+              Andy<br>
+            </div>
+          </blockquote>
+        </div>
+      </div>
+    </blockquote>
+  </body>
+</html>
+
+<p></p>
+
+-- <br />
+You received this message because you are subscribed to the Google<br />
+Groups &quot;Clojure&quot; group.<br />
+To post to this group, send email to clojure@googlegroups.com<br />
+Note that posts from new members are moderated - please be patient with your first post.<br />
+To unsubscribe from this group, send email to<br />
+clojure+unsubscribe@googlegroups.com<br />
+For more options, visit this group at<br />
+<a href="http://groups.google.com/group/clojure?hl=en">http://groups.google.com/group/clojure?hl=en</a><br />
+--- <br />
+You received this message because you are subscribed to the Google Groups &quot;Clojure&quot; group.<br />
+To unsubscribe from this group and stop receiving emails from it, send an email to <a href="mailto:clojure+unsubscribe@googlegroups.com">clojure+unsubscribe@googlegroups.com</a>.<br />
+For more options, visit <a href="https://groups.google.com/d/optout">https://groups.google.com/d/optout</a>.<br />
+
+--------------030407000005090700010508--
