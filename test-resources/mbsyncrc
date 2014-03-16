@@ -35,6 +35,10 @@ Path test-resources/maildir/foo-mdir/
 MaildirStore BAR-mdir
 Path test-resources/maildir/bar-mdir/
 
+MaildirStore ROOT-mdir
+Inbox ~root/Mail/INBOX
+Path ~root/Mail/root/
+
 #
 # Channels
 #
@@ -51,6 +55,14 @@ Slave :BAR-mdir:
 Channel FOO-BAR-chan
 Master :FOO-mdir:
 Slave :BAR-mdir:
+Patterns *
+Sync All
+Create Both
+Expunge Both
+
+Channel FOO-ROOT-chan
+Master :FOO-mdir:
+Slave :ROOT-mdir:
 Patterns *
 Sync All
 Create Both

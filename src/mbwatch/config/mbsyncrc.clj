@@ -2,8 +2,9 @@
   "Configuration from an mbsyncrc configuration file."
   (:require [clojure.java.shell :refer [sh]]
             [clojure.string :as string]
+            [mbwatch.passwd :refer [expand-user-path parse-passwd]]
             [mbwatch.util :refer [chomp dequote]]
-            [schema.core :as s :refer [both defschema either enum eq maybe one
+            [schema.core :as s :refer [both defschema either enum eq one
                                        optional-key pair pred]])
   (:import (clojure.lang IPersistentSet)))
 
@@ -147,13 +148,16 @@
 
 (s/defn ^:private map-maildirstores :- {Word Maildirstore}
   [stores :- MapSectionValue]
-  (reduce-kv
-    (fn [m store-name mdirmap]
-      (assoc m store-name
-             {:inbox (or (mdirmap "inbox") default-mbsync-inbox)
-              :path (mdirmap "path")
-              :flatten (or (mdirmap "flatten") "/")}))
-    {} stores))
+  (let [passwd-map (parse-passwd (slurp "/etc/passwd"))]
+    (reduce-kv
+      (fn [m store-name mdirmap]
+        (assoc m store-name
+               {:inbox (expand-user-path
+                         passwd-map (or (mdirmap "inbox") default-mbsync-inbox))
+                :path (expand-user-path
+                        passwd-map (mdirmap "path"))
+                :flatten (or (mdirmap "flatten") "/")}))
+      {} stores)))
 
 (s/defn ^:private map-slave-maildirstores :- {Word Maildirstore}
   [channels      :- MapSectionValue

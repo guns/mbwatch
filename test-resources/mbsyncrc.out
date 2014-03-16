@@ -23,6 +23,10 @@ maildirstore FOO-mdir
 inbox test-resources/maildir/foo-mdir/INBOX
 path test-resources/maildir/foo-mdir/
 
+maildirstore ROOT-mdir
+inbox ~root/Mail/INBOX
+path ~root/Mail/root/
+
 channel BAR-chan
 master :BAR-imap:
 slave :BAR-mdir:
@@ -33,6 +37,14 @@ expunge Both
 master :FOO-mdir:
 patterns *
 slave :BAR-mdir:
+sync All
+
+channel FOO-ROOT-chan
+create Both
+expunge Both
+master :FOO-mdir:
+patterns *
+slave :ROOT-mdir:
 sync All
 
 channel FOO-chan
