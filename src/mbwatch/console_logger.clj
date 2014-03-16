@@ -70,8 +70,10 @@
 (defn tty? []
   (boolean (System/console)))
 
-(defn sgr-join [styles]
-  (string/join \; (mapv #(if (keyword? %) (sgr %) %) styles)))
+(defn ^:private sgr-join [styles]
+  (if (string? styles)
+    styles
+    (string/join \; (mapv #(if (keyword? %) (sgr %) %) styles))))
 
 (defn- ^String wrap [msg sgr-string]
   (if (seq sgr-string)

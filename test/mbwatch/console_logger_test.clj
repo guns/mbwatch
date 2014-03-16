@@ -13,9 +13,10 @@
   (is (validate {Keyword String} c/sgr)))
 
 (deftest test-sgr-join
-  (is (= "" (c/sgr-join nil) (c/sgr-join [])))
-  (is (= "31;48;5;100" (c/sgr-join [:red :bg100])))
-  (is (= "31;48;5;100" (c/sgr-join [31 "48;5;100"]))))
+  (is (= "" (#'c/sgr-join nil) (#'c/sgr-join [])))
+  (is (= "31;48;5;100" (#'c/sgr-join [:red :bg100])))
+  (is (= "31;48;5;100" (#'c/sgr-join [31 "48;5;100"])))
+  (is (= "31;48;5;100" (#'c/sgr-join "31;48;5;100"))))
 
 (deftest test-ConsoleLogger
   (let [s (StringWriter.)
