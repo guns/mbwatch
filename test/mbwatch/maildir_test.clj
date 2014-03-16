@@ -9,7 +9,7 @@
 
 (s/deftest test-new-messages
   (is (= (count (md/new-messages test-mdir 0))
-         (count (filter #(.isFile ^File %) (file-seq (File. test-mdir)))))))
+         (count (filterv #(.isFile ^File %) (file-seq (File. test-mdir)))))))
 
 (s/deftest test-senders
   (is (= (md/senders (md/new-messages test-mdir 0))
