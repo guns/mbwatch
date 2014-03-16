@@ -49,3 +49,17 @@
               (update-in [3] #(Integer/parseInt %))
               ((fn [[a b c d e f g]] (Passwd. a b c d e f g)))))
         (string/split-lines s)))
+
+(s/defn expand-user-path :- String
+  [pwents :- [Passwd]
+   path   :- String]
+  (if (= (first path) \~)
+    (if (= (second path) \/)
+      (str (System/getProperty "user.home") (subs path 1))
+      (let [i (.indexOf path "/")
+            user (subs path 1 i)
+            dir (:dir (first (filter #(= (:name %) user) pwents)))]
+        (if dir
+          (str dir (subs path i))
+          path)))
+    path))
