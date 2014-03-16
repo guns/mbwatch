@@ -25,7 +25,8 @@
                         "pass" "\"H'|&z]0pIcU2?T/(<!zaIq[wW\\\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\\\"\""}}))
     (is (= (-> mbsyncrc :sections :maildirstore)
            {"FOO-mdir" {"inbox" "test-resources/maildir/foo-mdir/INBOX"
-                        "path" "test-resources/maildir/foo-mdir/"}
+                        "path" "test-resources/maildir/foo-mdir/"
+                        "flatten" "."}
             "BAR-mdir" {"path" "test-resources/maildir/bar-mdir/"}
             "ROOT-mdir" {"inbox" "~root/Mail/INBOX"
                          "path" "~root/Mail/root/"}}))
@@ -61,13 +62,13 @@
     (is (= (:channels->maildirstores mbsyncrc)
            {"FOO-chan" {:inbox "test-resources/maildir/foo-mdir/INBOX"
                         :path "test-resources/maildir/foo-mdir/"
-                        :flatten "/"}
+                        :flatten "."}
             "BAR-chan" {:inbox "/home/guns/Maildir"
                         :path "test-resources/maildir/bar-mdir/"
-                        :flatten "/"}
+                        :flatten nil}
             "FOO-BAR-chan" {:inbox "/home/guns/Maildir"
                             :path "test-resources/maildir/bar-mdir/"
-                            :flatten "/"}
+                            :flatten nil}
             "FOO-ROOT-chan" {:inbox "/root/Mail/INBOX"
                              :path "/root/Mail/root/"
-                             :flatten "/"}}))))
+                             :flatten nil}}))))

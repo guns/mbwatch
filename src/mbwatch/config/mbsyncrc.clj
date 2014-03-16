@@ -4,7 +4,7 @@
             [clojure.string :as string]
             [mbwatch.passwd :refer [expand-user-path parse-passwd]]
             [mbwatch.util :refer [chomp dequote]]
-            [schema.core :as s :refer [both defschema either enum eq one
+            [schema.core :as s :refer [both defschema either enum eq maybe one
                                        optional-key pair pred]])
   (:import (clojure.lang IPersistentSet)))
 
@@ -59,7 +59,7 @@
 (defschema Maildirstore
   {:inbox   FilteredLine
    :path    FilteredLine
-   :flatten FilteredLine})
+   :flatten (maybe FilteredLine)})
 
 (s/defrecord Mbsyncrc
   [text                    :- String
@@ -156,7 +156,7 @@
                          passwd-map (or (mdirmap "inbox") default-mbsync-inbox))
                 :path (expand-user-path
                         passwd-map (mdirmap "path"))
-                :flatten (or (mdirmap "flatten") "/")}))
+                :flatten (mdirmap "flatten")}))
       {} stores)))
 
 (s/defn ^:private map-slave-maildirstores :- {Word Maildirstore}
