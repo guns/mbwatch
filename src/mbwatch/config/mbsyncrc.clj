@@ -4,8 +4,8 @@
             [clojure.string :as string]
             [mbwatch.passwd :refer [expand-user-path parse-passwd]]
             [mbwatch.util :refer [chomp dequote]]
-            [schema.core :as s :refer [both defschema either enum eq maybe one
-                                       optional-key pair pred]])
+            [schema.core :as s :refer [both defschema either enum eq maybe
+                                       one optional-key pair pred]])
   (:import (clojure.lang IPersistentSet)))
 
 (defschema Word
