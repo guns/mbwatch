@@ -10,20 +10,20 @@
 
    Calling .stop on MbsyncMaster also stops all MbsyncWorkers.
 
-       ─── MbsyncCommand ──┐
-                           │
-                           │
-                           ▼                       ┐
-                    ┌──────────────┐               │
-                    │ MbsyncMaster │               │
-                    └──────┬───────┘               │
-                           │                       │
-               ┌───────────┴──────────┐            ├── Loggable ───▶
-               ▼                      ▼            │
-        ┌──────────────┐       ┌──────────────┐    │
-        │ MbsyncWorker │   …   │ MbsyncWorker │    │
-        └──────────────┘       └──────────────┘    │
-                                                   ┘
+     ───── MbsyncCommand ────┐
+                             │
+                             │
+                             ▼                      ─┐
+                      ┌──────────────┐               │
+                      │ MbsyncMaster │               │
+                      └──────┬───────┘               │
+                             │                       │
+                 ┌───────────┴──────────┐            ├── Loggable ───▶
+                 ▼                      ▼            │
+          ┌──────────────┐       ┌──────────────┐    │
+          │ MbsyncWorker │   …   │ MbsyncWorker │    │
+          └──────────────┘       └──────────────┘    │
+                                                    ─┘
    "
   (:require [clojure.core.async :refer [<!! >!! chan put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
