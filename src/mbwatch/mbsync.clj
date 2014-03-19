@@ -196,8 +196,11 @@
     (put! log-chan this)
     (assoc this :state-chan
            (thread-loop [workers {}]
-             (when-let [ws (handle-mbsync-command (<!! cmd-chan) workers this)]
-               (recur ws)))))
+             (let [cmd (<!! cmd-chan)]
+               (when cmd
+                 (put! log-chan cmd))
+               (when-let [ws (handle-mbsync-command cmd workers this)]
+                 (recur ws))))))
 
   (stop [this]
     (put! log-chan this)
@@ -223,12 +226,22 @@
               (.stop w)))
           workers)))
 
-(defschema MbsyncCommand
+(defschema MbsyncCommandSchema
   (either {String [String]} ; Sync {mbchan [mbox]}
-          (eq :term)        ; Terminate current sync processes
+          (eq :terminate)   ; Terminate current sync processes
           (eq ::stop)       ; Terminate syncs and kill workers
           (eq nil)          ; Same as ::stop
           ))
+
+(s/defrecord MbsyncCommand
+  [command :- MbsyncCommandSchema]
+
+  Loggable
+
+  (log-level [_] DEBUG)
+
+  (->log [this]
+    (LogItem. DEBUG (DateTime.) (str (class-name this) ": " command))))
 
 (s/defn ^:private new-mbsync-worker :- MbsyncWorker
   [mbchan            :- String
@@ -263,13 +276,14 @@
       workers sync-req)))
 
 (s/defn ^:private handle-mbsync-command :- (maybe {String MbsyncWorker})
-  [command           :- MbsyncCommand
+  [mbsync-command    :- MbsyncCommand
    workers           :- {String MbsyncWorker}
    mbsync-master-map :- (:schema (class-schema MbsyncMaster))]
-  (case command
-    nil    (do (stop-workers (vals workers)) nil)
-    ::stop (do (stop-workers (vals workers)) nil)
-    :term  (do (doseq [^MbsyncWorker w (vals workers)]
-                 (sig-notify-all (.monitor w)))
-               workers)
-    (dispatch-syncs command workers mbsync-master-map)))
+  (let [{:keys [command]} mbsync-command]
+    (case command
+      nil        (do (stop-workers (vals workers)) nil)
+      ::stop     (do (stop-workers (vals workers)) nil)
+      :terminate (do (doseq [^MbsyncWorker w (vals workers)]
+                       (sig-notify-all (.monitor w)))
+                     workers)
+      (dispatch-syncs command workers mbsync-master-map))))
