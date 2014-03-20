@@ -6,11 +6,14 @@
   (:import (org.joda.time DateTime)
            (org.joda.time.format DateTimeFormat DateTimeFormatter)))
 
+(def ^:private ^DateTimeFormatter TIMESTAMP-FORMAT
+  (DateTimeFormat/forPattern "HH:mm:ss"))
+
 ;;
 ;; TTY helpers
 ;;
 
-(def sgr
+(def SGR
   "ANSI SGR codes.
    http://www.inwap.com/pdp10/ansicode.txt
    http://en.wikipedia.org/wiki/ANSI_escape_code#graphics"
@@ -55,7 +58,7 @@
     (catch Throwable _
       8)))
 
-(def default-colors
+(defn get-default-colors []
   (let [c256 (= (tty-color-count) 256)]
     [[:red :inverse :bold]        ; EMERG
      [:red :inverse]              ; ALERT
@@ -73,27 +76,24 @@
 (defn ^:private sgr-join [styles]
   (if (string? styles)
     styles
-    (string/join \; (mapv #(if (keyword? %) (sgr %) %) styles))))
+    (string/join \; (mapv #(if (keyword? %) (SGR %) %) styles))))
 
 (defn- ^String wrap [msg sgr-string]
   (if (seq sgr-string)
     (str "\033[" sgr-string "m" msg "\033[0m")
     msg))
 
-(def ^:private ^DateTimeFormatter timestamp-format
-  (DateTimeFormat/forPattern "HH:mm:ss"))
-
 (deftype ConsoleLogger [^Appendable stream colors]
   IItemLogger
   (log [_ log-item]
     (let [{:keys [level timestamp message]} log-item
-          ts (.print timestamp-format ^DateTime timestamp)
+          ts (.print TIMESTAMP-FORMAT ^DateTime timestamp)
           msg (wrap (str "[" ts "] " message) (get colors level))]
       (.append stream msg)
       (.append stream \newline))))
 
 (defn ^ConsoleLogger ->ConsoleLogger
   ([^Appendable stream]
-   (ConsoleLogger. stream (mapv sgr-join default-colors)))
+   (ConsoleLogger. stream (mapv sgr-join (get-default-colors))))
   ([^Appendable stream colors]
    (ConsoleLogger. stream (mapv sgr-join colors))))

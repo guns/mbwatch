@@ -3,10 +3,10 @@
             [schema.core :as s])
   (:import (java.io StringReader)))
 
-(def default-path
+(def DEFAULT-PATH
   (str (System/getProperty "user.home") "/.config/mbwatch/rc"))
 
-(def default-options
+(def DEFAULT-OPTIONS
   {:notification-cmd "notify-send \"$(cat)\""})
 
 (s/defrecord Mbwatchrc
@@ -15,4 +15,4 @@
 (s/defn parse :- Mbwatchrc
   [s :- String]
   (strict-map->Mbwatchrc
-    (merge default-options (read-ini (StringReader. s) :keywordize? true))))
+    (merge DEFAULT-OPTIONS (read-ini (StringReader. s) :keywordize? true))))

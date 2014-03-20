@@ -26,7 +26,7 @@
 (def ^:const INFO    6) ; /* informational */
 (def ^:const DEBUG   7) ; /* debug-level messages */
 
-(def ^:private log-levels
+(def ^:private LOG-LEVELS
   (mapv str '[EMERG ALERT CRIT ERR WARNING NOTICE INFO DEBUG]))
 
 (defprotocol Loggable
@@ -86,6 +86,6 @@
     (let [msg (format "%s %s [%s %s]"
                       (if state-chan "↓ Stopping" "↑ Starting")
                       (class-name this)
-                      (get log-levels level)
+                      (get LOG-LEVELS level)
                       (class-name logger))]
       (LogItem. DEBUG (DateTime.) msg))))

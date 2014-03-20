@@ -8,6 +8,13 @@
                                        one optional-key pair pred]])
   (:import (clojure.lang IPersistentSet)))
 
+(def DEFAULT-PATH
+  "Default path of mbsyncrc."
+  (str (System/getProperty "user.home") \/ ".mbsyncrc"))
+
+(def ^:private DEFAULT-MBSYNC-INBOX
+  (str (System/getProperty "user.home") \/ "Maildir"))
+
 (defschema Word
   (pred #(and (string? %)
               (seq %)
@@ -67,13 +74,6 @@
    credentials             :- {Word IMAPCredentials}
    channels                :- IPersistentSet
    channels->maildirstores :- {Word Maildirstore}])
-
-(def ^:const default-path
-  "Default path of mbsyncrc."
-  (str (System/getProperty "user.home") \/ ".mbsyncrc"))
-
-(def ^:private default-mbsync-inbox
-  (str (System/getProperty "user.home") \/ "Maildir"))
 
 (s/defn ^:private paragraphs :- [[String]]
   [s :- String]
@@ -153,7 +153,7 @@
       (fn [m store-name mdirmap]
         (assoc m store-name
                {:inbox (expand-user-path
-                         passwd-map (or (mdirmap "inbox") default-mbsync-inbox))
+                         passwd-map (or (mdirmap "inbox") DEFAULT-MBSYNC-INBOX))
                 :path (expand-user-path
                         passwd-map (mdirmap "path"))
                 :flatten (mdirmap "flatten")}))

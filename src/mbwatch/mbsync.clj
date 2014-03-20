@@ -46,7 +46,7 @@
            (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
-(def ^:const ^:private CHAN_SIZE
+(def ^:const ^:private CHAN-SIZE
   "TODO: Move to Config?"
   0x1000)
 
@@ -251,7 +251,7 @@
       {:mbsyncrc (-> config :mbsyncrc :text)
        :maildir (get-in config [:mbsyncrc :channels->maildirstores mbchan])
        :mbchan mbchan
-       :req-chan (chan (->UniqueBuffer CHAN_SIZE))
+       :req-chan (chan (->UniqueBuffer CHAN-SIZE))
        :log-chan log-chan
        :monitor (AtomicBoolean. true)})))
 

@@ -10,14 +10,14 @@
   (:import (com.stuartsierra.component SystemMap)
            (mbwatch.config Config)))
 
-(def ^:const ^:private CHAN_SIZE
+(def ^:const ^:private CHAN-SIZE
   "TODO: Move to Config?"
   0x1000)
 
 (s/defn new-system :- SystemMap
   [config   :- Config
    cmd-chan :- Channel]
-  (let [log-chan (chan CHAN_SIZE)]
+  (let [log-chan (chan CHAN-SIZE)]
     (system-map
       :logger (map->LoggingService
                 {:level DEBUG

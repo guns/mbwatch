@@ -10,7 +10,7 @@
            (org.joda.time.format DateTimeFormat)))
 
 (deftest test-sgr
-  (is (validate {Keyword String} c/sgr)))
+  (is (validate {Keyword String} c/SGR)))
 
 (deftest test-sgr-join
   (is (= "" (#'c/sgr-join nil) (#'c/sgr-join [])))
