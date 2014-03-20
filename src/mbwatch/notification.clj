@@ -35,10 +35,11 @@
                                            (new-messages (mdir-path maildir %) ts))))
                  (string/join "\n\n"))))))))
 
-(s/defn new-message-notification :- String
+(s/defn new-message-notification :- (maybe String)
   [notify-map :- {String #{String}}
    events     :- [MbsyncEventStop]]
-  (->> events
-       (map (partial sync-event->notification notify-map))
-       (remove nil?)
-       (string/join "\n\n")))
+  (let [msgs (->> events
+                  (map (partial sync-event->notification notify-map))
+                  (remove nil?))]
+    (when (seq msgs)
+      (string/join "\n\n" msgs))))
