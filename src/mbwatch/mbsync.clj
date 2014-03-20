@@ -1,8 +1,8 @@
 (ns mbwatch.mbsync
-  "The MbsyncMaster component takes an MbsyncCommand from a channel, then
-   sends mail synchronization jobs to an MbsyncWorker via a UniqueBuffer
-   channel, spawning a new worker if necessary. Each worker is responsible for
-   syncing a single mbsync channel.
+  "The MbsyncMaster component takes an ICommand from a channel, then sends
+   mail synchronization jobs to an MbsyncWorker via a UniqueBuffer channel,
+   spawning a new worker if necessary. Each worker is responsible for syncing
+   a single mbsync channel.
 
    The workers shell out to `mbsync`, passing a parsed configuration string
    via `bash -c 'mbsync -c <(cat)'`. These child processes can be terminated
@@ -10,7 +10,7 @@
 
    Calling .stop on MbsyncMaster also stops all MbsyncWorkers.
 
-     ───── MbsyncCommand ────┐
+     ─────── ICommand ───────┐
                              │
                              │
                              ▼                      ─┐
@@ -25,24 +25,22 @@
           └──────────────┘       └──────────────┘    │
                                                     ─┘
    "
-  (:require [clojure.core.async :refer [<!! >!! chan put!]]
+  (:require [clojure.core.async :refer [<!! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
-            [mbwatch.config]
             [mbwatch.logging :refer [DEBUG ERR INFO Loggable NOTICE WARNING]]
             [mbwatch.mbsync.events :refer [join-mbargs
                                            strict-map->MbsyncEventStart
                                            strict-map->MbsyncEventStop]]
             [mbwatch.process :as process]
-            [mbwatch.types :refer [->UniqueBuffer VOID]]
+            [mbwatch.types :refer [VOID]]
             [mbwatch.util :refer [class-name poison-chan shell-escape
-                                  sig-notify-all thread-loop with-chan-value]]
-            [schema.core :as s :refer [defschema either eq maybe protocol]]
+                                  thread-loop with-chan-value]]
+            [schema.core :as s :refer [maybe protocol]]
             [schema.utils :refer [class-schema]])
   (:import (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
-           (mbwatch.config Config)
            (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
@@ -67,7 +65,7 @@
   [mbsyncrc   :- String
    maildir    :- Maildirstore
    mbchan     :- String
-   req-chan   :- ReadPort
+   sync-chan  :- ReadPort
    log-chan   :- WritePort
    monitor    :- AtomicBoolean
    state-chan :- (maybe (protocol ReadPort))]
@@ -79,13 +77,13 @@
     (assoc this :state-chan
            (thread-loop []
              (when (.get monitor)
-               (with-chan-value [bs (<!! req-chan)]
-                 (sync-boxes! this bs)
+               (with-chan-value [bs (<!! sync-chan)]
+                 (apply sync-boxes! this)
                  (recur))))))
 
   (stop [this]
     (put! log-chan this)
-    (poison-chan req-chan state-chan)
+    (poison-chan sync-chan state-chan)
     (dissoc this :state-chan))
 
   Loggable
@@ -101,10 +99,12 @@
 
 (s/defn ^:private sync-boxes! :- VOID
   [mbsync-worker-map :- (:schema (class-schema MbsyncWorker))
+   id                :- Long
    mboxes            :- [String]]
   (let [{:keys [mbsyncrc maildir mbchan log-chan monitor]} mbsync-worker-map
         ev (strict-map->MbsyncEventStart
              {:level INFO
+              :id id
               :mbchan mbchan
               :mboxes mboxes
               :start (DateTime.)})
@@ -126,23 +126,6 @@
                      :maildir maildir))]
     (put! log-chan ev')
     nil))
-
-(defschema MbsyncCommandSchema
-  (either {String [String]} ; Sync {mbchan [mbox]}
-          (eq :terminate)   ; Terminate current sync processes
-          (eq ::stop)       ; Terminate syncs and kill workers
-          (eq nil)          ; Same as ::stop
-          ))
-
-(s/defrecord MbsyncCommand
-  [command :- MbsyncCommandSchema]
-
-  Loggable
-
-  (log-level [_] DEBUG)
-
-  (->log [this]
-    (LogItem. DEBUG (DateTime.) (str (class-name this) ": " command))))
 
 (declare handle-mbsync-command)
 
