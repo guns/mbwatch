@@ -182,6 +182,23 @@
     (put! log-chan ev')
     nil))
 
+(defschema MbsyncCommandSchema
+  (either {String [String]} ; Sync {mbchan [mbox]}
+          (eq :terminate)   ; Terminate current sync processes
+          (eq ::stop)       ; Terminate syncs and kill workers
+          (eq nil)          ; Same as ::stop
+          ))
+
+(s/defrecord MbsyncCommand
+  [command :- MbsyncCommandSchema]
+
+  Loggable
+
+  (log-level [_] DEBUG)
+
+  (->log [this]
+    (LogItem. DEBUG (DateTime.) (str (class-name this) ": " command))))
+
 (declare handle-mbsync-command)
 
 (s/defrecord MbsyncMaster
@@ -225,23 +242,6 @@
               (sig-notify-all mon)
               (.stop w)))
           workers)))
-
-(defschema MbsyncCommandSchema
-  (either {String [String]} ; Sync {mbchan [mbox]}
-          (eq :terminate)   ; Terminate current sync processes
-          (eq ::stop)       ; Terminate syncs and kill workers
-          (eq nil)          ; Same as ::stop
-          ))
-
-(s/defrecord MbsyncCommand
-  [command :- MbsyncCommandSchema]
-
-  Loggable
-
-  (log-level [_] DEBUG)
-
-  (->log [this]
-    (LogItem. DEBUG (DateTime.) (str (class-name this) ": " command))))
 
 (s/defn ^:private new-mbsync-worker :- MbsyncWorker
   [mbchan            :- String
