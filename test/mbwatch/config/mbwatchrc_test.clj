@@ -6,5 +6,5 @@
 
 (s/deftest test-parse
   (let [mbwatchrc (mbw/parse (slurp (io/resource "mbwatchrc")))]
-    (is (= (:notification-cmd mbwatchrc)
+    (is (= (:notify-cmd mbwatchrc)
            "notify - -a \"~/.sounds/new-message.mp3\""))))

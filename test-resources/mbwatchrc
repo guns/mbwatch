@@ -2,6 +2,6 @@
 ; Test mbwatchrc
 ;
 
-notification-cmd = notify - -a "~/.sounds/new-message.mp3"
+notify-cmd = notify - -a "~/.sounds/new-message.mp3"
 
 ; vim:ft=dosini:

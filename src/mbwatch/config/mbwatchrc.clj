@@ -7,10 +7,10 @@
   (str (System/getProperty "user.home") "/.config/mbwatch/rc"))
 
 (def DEFAULT-OPTIONS
-  {:notification-cmd "notify-send \"$(cat)\""})
+  {:notify-cmd "notify-send \"$(cat)\""})
 
 (s/defrecord Mbwatchrc
-  [notification-cmd :- String])
+  [notify-cmd :- String])
 
 (s/defn parse :- Mbwatchrc
   [s :- String]
