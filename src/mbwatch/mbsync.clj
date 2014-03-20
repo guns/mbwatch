@@ -78,9 +78,8 @@
 
   (log-level [_] level)
 
-  (->log [this]
-    (let [{:keys [level mbchan mboxes start]} this
-          msg (format "Starting `mbsync %s`" (join-mbargs mbchan mboxes))]
+  (->log [_]
+    (let [msg (format "Starting `mbsync %s`" (join-mbargs mbchan mboxes))]
       (LogItem. level start msg))))
 
 (s/defrecord MbsyncEventStop
@@ -97,9 +96,8 @@
 
   (log-level [_] level)
 
-  (->log [this]
-    (let [{:keys [level mbchan mboxes start stop status error]} this
-          mbarg (join-mbargs mbchan mboxes)
+  (->log [_]
+    (let [mbarg (join-mbargs mbchan mboxes)
           Δt (human-duration start stop)
           msg (if (zero? status)
                 (format "Finished `mbsync %s` in %s." mbarg Δt)
