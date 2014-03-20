@@ -13,7 +13,7 @@
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.util :refer [class-name poison-chan thread-loop
                                   with-chan-value]]
-            [schema.core :as s :refer [Int maybe]])
+            [schema.core :as s :refer [Int maybe protocol]])
   (:import (org.joda.time DateTime)))
 
 ;; From linux/kern_levels.h
@@ -60,7 +60,7 @@
   [level      :- Int
    logger     :- IItemLogger
    log-chan   :- ReadPort
-   state-chan :- (maybe ReadPort)]
+   state-chan :- (maybe (protocol ReadPort))]
 
   Lifecycle
 
