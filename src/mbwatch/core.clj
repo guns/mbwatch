@@ -19,10 +19,10 @@
    cmd-chan :- Channel]
   (let [log-chan (chan CHAN-SIZE)]
     (system-map
-      :logger (map->LoggingService
-                {:level DEBUG
-                 :logger (->ConsoleLogger System/out)
-                 :log-chan log-chan})
+      :logging-service (map->LoggingService
+                         {:level DEBUG
+                          :logger (->ConsoleLogger System/out)
+                          :log-chan log-chan})
       :mbsync-master (map->MbsyncMaster
                        {:config config
                         :cmd-chan cmd-chan

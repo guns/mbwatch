@@ -28,8 +28,8 @@
     (LogItem. DEBUG (DateTime.) (str (class-name this) ": " command))))
 
 (s/defrecord SyncCommand
-  [id              :- Long
-   channels->boxes :- {String [String]}]
+  [id           :- Long
+   mbchan->mbox :- {String [String]}]
 
   ICommand
 
@@ -40,7 +40,7 @@
   (log-level [_] DEBUG)
 
   (->log [this]
-    (let [msg (format "%s: %s (%d)" (class-name this) channels->boxes id)]
+    (let [msg (format "%s: %s (%d)" (class-name this) mbchan->mbox id)]
       (LogItem. DEBUG (DateTime.) msg))))
 
 (s/defn ->command :- ICommand
