@@ -91,17 +91,15 @@
   [bindings & body]
   `(thread (loop ~bindings ~@body)))
 
-(def ^:private POISON ::poison)
-
 (defn poison-chan
   "Send a poison value on wr-chan and wait for a response on rd-chan."
   [wr-chan rd-chan]
-  (>!! wr-chan POISON)
+  (>!! wr-chan ::poison)
   (<!! rd-chan))
 
 (defmacro with-chan-value [[sym form] & body]
   `(let [~sym ~form]
-     (when (and ~sym (not= ~sym ~POISON))
+     (when (and ~sym (not= ~sym ::poison))
        ~@body)))
 
 (defmacro first-alt
