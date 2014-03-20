@@ -1,7 +1,7 @@
 (ns mbwatch.notification-test
   (:require [clojure.test :refer [is]]
             [mbwatch.logging :refer [DEBUG]]
-            [mbwatch.mbsync :as m]
+            [mbwatch.mbsync.events :as e]
             [mbwatch.notification :as n]
             [schema.test :as s])
   (:import (org.joda.time DateTime)))
@@ -10,7 +10,7 @@
   (is (= "[FOO-chan/INBOX] 2 new messages from:\n\nAlice <alice@example.com>\n★ ❤ Carol ❤ ★ <carol@example.com>"
          (n/new-message-notification
            {"FOO-chan" #{"INBOX"}}
-           [(m/strict-map->MbsyncEventStop
+           [(e/strict-map->MbsyncEventStop
               {:level DEBUG
                :mbchan "FOO-chan"
                :mboxes []
@@ -21,7 +21,7 @@
                :maildir {:inbox "test-resources/maildir/foo-mdir/INBOX"
                          :path "test-resources/maildir/foo-mdir/"
                          :flatten nil}})
-            (m/strict-map->MbsyncEventStop
+            (e/strict-map->MbsyncEventStop
               {:level DEBUG
                :mbchan "BAR-chan"
                :mboxes []
@@ -35,7 +35,7 @@
   (is (re-find #"\A\[FOO-chan/clojure\] 17 new messages from:"
                (n/new-message-notification
                  {"FOO-chan" #{"clojure"}}
-                 [(m/strict-map->MbsyncEventStop
+                 [(e/strict-map->MbsyncEventStop
                     {:level DEBUG
                      :mbchan "FOO-chan"
                      :mboxes []
