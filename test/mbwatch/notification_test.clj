@@ -12,6 +12,7 @@
            {"FOO-chan" #{"INBOX"}}
            [(e/strict-map->MbsyncEventStop
               {:level DEBUG
+               :id 1
                :mbchan "FOO-chan"
                :mboxes []
                :start (DateTime. 0)
@@ -23,6 +24,7 @@
                          :flatten nil}})
             (e/strict-map->MbsyncEventStop
               {:level DEBUG
+               :id 1
                :mbchan "BAR-chan"
                :mboxes []
                :start (DateTime. 0)
@@ -37,6 +39,7 @@
                  {"FOO-chan" #{"clojure"}}
                  [(e/strict-map->MbsyncEventStop
                     {:level DEBUG
+                     :id 2
                      :mbchan "FOO-chan"
                      :mboxes []
                      :start (DateTime. 0)

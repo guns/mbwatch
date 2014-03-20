@@ -15,11 +15,13 @@
   (let [dt (DateTime.)
         start (e/strict-map->MbsyncEventStart
                 {:level DEBUG
+                 :id 1
                  :mbchan "test"
                  :mboxes ["INBOX"]
                  :start dt})
         stop (e/strict-map->MbsyncEventStop
                {:level ERR
+                :id 1
                 :mbchan "test"
                 :mboxes []
                 :start dt

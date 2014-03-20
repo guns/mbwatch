@@ -16,7 +16,7 @@
 
 (s/defrecord MbsyncEventStart
   [level  :- Int
-   id     :- Long
+   id     :- Int
    mbchan :- String
    mboxes :- [String]
    start  :- DateTime]
@@ -31,7 +31,7 @@
 
 (s/defrecord MbsyncEventStop
   [level   :- Int
-   id      :- Long
+   id      :- Int
    mbchan  :- String
    mboxes  :- [String]
    start   :- DateTime

@@ -1,7 +1,7 @@
 (ns mbwatch.mbsync.command
   (:require [mbwatch.logging :refer [DEBUG Loggable]]
             [mbwatch.util :refer [class-name]]
-            [schema.core :as s :refer [either eq]])
+            [schema.core :as s :refer [Int either eq]])
   (:import (clojure.lang Keyword)
            (java.util.concurrent.atomic AtomicLong)
            (mbwatch.logging LogItem)
@@ -28,7 +28,7 @@
     (LogItem. DEBUG (DateTime.) (str (class-name this) ": " command))))
 
 (s/defrecord SyncCommand
-  [id           :- Long
+  [id           :- Int
    mbchan->mbox :- {String [String]}]
 
   ICommand

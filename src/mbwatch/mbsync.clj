@@ -39,7 +39,7 @@
             [mbwatch.types :refer [VOID]]
             [mbwatch.util :refer [class-name poison-chan shell-escape
                                   sig-notify-all thread-loop with-chan-value]]
-            [schema.core :as s :refer [maybe protocol]]
+            [schema.core :as s :refer [Int maybe protocol]]
             [schema.utils :refer [class-schema]])
   (:import (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
@@ -103,7 +103,7 @@
 
 (s/defn ^:private sync-boxes! :- VOID
   [mbsync-worker-map :- (:schema (class-schema MbsyncWorker))
-   id                :- Long
+   id                :- Int
    mboxes            :- [String]]
   (let [{:keys [mbsyncrc maildir mbchan log-chan monitor]} mbsync-worker-map
         ev (strict-map->MbsyncEventStart
@@ -191,7 +191,7 @@
   "Dispatch sync jobs to MbsyncWorker instances. Creates a new channel worker
    if it does not exist."
   [workers           :- {String MbsyncWorker}
-   id                :- Long
+   id                :- Int
    sync-req          :- {String [String]}
    mbsync-master-map :- (:schema (class-schema MbsyncMaster))]
   (let [channels (-> mbsync-master-map :config :mbsyncrc :channels)]
