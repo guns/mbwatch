@@ -33,7 +33,7 @@
 
   ICommand
 
-  (command [_] :sync) ; This is perfunctory as we can dispatch on type
+  (command [_] :sync)
 
   Loggable
 

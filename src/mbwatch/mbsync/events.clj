@@ -53,7 +53,7 @@
                       fail (if (<= level ERR)
                              (format "FAILURE: `mbsync %s` aborted in %s with status %d."
                                      mbarg Δt status)
-                             (format "TERMINATED: `mbsync %s` terminated after %s with status %d."
+                             (format "FAILURE: `mbsync %s` terminated after %s with status %d."
                                      mbarg Δt status))]
                   (.append buf fail)
                   (when error

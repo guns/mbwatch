@@ -25,22 +25,25 @@
           └──────────────┘       └──────────────┘    │
                                                     ─┘
    "
-  (:require [clojure.core.async :refer [<!! put!]]
+  (:require [clojure.core.async :refer [<!! >!! chan put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
+            [mbwatch.config]
             [mbwatch.logging :refer [DEBUG ERR INFO Loggable NOTICE WARNING]]
+            [mbwatch.mbsync.command :refer [->command ICommand command]]
             [mbwatch.mbsync.events :refer [join-mbargs
                                            strict-map->MbsyncEventStart
                                            strict-map->MbsyncEventStop]]
             [mbwatch.process :as process]
-            [mbwatch.types :refer [VOID]]
+            [mbwatch.types :refer [->UniqueBuffer VOID]]
             [mbwatch.util :refer [class-name poison-chan shell-escape
-                                  thread-loop with-chan-value]]
+                                  sig-notify-all thread-loop with-chan-value]]
             [schema.core :as s :refer [maybe protocol]]
             [schema.utils :refer [class-schema]])
   (:import (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
+           (mbwatch.config Config)
            (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
@@ -65,7 +68,7 @@
   [mbsyncrc   :- String
    maildir    :- Maildirstore
    mbchan     :- String
-   sync-chan  :- ReadPort
+   req-chan   :- ReadPort
    log-chan   :- WritePort
    monitor    :- AtomicBoolean
    state-chan :- (maybe (protocol ReadPort))]
@@ -77,13 +80,14 @@
     (assoc this :state-chan
            (thread-loop []
              (when (.get monitor)
-               (with-chan-value [bs (<!! sync-chan)]
-                 (apply sync-boxes! this)
+               (with-chan-value [req (<!! req-chan)]
+                 (let [[id boxes] req]
+                   (sync-boxes! this id boxes))
                  (recur))))))
 
   (stop [this]
     (put! log-chan this)
-    (poison-chan sync-chan state-chan)
+    (poison-chan req-chan state-chan)
     (dissoc this :state-chan))
 
   Loggable
@@ -144,12 +148,12 @@
              (let [cmd (<!! cmd-chan)]
                (when cmd
                  (put! log-chan cmd))
-               (when-let [ws (handle-mbsync-command cmd workers this)]
-                 (recur ws))))))
+               (when-let [workers (handle-mbsync-command workers cmd this)]
+                 (recur workers))))))
 
   (stop [this]
     (put! log-chan this)
-    (>!! cmd-chan ::stop)
+    (>!! cmd-chan (->command :stop))
     (<!! state-chan)
     (dissoc this :state-chan))
 
@@ -158,8 +162,8 @@
   (log-level [_] DEBUG)
 
   (->log [this]
-    (LogItem. DEBUG (DateTime.) (str (if state-chan "↓ Stopping " "↑ Starting ")
-                                     (class-name this)))))
+    (let [msg (str (if state-chan "↓ Stopping " "↑ Starting ") (class-name this))]
+      (LogItem. DEBUG (DateTime.) msg))))
 
 (s/defn ^:private stop-workers :- [MbsyncWorker]
   [workers :- [MbsyncWorker]]
@@ -186,8 +190,9 @@
 (s/defn ^:private dispatch-syncs :- {String MbsyncWorker}
   "Dispatch sync jobs to MbsyncWorker instances. Creates a new channel worker
    if it does not exist."
-  [sync-req          :- {String [String]}
-   workers           :- {String MbsyncWorker}
+  [workers           :- {String MbsyncWorker}
+   id                :- Long
+   sync-req          :- {String [String]}
    mbsync-master-map :- (:schema (class-schema MbsyncMaster))]
   (let [channels (-> mbsync-master-map :config :mbsyncrc :channels)]
     (reduce-kv
@@ -196,7 +201,7 @@
           (let [ws (if (contains? ws ch)
                      ws
                      (assoc ws ch (.start (new-mbsync-worker ch mbsync-master-map))))]
-            (put! (get-in ws [ch :req-chan]) bs)
+            (put! (get-in ws [ch :req-chan]) [id bs])
             ws)
           (do (put! (:log-chan mbsync-master-map)
                     (LogItem. WARNING (DateTime.) (format "Unknown channel: `%s`" ch)))
@@ -204,14 +209,17 @@
       workers sync-req)))
 
 (s/defn ^:private handle-mbsync-command :- (maybe {String MbsyncWorker})
-  [mbsync-command    :- MbsyncCommand
-   workers           :- {String MbsyncWorker}
+  [workers           :- {String MbsyncWorker}
+   cmd               :- (maybe (protocol ICommand))
    mbsync-master-map :- (:schema (class-schema MbsyncMaster))]
-  (let [{:keys [command]} mbsync-command]
-    (case command
-      nil        (do (stop-workers (vals workers)) nil)
-      ::stop     (do (stop-workers (vals workers)) nil)
-      :terminate (do (doseq [^MbsyncWorker w (vals workers)]
-                       (sig-notify-all (.monitor w)))
-                     workers)
-      (dispatch-syncs command workers mbsync-master-map))))
+  (if (nil? cmd)
+    (do (stop-workers (vals workers)) nil)
+    (case (command cmd)
+      :stop (do (stop-workers (vals workers)) nil)
+      :term (do (doseq [^MbsyncWorker w (vals workers)]
+                  (sig-notify-all (.monitor w)))
+                workers)
+      :sync (dispatch-syncs workers
+                            (:id cmd)
+                            (:channels->boxes cmd)
+                            mbsync-master-map))))
