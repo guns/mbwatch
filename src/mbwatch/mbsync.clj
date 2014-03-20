@@ -27,18 +27,18 @@
    "
   (:require [clojure.core.async :refer [<!! >!! chan put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
-            [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.config]
             [mbwatch.logging :refer [DEBUG ERR INFO Loggable NOTICE WARNING]]
+            [mbwatch.mbsync.events :refer [join-mbargs
+                                           strict-map->MbsyncEventStart
+                                           strict-map->MbsyncEventStop]]
             [mbwatch.process :as process]
             [mbwatch.types :refer [->UniqueBuffer VOID]]
-            [mbwatch.util :refer [class-name human-duration poison-chan
-                                  shell-escape sig-notify-all thread-loop
-                                  with-chan-value]]
-            [schema.core :as s :refer [Int defschema either eq maybe
-                                       protocol]]
+            [mbwatch.util :refer [class-name poison-chan shell-escape
+                                  sig-notify-all thread-loop with-chan-value]]
+            [schema.core :as s :refer [defschema either eq maybe protocol]]
             [schema.utils :refer [class-schema]])
   (:import (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
@@ -50,13 +50,6 @@
   "TODO: Move to Config?"
   0x1000)
 
-(s/defn ^:private join-mbargs :- String
-  [mbchan :- String
-   mboxes :- [String]]
-  (if (seq mboxes)
-    (str mbchan \: (string/join \, mboxes))
-    (str mbchan)))
-
 (s/defn spawn-sync :- Process
   "Asynchronously launch an mbsync process to sync a single mail channel. The
    config string is passed to mbsync via `cat` and bash's <(/dev/fd) feature
@@ -67,52 +60,6 @@
   (process/spawn
     "bash" "-c" (str "exec mbsync -c <(cat) " (shell-escape (join-mbargs mbchan mboxes)))
     :in mbsyncrc))
-
-(s/defrecord MbsyncEventStart
-  [level  :- Int
-   mbchan :- String
-   mboxes :- [String]
-   start  :- DateTime]
-
-  Loggable
-
-  (log-level [_] level)
-
-  (->log [_]
-    (let [msg (format "Starting `mbsync %s`" (join-mbargs mbchan mboxes))]
-      (LogItem. level start msg))))
-
-(s/defrecord MbsyncEventStop
-  [level   :- Int
-   mbchan  :- String
-   mboxes  :- [String]
-   start   :- DateTime
-   stop    :- DateTime
-   status  :- Int
-   error   :- (maybe String)
-   maildir :- (maybe Maildirstore)]
-
-  Loggable
-
-  (log-level [_] level)
-
-  (->log [_]
-    (let [mbarg (join-mbargs mbchan mboxes)
-          Δt (human-duration start stop)
-          msg (if (zero? status)
-                (format "Finished `mbsync %s` in %s." mbarg Δt)
-                (let [buf (StringBuffer.)
-                      fail (if (<= level ERR)
-                             (format "FAILURE: `mbsync %s` aborted in %s with status %d."
-                                     mbarg Δt status)
-                             (format "TERMINATED: `mbsync %s` terminated after %s with status %d."
-                                     mbarg Δt status))]
-                  (.append buf fail)
-                  (when error
-                    (.append buf \newline)
-                    (.append buf error))
-                  (str buf)))]
-      (LogItem. level stop msg))))
 
 (declare sync-boxes!)
 
