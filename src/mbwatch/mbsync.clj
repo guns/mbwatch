@@ -1,6 +1,6 @@
 (ns mbwatch.mbsync
   "The MbsyncMaster component takes an ICommand from a channel, then sends
-   mail synchronization jobs to an MbsyncWorker via a UniqueBuffer channel,
+   mail synchronization jobs to an MbsyncWorker via a buffered channel,
    spawning a new worker if necessary. Each worker is responsible for syncing
    a single mbsync channel.
 
@@ -36,7 +36,7 @@
                                            strict-map->MbsyncEventStart
                                            strict-map->MbsyncEventStop]]
             [mbwatch.process :as process]
-            [mbwatch.types :refer [->UniqueBuffer VOID]]
+            [mbwatch.types :refer [VOID]]
             [mbwatch.util :refer [class-name poison-chan shell-escape
                                   sig-notify-all thread-loop with-chan-value]]
             [schema.core :as s :refer [maybe protocol]]
@@ -183,7 +183,7 @@
       {:mbsyncrc (-> config :mbsyncrc :text)
        :maildir (get-in config [:mbsyncrc :channels->maildirstores mbchan])
        :mbchan mbchan
-       :req-chan (chan (->UniqueBuffer CHAN-SIZE))
+       :req-chan (chan CHAN-SIZE)
        :log-chan log-chan
        :monitor (AtomicBoolean. true)})))
 
