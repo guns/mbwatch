@@ -28,7 +28,7 @@
   (start [this] (start-system this))
   (stop [this] (stop-system this)))
 
-(s/defn new-system :- Application
+(s/defn new-application :- Application
   [config   :- Config
    cmd-chan :- ReadPort]
   (let [notify-chan (chan CHAN-SIZE)
