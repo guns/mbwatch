@@ -130,9 +130,10 @@
       (if-let [req (sync-requests id)]
         (let [req (conj req obj)]
           (if (> (count req) (first req))
-            (do (notify! (:notify-cmd service-map)
-                         (deref (:notify-map-ref service-map))
-                         (rest req))
+            (do (future
+                  (notify! (:notify-cmd service-map)
+                           (deref (:notify-map-ref service-map))
+                           (rest req)))
                 (dissoc sync-requests id))
             (assoc sync-requests id req)))
         sync-requests))
