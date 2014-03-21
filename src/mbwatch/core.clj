@@ -5,9 +5,9 @@
                                                 stop-system]]
             [mbwatch.config]
             [mbwatch.console-logger :refer [->ConsoleLogger]]
-            [mbwatch.logging :refer [DEBUG map->LoggingService]]
-            [mbwatch.mbsync :refer [map->MbsyncMaster]]
-            [mbwatch.notification :refer [map->NewMessageNotificationService]]
+            [mbwatch.logging :refer [DEBUG strict-map->LoggingService]]
+            [mbwatch.mbsync :refer [strict-map->MbsyncMaster]]
+            [mbwatch.notification :refer [strict-map->NewMessageNotificationService]]
             [schema.core :as s])
   (:import (mbwatch.config Config)
            (mbwatch.logging LoggingService)
@@ -34,16 +34,19 @@
   (let [notify-chan (chan CHAN-SIZE)
         log-chan (chan CHAN-SIZE)]
     (Application.
-      (map->LoggingService
+      (strict-map->LoggingService
         {:level DEBUG
          :logger (->ConsoleLogger System/out)
-         :log-chan log-chan})
-      (map->NewMessageNotificationService
+         :log-chan log-chan
+         :state-chan nil})
+      (strict-map->NewMessageNotificationService
         {:notify-cmd (-> config :mbwatchrc :notify-cmd)
          :notify-map-ref (atom {"self" #{"INBOX"}})
          :read-chan notify-chan
-         :write-chan log-chan})
-      (map->MbsyncMaster
+         :write-chan log-chan
+         :state-chan nil})
+      (strict-map->MbsyncMaster
         {:config config
          :cmd-chan cmd-chan
-         :log-chan notify-chan}))))
+         :log-chan notify-chan
+         :state-chan nil}))))

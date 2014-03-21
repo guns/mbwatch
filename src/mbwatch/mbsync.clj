@@ -180,13 +180,14 @@
   [mbchan            :- String
    mbsync-master-map :- (:schema (class-schema MbsyncMaster))]
   (let [{:keys [config log-chan]} mbsync-master-map]
-    (map->MbsyncWorker
+    (strict-map->MbsyncWorker
       {:mbsyncrc (-> config :mbsyncrc :text)
        :maildir (get-in config [:mbsyncrc :channels->maildirstores mbchan])
        :mbchan mbchan
        :req-chan (chan CHAN-SIZE)
        :log-chan log-chan
-       :monitor (AtomicBoolean. true)})))
+       :monitor (AtomicBoolean. true)
+       :state-chan nil})))
 
 (s/defn ^:private dispatch-syncs :- {String MbsyncWorker}
   "Dispatch sync jobs to MbsyncWorker instances. Creates a new channel worker
