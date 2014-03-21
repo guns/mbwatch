@@ -165,7 +165,7 @@
     (let [msg (str (if state-chan "↓ Stopping " "↑ Starting ") (class-name this))]
       (LogItem. DEBUG (DateTime.) msg))))
 
-(s/defn ^:private stop-workers :- [MbsyncWorker]
+(s/defn ^:private stop-workers! :- VOID
   [workers :- [MbsyncWorker]]
   (doall
     (pmap (fn [^MbsyncWorker w]
@@ -173,7 +173,8 @@
               (.set mon false)
               (sig-notify-all mon)
               (.stop w)))
-          workers)))
+          workers))
+  nil)
 
 (s/defn ^:private new-mbsync-worker :- MbsyncWorker
   [mbchan            :- String
@@ -213,13 +214,13 @@
    cmd               :- (maybe (protocol ICommand))
    mbsync-master-map :- (:schema (class-schema MbsyncMaster))]
   (if (nil? cmd)
-    (do (stop-workers (vals workers)) nil)
+    (stop-workers! (vals workers))
     (case (command cmd)
-      :stop (do (stop-workers (vals workers)) nil)
+      :stop (stop-workers! (vals workers))
       :term (do (doseq [^MbsyncWorker w (vals workers)]
                   (sig-notify-all (.monitor w)))
                 workers)
       :sync (dispatch-syncs workers
                             (:id cmd)
-                            (:channels->boxes cmd)
+                            (:mbchan->mbox cmd)
                             mbsync-master-map))))

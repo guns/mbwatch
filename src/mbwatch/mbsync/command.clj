@@ -40,7 +40,7 @@
   (log-level [_] DEBUG)
 
   (->log [this]
-    (let [msg (format "%s: %s (%d)" (class-name this) mbchan->mbox id)]
+    (let [msg (format "%s: %d %s" (class-name this) id mbchan->mbox)]
       (LogItem. DEBUG (DateTime.) msg))))
 
 (s/defn ->command :- ICommand

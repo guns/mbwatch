@@ -34,7 +34,7 @@
   [messages :- [MimeMessage]]
   (let [n (count messages)]
     (when (pos? n)
-      (format "%d new message%s from:\n\n%s"
+      (format "%d new message%s from:\n%s"
               n
               (if (= 1 n) "" \s)
               (string/join \newline (senders messages))))))
@@ -49,12 +49,15 @@
                  nboxes ; [] means full channel sync
                  (set/intersection (set mboxes) nboxes))]
         (when (seq bs)
-          (let [ts (to-ms start)]
-            (->> (sort bs)
-                 (mapv #(format "[%s/%s] %s"
-                                mbchan % (format-msg
-                                           (new-messages (mdir-path maildir %) ts))))
-                 (string/join "\n\n"))))))))
+          (let [ts (to-ms start)
+                msgs (reduce
+                       (fn [v b]
+                         (if-let [msg (format-msg (new-messages (mdir-path maildir b) ts))]
+                           (conj v (str "[" mbchan "/" b "]\t" msg))
+                           v))
+                       [] (sort bs))]
+            (when (seq msgs)
+              (string/join "\n\n" msgs))))))))
 
 (s/defn ^:private new-message-notification :- (maybe String)
   [notify-map :- {String #{String}}
@@ -68,7 +71,7 @@
 (s/defn notify! :- VOID
   [notify-cmd :- String
    notify-map :- {String #{String}}
-   events     :- MbsyncEventStop]
+   events     :- [MbsyncEventStop]]
   (when-let [msg (new-message-notification notify-map events)]
     (process/spawn "bash" "-c" notify-cmd :in msg)
     nil))
@@ -78,24 +81,24 @@
 (s/defrecord NewMessageNotificationService
   [notify-cmd     :- String
    notify-map-ref :- IDeref
-   notify-chan    :- ReadPort
-   log-chan       :- WritePort
+   read-chan      :- ReadPort
+   write-chan     :- WritePort
    state-chan     :- (maybe (protocol ReadPort))]
 
   Lifecycle
 
   (start [this]
-    (put! log-chan this)
+    (put! write-chan this)
     (assoc this :state-chan
            (thread-loop [sync-requests {}]
-             (with-chan-value [obj (<!! notify-chan)]
+             (with-chan-value [obj (<!! read-chan)]
                ;; Pass through ASAP
-               (put! log-chan obj)
+               (put! write-chan obj)
                (recur (handle-notification-input sync-requests obj this))))))
 
   (stop [this]
-    (put! notify-chan this)
-    (poison-chan notify-chan state-chan)
+    (put! read-chan this)
+    (poison-chan read-chan state-chan)
     (dissoc this :state-chan))
 
   Loggable
