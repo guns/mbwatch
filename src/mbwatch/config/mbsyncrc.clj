@@ -177,7 +177,8 @@
    credentials :- {Word IMAPCredentials}]
   (reduce-kv
     (fn [m k v]
-      (assoc m k (-> (dissoc v "passcmd")
+      (assoc m k (-> v
+                     (dissoc "passcmd")
                      (assoc "pass" (pr-str (get-in credentials [k :pass]))))))
     {} imapstore))
 
