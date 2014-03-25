@@ -7,7 +7,7 @@
   (:import (org.joda.time DateTime)))
 
 (s/deftest test-new-message-notification
-  (is (= "[FOO-chan/INBOX] 2 new messages from:\n\nAlice <alice@example.com>\n★ ❤ Carol ❤ ★ <carol@example.com>"
+  (is (= "[FOO-chan/INBOX]\t2 new messages from:\nAlice <alice@example.com>\n★ ❤ Carol ❤ ★ <carol@example.com>"
          (#'n/new-message-notification
            {"FOO-chan" #{"INBOX"}}
            [(e/strict-map->MbsyncEventStop
@@ -34,7 +34,7 @@
                :maildir {:inbox "test-resources/maildir/bar-mdir/INBOX"
                          :path "test-resources/maildir/bar-mdir/"
                          :flatten nil}})])))
-  (is (re-find #"\A\[FOO-chan/clojure\] 17 new messages from:"
+  (is (re-find #"\A\[FOO-chan/clojure\]\t17 new messages from:"
                (#'n/new-message-notification
                  {"FOO-chan" #{"clojure"}}
                  [(e/strict-map->MbsyncEventStop
