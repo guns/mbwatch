@@ -71,7 +71,7 @@
 (s/defrecord Mbsyncrc
   [text                    :- String
    sections                :- Sections
-   credentials             :- {Word IMAPCredentials}
+   names->credentials      :- {Word IMAPCredentials}
    channels                :- IPersistentSet
    channels->maildirstores :- {Word Maildirstore}])
 
@@ -173,13 +173,13 @@
     {} channels))
 
 (s/defn ^:private replace-passcmd :- MapSectionValue
-  [imapstore   :- MapSectionValue
-   credentials :- {Word IMAPCredentials}]
+  [imapstore          :- MapSectionValue
+   names->credentials :- {Word IMAPCredentials}]
   (reduce-kv
     (fn [m k v]
       (assoc m k (-> v
                      (dissoc "passcmd")
-                     (assoc "pass" (pr-str (get-in credentials [k :pass]))))))
+                     (assoc "pass" (pr-str (get-in names->credentials [k :pass]))))))
     {} imapstore))
 
 (s/defn ^:private render-section :- [String]
@@ -192,9 +192,9 @@
           (sort-by key (get sections type))))
 
 (s/defn ^:private render :- String
-  [sections    :- Sections
-   credentials :- {Word IMAPCredentials}]
-  (let [s (update-in sections [:imapstore] #(replace-passcmd % credentials))
+  [sections           :- Sections
+   names->credentials :- {Word IMAPCredentials}]
+  (let [s (update-in sections [:imapstore] #(replace-passcmd % names->credentials))
         r (partial render-section s)]
     (string/join \newline (concat (:general s)
                                   [""]
@@ -205,13 +205,13 @@
 (s/defn parse :- Mbsyncrc
   [s :- String]
   (let [sections (parse-tokens (tokenize s))
-        credentials (map-credentials (:imapstore sections))
+        names->credentials (map-credentials (:imapstore sections))
         channels->maildirstores (map-slave-maildirstores
                                   (:channel sections)
                                   (map-maildirstores (:maildirstore sections)))]
     (strict-map->Mbsyncrc
-      {:text (render sections credentials)
+      {:text (render sections names->credentials)
        :sections sections
-       :credentials credentials
+       :names->credentials names->credentials
        :channels (-> sections :channel keys set)
        :channels->maildirstores channels->maildirstores})))
