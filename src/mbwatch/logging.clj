@@ -48,7 +48,7 @@
   ;; Fallback implementation
   Object
 
-  (log-level [_] NOTICE)
+  (log-level [_] DEBUG)
 
   (->log [this]
     (LogItem. NOTICE (DateTime.) (str this))))
