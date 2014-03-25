@@ -1,7 +1,8 @@
 (ns mbwatch.util
   (:require [clojure.core.async :refer [<!! >!! alts!! chan go thread]]
             [clojure.string :as string])
-  (:import (org.joda.time Instant ReadableInstant Seconds)))
+  (:import (java.net URLEncoder)
+           (org.joda.time Instant ReadableInstant Seconds)))
 
 (defn chomp
   "Like Ruby's String#chomp, remove either trailing newlines or a constant
@@ -63,6 +64,11 @@
 
 (defn to-ms [datetime]
   (.getMillis (Instant. datetime)))
+
+(defn url-for
+  "Returns scheme://user@host:port with appropriate escaping."
+  [scheme user host port]
+  (str scheme "://" (URLEncoder/encode user) \@ (URLEncoder/encode host) \: port))
 
 ;;
 ;; Concurrency helpers

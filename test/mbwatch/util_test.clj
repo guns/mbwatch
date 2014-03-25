@@ -32,6 +32,10 @@
   (let [dt (DateTime.)]
     (is (= "1 second" (u/human-duration dt (.plus dt 1000))))))
 
+(deftest test-url-for
+  (is (= "imaps://foo%40example.com@example.com:993"
+         (u/url-for "imaps" "foo@example.com" "example.com" 993))))
+
 (deftest test-first-alt
   (is (= (u/first-alt (do (Thread/sleep 10) :first)
                       (do (Thread/sleep 20) :second))
