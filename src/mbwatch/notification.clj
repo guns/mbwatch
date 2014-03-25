@@ -21,7 +21,7 @@
             [mbwatch.types :refer [VOID]]
             [mbwatch.util :refer [class-name poison-chan thread-loop to-ms
                                   with-chan-value]]
-            [schema.core :as s :refer [Int defschema maybe one protocol]]
+            [schema.core :as s :refer [Int defschema maybe protocol]]
             [schema.utils :refer [class-schema]])
   (:import (clojure.lang IDeref)
            (javax.mail.internet MimeMessage)
@@ -114,7 +114,7 @@
 
 (defschema SyncRequestMap
   {Int {:countdown Int
-        :events MbsyncEventStop}})
+        :events [MbsyncEventStop]}})
 
 (s/defn ^:private handle-notification-input :- SyncRequestMap
   {:require [SyncCommand MbsyncEventStop]}
