@@ -113,7 +113,8 @@
       (LogItem. DEBUG (DateTime.) msg))))
 
 (defschema SyncRequestMap
-  {Int [(one Int "needed event count") MbsyncEventStop]})
+  {Int {:countdown Int
+        :events MbsyncEventStop}})
 
 (s/defn ^:private handle-notification-input :- SyncRequestMap
   {:require [SyncCommand MbsyncEventStop]}
@@ -123,19 +124,21 @@
   (case (class obj)
     #=mbwatch.mbsync.command.SyncCommand
     (let [{:keys [id mbchan->mbox]} obj]
-      (assoc sync-requests id [(count mbchan->mbox)]))
+      (assoc sync-requests id {:countdown (count mbchan->mbox) :events []}))
 
     #=mbwatch.mbsync.events.MbsyncEventStop
     (let [{:keys [id mbchan]} obj]
       (if-let [req (sync-requests id)]
-        (let [req (conj req obj)]
-          (if (> (count req) (first req))
+        (let [{:keys [countdown events]} req
+              countdown (dec countdown)
+              events (conj events obj)]
+          (if (zero? countdown)
             (do (future
                   (notify! (:notify-cmd service-map)
                            (deref (:notify-map-ref service-map))
-                           (rest req)))
+                           events))
                 (dissoc sync-requests id))
-            (assoc sync-requests id req)))
+            (assoc sync-requests id {:countdown countdown :events events})))
         sync-requests))
 
     ;; obj is not relevant to our interests
