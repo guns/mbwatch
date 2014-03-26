@@ -21,8 +21,7 @@
             [mbwatch.types :refer [VOID]]
             [mbwatch.util :refer [class-name poison-chan thread-loop to-ms
                                   with-chan-value]]
-            [schema.core :as s :refer [Int defschema maybe protocol]]
-            [schema.utils :refer [class-schema]])
+            [schema.core :as s :refer [Int defschema maybe protocol]])
   (:import (clojure.lang IDeref)
            (javax.mail.internet MimeMessage)
            (mbwatch.logging LogItem)
@@ -94,7 +93,7 @@
              (with-chan-value [obj (<!! read-chan)]
                ;; Pass through ASAP
                (put! write-chan obj)
-               (recur (handle-notification-input sync-requests obj this))))))
+               (recur (handle-notification-input this sync-requests obj))))))
 
   (stop [this]
     (put! read-chan this)
@@ -118,9 +117,9 @@
 
 (s/defn ^:private handle-notification-input :- SyncRequestMap
   {:require [SyncCommand MbsyncEventStop]}
-  [sync-requests :- SyncRequestMap
-   obj           :- Object
-   service-map   :- (:schema (class-schema NewMessageNotificationService))]
+  [notify-service :- NewMessageNotificationService
+   sync-requests  :- SyncRequestMap
+   obj            :- Object]
   (case (class obj)
     #=mbwatch.mbsync.command.SyncCommand
     (let [{:keys [id mbchan->mbox]} obj]
@@ -134,8 +133,8 @@
               events (conj events obj)]
           (if (zero? countdown)
             (do (future
-                  (notify! (:notify-cmd service-map)
-                           (deref (:notify-map-ref service-map))
+                  (notify! (:notify-cmd notify-service)
+                           (deref (:notify-map-ref notify-service))
                            events))
                 (dissoc sync-requests id))
             (assoc sync-requests id {:countdown countdown :events events})))
