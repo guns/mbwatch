@@ -1,14 +1,13 @@
 (ns mbwatch.mbsync.command
   (:require [mbwatch.logging :refer [DEBUG Loggable]]
             [mbwatch.util :refer [class-name]]
-            [schema.core :as s :refer [Int either eq]])
-  (:import (clojure.lang Keyword)
-           (java.util.concurrent.atomic AtomicLong)
+            [schema.core :as s :refer [Int either enum]])
+  (:import (java.util.concurrent.atomic AtomicLong)
            (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
 (def ^:private ^AtomicLong next-command-id
-  (AtomicLong.))
+  (AtomicLong. 1))
 
 (defprotocol ICommand
   (command [this] "Returns a keyword representing an operation."))
@@ -44,7 +43,8 @@
       (LogItem. DEBUG (DateTime.) msg))))
 
 (s/defn ->command :- ICommand
-  [command :- (either {String [String]} Keyword (eq nil))]
+  [command :- (either {String [String]}
+                      (enum :term :stop nil))]
   (if (map? command)
     (SyncCommand. (.getAndIncrement next-command-id) command)
     (Command. (or command :stop))))
