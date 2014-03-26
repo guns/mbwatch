@@ -166,14 +166,13 @@
 
 (s/defn ^:private stop-workers! :- VOID
   [workers :- [MbsyncWorker]]
-  (doall
+  (dorun
     (pmap (fn [^MbsyncWorker w]
             (let [mon ^AtomicBoolean (.monitor w)]
               (.set mon false)
               (sig-notify-all mon)
               (.stop w)))
-          workers))
-  nil)
+          workers)))
 
 (s/defn ^:private new-mbsync-worker :- MbsyncWorker
   [mbchan        :- String
