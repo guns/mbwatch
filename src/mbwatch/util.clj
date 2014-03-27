@@ -1,5 +1,5 @@
 (ns mbwatch.util
-  (:require [clojure.core.async :refer [<!! >!! alts!! chan go thread]]
+  (:require [clojure.core.async :refer [<!! >!! alts!! chan thread]]
             [clojure.string :as string])
   (:import (java.net URLEncoder)
            (org.joda.time Instant ReadableInstant Seconds)))
@@ -112,11 +112,11 @@
   "Execute all expressions concurrently and return the value of the first to
    return, prioritized by the given order. All expressions are left to run to
    completion."
-  {:require [#'go]}
+  {:require [#'thread]}
   [& exprs]
   (let [n (count exprs)
         chans (gensym "chans")]
     `(let [~chans (repeatedly ~n ~chan)]
-       ~@(mapv (fn [i] `(go (~'>! (nth ~chans ~i) ~(nth exprs i))))
+       ~@(mapv (fn [i] `(thread (~>!! (nth ~chans ~i) ~(nth exprs i))))
                (range n))
        (first (~alts!! ~chans :priority true)))))
