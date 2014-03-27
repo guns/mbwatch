@@ -74,19 +74,19 @@
 ;; Concurrency helpers
 ;;
 
-(defmacro sig-wait
+(defn sig-wait
   ([^Object monitor]
-   `(locking ~monitor (.wait ~monitor)))
+   (locking monitor (.wait monitor)))
   ([^Object monitor ^long timeout]
-   `(when (pos? ~timeout)
-      (locking ~monitor
-        (.wait ~monitor ~timeout)))))
+   (when (pos? timeout)
+     (locking monitor
+       (.wait monitor timeout)))))
 
-(defmacro sig-notify [^Object monitor]
-  `(locking ~monitor (.notify ~monitor)))
+(defn sig-notify [^Object monitor]
+  (locking monitor (.notify monitor)))
 
-(defmacro sig-notify-all [^Object monitor]
-  `(locking ~monitor (.notifyAll ~monitor)))
+(defn sig-notify-all [^Object monitor]
+  (locking monitor (.notifyAll monitor)))
 
 ;;
 ;; core.async helpers
