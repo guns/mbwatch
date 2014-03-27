@@ -22,9 +22,15 @@
   (let [s (StringWriter.)
         dt (DateTime.)
         dt-str (.print (DateTimeFormat/forPattern "HH:mm:ss") dt)
+        ms-str (.print (DateTimeFormat/forPattern "HH:mm:ss.SSS") dt)
         item (LogItem. 0 dt "Hello world.")]
     (.log (c/->ConsoleLogger s [[:red]]) item)
     (is (= (format "\033[31m[%s] Hello world.\033[0m\n" dt-str) (str s)))
     (.setLength (.getBuffer s) 0)
+
     (.log (c/->ConsoleLogger s nil) item)
-    (is (= (format "[%s] Hello world.\n" dt-str) (str s)))))
+    (is (= (format "[%s] Hello world.\n" dt-str) (str s)))
+    (.setLength (.getBuffer s) 0)
+
+    (.log (c/->ConsoleLogger s nil c/MILLIS-TIMESTAMP-FORMAT) item)
+    (is (= (format "[%s] Hello world.\n" ms-str) (str s)))))

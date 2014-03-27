@@ -6,8 +6,11 @@
   (:import (org.joda.time DateTime)
            (org.joda.time.format DateTimeFormat DateTimeFormatter)))
 
-(def ^:private ^DateTimeFormatter TIMESTAMP-FORMAT
+(def ^DateTimeFormatter TIMESTAMP-FORMAT
   (DateTimeFormat/forPattern "HH:mm:ss"))
+
+(def ^DateTimeFormatter MILLIS-TIMESTAMP-FORMAT
+  (DateTimeFormat/forPattern "HH:mm:ss.SSS"))
 
 ;;
 ;; TTY helpers
@@ -83,17 +86,19 @@
     (str "\033[" sgr-string "m" msg "\033[0m")
     msg))
 
-(deftype ConsoleLogger [^Appendable stream colors]
+(deftype ConsoleLogger [^Appendable stream colors ^DateTimeFormatter dt-formatter]
   IItemLogger
   (log [_ log-item]
     (let [{:keys [level timestamp message]} log-item
-          ts (.print TIMESTAMP-FORMAT ^DateTime timestamp)
+          ts (.print dt-formatter ^DateTime timestamp)
           msg (wrap (str "[" ts "] " message) (get colors level))]
       (.append stream msg)
       (.append stream \newline))))
 
 (defn ^ConsoleLogger ->ConsoleLogger
   ([^Appendable stream]
-   (ConsoleLogger. stream (mapv sgr-join (get-default-colors))))
+   (ConsoleLogger. stream (mapv sgr-join (get-default-colors)) TIMESTAMP-FORMAT))
   ([^Appendable stream colors]
-   (ConsoleLogger. stream (mapv sgr-join colors))))
+   (ConsoleLogger. stream (mapv sgr-join colors) TIMESTAMP-FORMAT))
+  ([^Appendable stream colors ^DateTimeFormatter dt-formatter]
+   (ConsoleLogger. stream (mapv sgr-join colors) dt-formatter)))

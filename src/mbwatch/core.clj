@@ -4,7 +4,9 @@
             [com.stuartsierra.component :refer [Lifecycle start-system
                                                 stop-system]]
             [mbwatch.config]
-            [mbwatch.console-logger :refer [->ConsoleLogger]]
+            [mbwatch.console-logger :refer [->ConsoleLogger
+                                            MILLIS-TIMESTAMP-FORMAT
+                                            get-default-colors]]
             [mbwatch.logging :refer [DEBUG strict-map->LoggingService]]
             [mbwatch.mbsync :refer [strict-map->MbsyncMaster]]
             [mbwatch.notification :refer [strict-map->NewMessageNotificationService]]
@@ -36,7 +38,7 @@
     (Application.
       (strict-map->LoggingService
         {:level DEBUG
-         :logger (->ConsoleLogger System/out)
+         :logger (->ConsoleLogger System/out (get-default-colors) MILLIS-TIMESTAMP-FORMAT)
          :log-chan log-chan
          :state-chan nil})
       (strict-map->NewMessageNotificationService
