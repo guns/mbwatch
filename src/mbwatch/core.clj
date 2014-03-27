@@ -27,6 +27,10 @@
 
   Lifecycle
 
+  ;; While the application components do not explicitly depend on each other,
+  ;; we do generally want the LogItem consumers to start before the producers
+  ;; and stop after them. Here we depend on the implicit parameter-ordering of
+  ;; (keys this) to start and stop the components in FILO order.
   (start [this] (start-system this))
   (stop [this] (stop-system this)))
 
