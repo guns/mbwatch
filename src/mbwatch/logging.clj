@@ -41,7 +41,6 @@
   Loggable
 
   (log-level [_] level)
-
   (->log [this] this))
 
 (extend-protocol Loggable
@@ -49,7 +48,6 @@
   Object
 
   (log-level [_] DEBUG)
-
   (->log [this]
     (LogItem. DEBUG (DateTime.) (str this))))
 

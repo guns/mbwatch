@@ -87,7 +87,9 @@
     msg))
 
 (deftype ConsoleLogger [^Appendable stream colors ^DateTimeFormatter dt-formatter]
+
   IItemLogger
+
   (log [_ log-item]
     (let [{:keys [level timestamp message]} log-item
           ts (.print dt-formatter ^DateTime timestamp)

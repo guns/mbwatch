@@ -22,7 +22,6 @@
   Loggable
 
   (log-level [_] DEBUG)
-
   (->log [this]
     (LogItem. DEBUG (DateTime.) (str (class-name this) ": " command))))
 
