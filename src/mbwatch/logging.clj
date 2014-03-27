@@ -51,7 +51,7 @@
   (log-level [_] DEBUG)
 
   (->log [this]
-    (LogItem. NOTICE (DateTime.) (str this))))
+    (LogItem. DEBUG (DateTime.) (str this))))
 
 (defprotocol IItemLogger
   (log [this ^LogItem log-item]))
