@@ -13,7 +13,7 @@
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.config :refer [mdir-path]]
-            [mbwatch.logging :refer [DEBUG Loggable]]
+            [mbwatch.logging :refer [->log-item DEBUG Loggable log!]]
             [mbwatch.maildir :refer [new-messages senders]]
             [mbwatch.mbsync.command]
             [mbwatch.mbsync.events]
@@ -24,10 +24,8 @@
             [schema.core :as s :refer [Int defschema maybe protocol]])
   (:import (clojure.lang IDeref)
            (javax.mail.internet MimeMessage)
-           (mbwatch.logging LogItem)
            (mbwatch.mbsync.command SyncCommand)
-           (mbwatch.mbsync.events MbsyncEventStop)
-           (org.joda.time DateTime)))
+           (mbwatch.mbsync.events MbsyncEventStop)))
 
 (def ^:const MAX-SENDERS-SHOWN
   "TODO: Make configurable?"
@@ -97,7 +95,7 @@
   Lifecycle
 
   (start [this]
-    (put! write-chan this)
+    (log! write-chan this)
     (assoc this :state-chan
            (thread-loop [sync-requests {}]
              (with-chan-value [obj (<!! read-chan)]
@@ -106,7 +104,7 @@
                (recur (handle-notification-input this sync-requests obj))))))
 
   (stop [this]
-    (put! read-chan this)
+    (log! read-chan this)
     (poison-chan read-chan state-chan)
     (dissoc this :state-chan))
 
@@ -115,11 +113,10 @@
   (log-level [_] DEBUG)
 
   (->log [this]
-    (let [msg (format "%s %s: `%s`"
-                      (if state-chan "↓ Stopping" "↑ Starting")
-                      (class-name this)
-                      notify-cmd)]
-      (LogItem. DEBUG (DateTime.) msg))))
+    (->log-item this (format "%s %s: `%s`"
+                             (if state-chan "↓ Stopping" "↑ Starting")
+                             (class-name this)
+                             notify-cmd))))
 
 (defschema SyncRequestMap
   {Int {:countdown Int

@@ -9,12 +9,14 @@
                        └────────────────┘
   "
   (:require [clojure.core.async :refer [<!! put!]]
-            [clojure.core.async.impl.protocols :refer [ReadPort]]
+            [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
+            [mbwatch.types :refer [VOID]]
             [mbwatch.util :refer [class-name poison-chan thread-loop
                                   with-chan-value]]
-            [schema.core :as s :refer [Int maybe protocol]])
-  (:import (org.joda.time DateTime)))
+            [schema.core :as s :refer [Any Int maybe protocol]])
+  (:import (clojure.lang Associative)
+           (org.joda.time DateTime)))
 
 ;; From linux/kern_levels.h
 (def ^:const EMERG   0) ; /* system is unusable */
@@ -43,13 +45,33 @@
   (log-level [_] level)
   (->log [this] this))
 
+(s/defn ^:private assoc-timestamp :- {:timestamp DateTime Any Any}
+  [map :- Associative]
+  (assoc map :timestamp (DateTime.)))
+
+(s/defn ^:private get-timestamp :- DateTime
+  [obj :- Any]
+  (or (:timestamp obj) (DateTime.)))
+
+(s/defn log! :- VOID
+  [chan :- WritePort
+   map  :- Associative]
+  (put! chan (assoc-timestamp map))
+  nil)
+
+(s/defn ->log-item :- LogItem
+  "Create a LogItem from a Loggable, assuming that the timestamp can be found
+   in the :timestamp field of the Loggable."
+  [loggable :- Loggable
+   message  :- String]
+  (LogItem. (log-level loggable) (get-timestamp loggable) message))
+
 (extend-protocol Loggable
   ;; Fallback implementation
   Object
 
   (log-level [_] DEBUG)
-  (->log [this]
-    (LogItem. DEBUG (DateTime.) (str this))))
+  (->log [this] (->log-item this (str this))))
 
 (defprotocol IItemLogger
   (log [this ^LogItem log-item]))
@@ -63,7 +85,7 @@
   Lifecycle
 
   (start [this]
-    (put! log-chan this)
+    (log! log-chan this)
     (assoc this :state-chan
            (thread-loop []
              (with-chan-value [obj (<!! log-chan)]
@@ -72,7 +94,7 @@
                (recur)))))
 
   (stop [this]
-    (put! log-chan this)
+    (log! log-chan this)
     (poison-chan log-chan state-chan)
     (dissoc this :state-chan))
 
@@ -81,9 +103,8 @@
   (log-level [_] DEBUG)
 
   (->log [this]
-    (let [msg (format "%s %s [%s %s]"
-                      (if state-chan "↓ Stopping" "↑ Starting")
-                      (class-name this)
-                      (get LOG-LEVELS level)
-                      (class-name logger))]
-      (LogItem. DEBUG (DateTime.) msg))))
+    (->log-item this (format "%s %s [%s %s]"
+                             (if state-chan "↓ Stopping" "↑ Starting")
+                             (class-name this)
+                             (get LOG-LEVELS level)
+                             (class-name logger)))))

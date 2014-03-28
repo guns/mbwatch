@@ -30,7 +30,8 @@
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.config]
-            [mbwatch.logging :refer [DEBUG ERR INFO Loggable NOTICE WARNING]]
+            [mbwatch.logging :refer [->log-item DEBUG ERR INFO Loggable
+                                     NOTICE WARNING log!]]
             [mbwatch.mbsync.command :refer [->command ICommand command]]
             [mbwatch.mbsync.events :refer [join-mbargs
                                            strict-map->MbsyncEventStart
@@ -43,7 +44,7 @@
   (:import (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.config Config)
-           (mbwatch.logging LogItem)
+           (mbwatch.mbsync.events MbsyncUnknownChannelError)
            (org.joda.time DateTime)))
 
 (def ^:const ^:private CHAN-SIZE
@@ -75,7 +76,7 @@
   Lifecycle
 
   (start [this]
-    (put! log-chan this)
+    (log! log-chan this)
     (assoc this :state-chan
            (thread-loop []
              (when (.get monitor)
@@ -85,7 +86,7 @@
                  (recur))))))
 
   (stop [this]
-    (put! log-chan this)
+    (log! log-chan this)
     (poison-chan req-chan state-chan)
     (dissoc this :state-chan))
 
@@ -94,11 +95,10 @@
   (log-level [_] DEBUG)
 
   (->log [this]
-    (let [msg (format "%s %s for channel `%s`"
-                      (if state-chan "↓ Stopping" "↑ Starting")
-                      (class-name this)
-                      mbchan)]
-      (LogItem. DEBUG (DateTime.) msg))))
+    (->log-item this (format "%s %s for channel `%s`"
+                             (if state-chan "↓ Stopping" "↑ Starting")
+                             (class-name this)
+                             mbchan))))
 
 (s/defn ^:private sync-boxes! :- VOID
   [mbsync-worker :- MbsyncWorker
@@ -141,7 +141,7 @@
   Lifecycle
 
   (start [this]
-    (put! log-chan this)
+    (log! log-chan this)
     (assoc this :state-chan
            (thread-loop [workers {}]
              (let [cmd (<!! cmd-chan)]
@@ -151,7 +151,7 @@
                  (recur workers))))))
 
   (stop [this]
-    (put! log-chan this)
+    (log! log-chan this)
     (>!! cmd-chan (->command :stop))
     (<!! state-chan)
     (dissoc this :state-chan))
@@ -161,8 +161,7 @@
   (log-level [_] DEBUG)
 
   (->log [this]
-    (let [msg (str (if state-chan "↓ Stopping " "↑ Starting ") (class-name this))]
-      (LogItem. DEBUG (DateTime.) msg))))
+    (->log-item this (str (if state-chan "↓ Stopping " "↑ Starting ") (class-name this)))))
 
 (s/defn ^:private stop-workers! :- VOID
   [workers :- [MbsyncWorker]]
@@ -203,8 +202,7 @@
                      (assoc ws ch (.start (new-mbsync-worker ch mbsync-master))))]
             (put! (get-in ws [ch :req-chan]) [id bs])
             ws)
-          (do (put! (:log-chan mbsync-master)
-                    (LogItem. WARNING (DateTime.) (format "Unknown channel: `%s`" ch)))
+          (do (put! (:log-chan mbsync-master) (MbsyncUnknownChannelError. ch (DateTime.)))
               ws)))
       workers sync-req)))
 

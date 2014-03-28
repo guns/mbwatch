@@ -1,5 +1,5 @@
 (ns mbwatch.mbsync.command
-  (:require [mbwatch.logging :refer [DEBUG Loggable]]
+  (:require [mbwatch.logging :refer [->log-item DEBUG Loggable]]
             [mbwatch.util :refer [class-name]]
             [schema.core :as s :refer [Int either enum]])
   (:import (java.util.concurrent.atomic AtomicLong)
@@ -12,40 +12,43 @@
   (AtomicLong. 1))
 
 (defprotocol ICommand
-  (command [this] "Returns a keyword representing an operation."))
+  (command [this] "Returns a keyword representing an operation.")
+  (timestamp [this] "Returns a DateTime"))
 
 (s/defrecord Command
-  [command :- #{:term :stop}]
+  [command   :- #{:term :stop}
+   timestamp :- DateTime]
 
   ICommand
 
   (command [_] command)
+  (timestamp [_] timestamp)
 
   Loggable
 
   (log-level [_] DEBUG)
-  (->log [this]
-    (LogItem. DEBUG (DateTime.) (str (class-name this) ": " command))))
+  (->log [this] (->log-item this (str (class-name this) ": " command))))
 
 (s/defrecord SyncCommand
-  [id           :- Int
-   mbchan->mbox :- {String [String]}]
+  [mbchan->mbox :- {String [String]}
+   timestamp    :- DateTime
+   id           :- Int]
 
   ICommand
 
   (command [_] :sync)
+  (timestamp [_] timestamp)
 
   Loggable
 
   (log-level [_] DEBUG)
 
   (->log [this]
-    (let [msg (format "%s: %d %s" (class-name this) id mbchan->mbox)]
-      (LogItem. DEBUG (DateTime.) msg))))
+    (->log-item this (format "%s: %d %s" (class-name this) id mbchan->mbox))))
 
 (s/defn ->command :- ICommand
   [command :- (either {String [String]}
                       (enum :term :stop nil))]
   (if (map? command)
-    (SyncCommand. (.getAndIncrement next-command-id) command)
-    (Command. (or command :stop))))
+    (SyncCommand. command (DateTime.) (.getAndIncrement next-command-id))
+    (Command. (or command :stop) (DateTime.))))

@@ -1,7 +1,7 @@
 (ns mbwatch.mbsync.events
   (:require [clojure.string :as string]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
-            [mbwatch.logging :refer [ERR Loggable]]
+            [mbwatch.logging :refer [->log-item ERR Loggable WARNING]]
             [mbwatch.util :refer [human-duration]]
             [schema.core :as s :refer [Int maybe]])
   (:import (mbwatch.logging LogItem)
@@ -61,3 +61,12 @@
                     (.append buf error))
                   (str buf)))]
       (LogItem. level stop msg))))
+
+(s/defrecord MbsyncUnknownChannelError
+  [mbchan    :- String
+   timestamp :- DateTime]
+
+  Loggable
+
+  (log-level [_] WARNING)
+  (->log [this] (->log-item this (format "Unknown channel: `%s`" mbchan))))
