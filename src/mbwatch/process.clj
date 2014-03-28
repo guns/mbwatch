@@ -3,7 +3,7 @@
             [mbwatch.types :refer [VOID]]
             [mbwatch.util :refer [first-alt sig-wait]]
             [schema.core :as s :refer [enum]])
-  (:import (java.io IOException)))
+  (:import (java.io File IOException OutputStream Writer)))
 
 (s/defn spawn :- Process
   "Asynchronously launch a process."
@@ -37,7 +37,7 @@
   "Dump a process's stdout or stderr into writer."
   [proc   :- Process
    stream :- (enum :out :err)
-   writer :- s/Any]
+   writer :- (enum OutputStream Writer File)]
   (try
     (io/copy (case stream
                :out (.getInputStream proc)
