@@ -7,6 +7,8 @@
            (org.joda.time DateTime)))
 
 (def ^:private ^AtomicLong next-command-id
+  "A synchronized counter for SyncCommands. There is no requirement to be
+   either predictable or unpredictable, so we can store this as a global var."
   (AtomicLong. 1))
 
 (defprotocol ICommand
