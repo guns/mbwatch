@@ -29,14 +29,24 @@
            (mbwatch.mbsync.events MbsyncEventStop)
            (org.joda.time DateTime)))
 
+(def ^:const MAX-SENDERS-SHOWN
+  "TODO: Make configurable?"
+  8)
+
 (s/defn ^:private format-msg :- (maybe String)
   [messages :- [MimeMessage]]
-  (let [n (count messages)]
+  (let [n (count messages)
+        ss (vec (senders messages))
+        ss (if (> (count ss) MAX-SENDERS-SHOWN)
+             (conj ss (format "… and %d other%s"
+                              (- (count ss) MAX-SENDERS-SHOWN)
+                              (if (= n 1) "" \s)))
+             ss)]
     (when (pos? n)
       (format "%d new message%s from:\n%s"
               n
-              (if (= 1 n) "" \s)
-              (string/join \newline (senders messages))))))
+              (if (= n 1) "" \s)
+              (string/join \newline ss)))))
 
 (s/defn ^:private sync-event->notification :- (maybe String)
   [notify-map :- {String #{String}}
