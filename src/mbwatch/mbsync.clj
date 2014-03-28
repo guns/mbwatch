@@ -202,7 +202,7 @@
                      (assoc ws ch (.start (new-mbsync-worker ch mbsync-master))))]
             (put! (get-in ws [ch :req-chan]) [id bs])
             ws)
-          (do (put! (:log-chan mbsync-master) (MbsyncUnknownChannelError. ch (DateTime.)))
+          (do (put! (:log-chan mbsync-master) (MbsyncUnknownChannelError. id ch (DateTime.)))
               ws)))
       workers sync-req)))
 

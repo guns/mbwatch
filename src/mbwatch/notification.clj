@@ -25,7 +25,7 @@
   (:import (clojure.lang IDeref)
            (javax.mail.internet MimeMessage)
            (mbwatch.mbsync.command SyncCommand)
-           (mbwatch.mbsync.events MbsyncEventStop)))
+           (mbwatch.mbsync.events MbsyncEventStop MbsyncUnknownChannelError)))
 
 (def ^:const MAX-SENDERS-SHOWN
   "TODO: Make configurable?"
@@ -83,7 +83,14 @@
     (process/spawn "bash" "-c" notify-cmd :in msg)
     nil))
 
-(declare handle-notification-input)
+(defschema SyncRequestMap
+  {Int {:countdown Int
+        :events [MbsyncEventStop]}})
+
+(defprotocol INotification
+  (process [this sync-requests notify-service]
+           "Returns a new version of the sync-requests map, adding or removing
+            self from it as necessary."))
 
 (s/defrecord NewMessageNotificationService
   [notify-cmd     :- String
@@ -101,7 +108,7 @@
              (with-chan-value [obj (<!! read-chan)]
                ;; Pass through ASAP
                (put! write-chan obj)
-               (recur (handle-notification-input this sync-requests obj))))))
+               (recur (process obj sync-requests this))))))
 
   (stop [this]
     (log! read-chan this)
@@ -118,34 +125,43 @@
                              (class-name this)
                              notify-cmd))))
 
-(defschema SyncRequestMap
-  {Int {:countdown Int
-        :events [MbsyncEventStop]}})
-
-(s/defn ^:private handle-notification-input :- SyncRequestMap
-  {:require [SyncCommand MbsyncEventStop]}
-  [notify-service :- NewMessageNotificationService
+(s/defn record-event :- SyncRequestMap
+  [obj            :- Object
    sync-requests  :- SyncRequestMap
-   obj            :- Object]
-  (case (class obj)
-    #=mbwatch.mbsync.command.SyncCommand
-    (let [{:keys [id mbchan->mbox]} obj]
-      (assoc sync-requests id {:countdown (count mbchan->mbox) :events []}))
+   notify-service :- NewMessageNotificationService
+   conj-event?    :- Boolean]
+  (let [{:keys [id mbchan]} obj]
+    (if-let [req (sync-requests id)]
+      (let [{:keys [countdown events]} req
+            countdown (dec countdown)
+            events (cond-> events
+                     conj-event? (conj obj))]
+        (if (zero? countdown)
+          (do (future
+                (notify! (:notify-cmd notify-service)
+                         (deref (:notify-map-ref notify-service))
+                         events))
+              (dissoc sync-requests id))
+          (assoc sync-requests id {:countdown countdown :events events})))
+      sync-requests)))
 
-    #=mbwatch.mbsync.events.MbsyncEventStop
-    (let [{:keys [id mbchan]} obj]
-      (if-let [req (sync-requests id)]
-        (let [{:keys [countdown events]} req
-              countdown (dec countdown)
-              events (conj events obj)]
-          (if (zero? countdown)
-            (do (future
-                  (notify! (:notify-cmd notify-service)
-                           (deref (:notify-map-ref notify-service))
-                           events))
-                (dissoc sync-requests id))
-            (assoc sync-requests id {:countdown countdown :events events})))
-        sync-requests))
+(extend-protocol INotification
+  SyncCommand
 
-    ;; obj is not relevant to our interests
-    sync-requests))
+  (process [this sync-requests notify-service]
+    (let [{:keys [id mbchan->mbox]} this]
+      (assoc sync-requests id {:countdown (count mbchan->mbox) :events []})))
+
+  MbsyncEventStop
+
+  (process [this sync-requests notify-service]
+    (record-event this sync-requests notify-service true))
+
+  MbsyncUnknownChannelError
+
+  (process [this sync-requests notify-service]
+    (record-event this sync-requests notify-service false))
+
+  Object
+
+  (process [_ sync-requests _] sync-requests))

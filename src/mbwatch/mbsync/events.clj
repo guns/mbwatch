@@ -63,7 +63,8 @@
       (LogItem. level stop msg))))
 
 (s/defrecord MbsyncUnknownChannelError
-  [mbchan    :- String
+  [id        :- Int
+   mbchan    :- String
    timestamp :- DateTime]
 
   Loggable
