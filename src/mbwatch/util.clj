@@ -95,7 +95,12 @@
 (defmacro thread-loop
   {:require [#'thread]}
   [bindings & body]
-  `(thread (loop ~bindings ~@body)))
+  `(thread
+     (try
+       (loop ~bindings
+         ~@body)
+       (catch Throwable e#
+         (.println System/err e#)))))
 
 (defn poison-chan
   "Send a poison value on wr-chan and wait for a response on rd-chan."
