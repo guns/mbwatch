@@ -29,7 +29,6 @@
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
-            [mbwatch.config]
             [mbwatch.logging :refer [->log-item DEBUG ERR INFO Loggable
                                      NOTICE WARNING log!]]
             [mbwatch.mbsync.command :refer [->command ICommand command]]
@@ -43,7 +42,7 @@
             [schema.core :as s :refer [Int maybe protocol]])
   (:import (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
-           (mbwatch.config Config)
+           (mbwatch.config.mbsyncrc Mbsyncrc)
            (mbwatch.mbsync.events MbsyncUnknownChannelError)
            (org.joda.time DateTime)))
 
@@ -55,17 +54,17 @@
   "Asynchronously launch an mbsync process to sync a single mail channel. The
    config string is passed to mbsync via `cat` and bash's <(/dev/fd) feature
    in order to avoid temporary files."
-  [mbsyncrc :- String
-   mbchan   :- String
-   mboxes   :- [String]]
+  [rc     :- String
+   mbchan :- String
+   mboxes :- [String]]
   (process/spawn
     "bash" "-c" (str "exec mbsync -c <(cat) " (shell-escape (join-mbargs mbchan mboxes)))
-    :in mbsyncrc))
+    :in rc))
 
 (declare sync-boxes!)
 
 (t/defrecord ^:private MbsyncWorker
-  [mbsyncrc   :- String
+  [rc         :- String
    maildir    :- Maildirstore
    mbchan     :- String
    req-chan   :- ReadPort
@@ -104,14 +103,14 @@
   [mbsync-worker :- MbsyncWorker
    id            :- Int
    mboxes        :- [String]]
-  (let [{:keys [mbsyncrc maildir mbchan log-chan monitor]} mbsync-worker
+  (let [{:keys [rc maildir mbchan log-chan monitor]} mbsync-worker
         ev (strict-map->MbsyncEventStart
              {:level INFO
               :id id
               :mbchan mbchan
               :mboxes mboxes
               :start (DateTime.)})
-        proc (spawn-sync mbsyncrc mbchan mboxes)
+        proc (spawn-sync rc mbchan mboxes)
         _ (put! log-chan ev)
 
         graceful? (process/interruptible-wait monitor proc)
@@ -133,7 +132,7 @@
 (declare handle-mbsync-command)
 
 (t/defrecord MbsyncMaster
-  [config     :- Config
+  [mbsyncrc   :- Mbsyncrc
    cmd-chan   :- ReadPort
    log-chan   :- WritePort
    state-chan :- (maybe (protocol ReadPort))]
@@ -176,10 +175,10 @@
 (s/defn ^:private new-mbsync-worker :- MbsyncWorker
   [mbchan        :- String
    mbsync-master :- MbsyncMaster]
-  (let [{:keys [config log-chan]} mbsync-master]
+  (let [{:keys [mbsyncrc log-chan]} mbsync-master]
     (strict-map->MbsyncWorker
-      {:mbsyncrc (-> config :mbsyncrc :text)
-       :maildir (get-in config [:mbsyncrc :channels->maildirstores mbchan])
+      {:rc (-> mbsyncrc :text)
+       :maildir (get-in mbsyncrc [:channels->maildirstores mbchan])
        :mbchan mbchan
        :req-chan (chan CHAN-SIZE)
        :log-chan log-chan
@@ -193,7 +192,7 @@
    id            :- Int
    sync-req      :- {String [String]}
    mbsync-master :- MbsyncMaster]
-  (let [channels (-> mbsync-master :config :mbsyncrc :channels)]
+  (let [channels (-> mbsync-master :mbsyncrc :channels)]
     (reduce-kv
       (fn [ws ch bs]
         (if (contains? channels ch)

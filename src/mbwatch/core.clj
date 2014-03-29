@@ -53,7 +53,7 @@
          :write-chan log-chan
          :state-chan nil})
       (strict-map->MbsyncMaster
-        {:config config
+        {:mbsyncrc (:mbsyncrc config)
          :cmd-chan cmd-chan
          :log-chan notify-chan
          :state-chan nil}))))
