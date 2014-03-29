@@ -1,5 +1,7 @@
 (ns mbwatch.config.mbwatchrc
+  "Configuration from an mbwatchrc configuration file."
   (:require [clojure-ini.core :refer [read-ini]]
+            [mbwatch.types :as t]
             [schema.core :as s :refer [Int]])
   (:import (java.io StringReader)))
 
@@ -10,7 +12,7 @@
   {:notify-cmd "notify-send \"$(cat)\""
    :imap-timeout "10000"})
 
-(s/defrecord Mbwatchrc
+(t/defrecord ^:private Mbwatchrc
   [notify-cmd   :- String
    imap-timeout :- Int])
 

@@ -10,6 +10,7 @@
             [mbwatch.logging :refer [DEBUG strict-map->LoggingService]]
             [mbwatch.mbsync :refer [strict-map->MbsyncMaster]]
             [mbwatch.notification :refer [strict-map->NewMessageNotificationService]]
+            [mbwatch.types :as t]
             [schema.core :as s])
   (:import (mbwatch.config Config)
            (mbwatch.logging LoggingService)
@@ -20,7 +21,7 @@
   "TODO: Move to Config?"
   0x1000)
 
-(s/defrecord Application
+(t/defrecord ^:private Application
   [logging-service      :- LoggingService
    notification-service :- NewMessageNotificationService
    mbsync-master        :- MbsyncMaster]
@@ -30,7 +31,7 @@
   ;; While the application components do not explicitly depend on each other,
   ;; we do generally want the LogItem consumers to start before the producers
   ;; and stop after them. Here we depend on the implicit parameter-ordering of
-  ;; (keys this) to start and stop the components in FILO order.
+  ;; (keys a-record) to start and stop the components in FILO order.
   (start [this] (start-system this))
   (stop [this] (stop-system this)))
 

@@ -1,21 +1,22 @@
 (ns mbwatch.mbsync.command
   (:require [mbwatch.logging :refer [->log-item DEBUG Loggable]]
+            [mbwatch.types :as t]
             [mbwatch.util :refer [class-name]]
             [schema.core :as s :refer [Int either enum]])
   (:import (java.util.concurrent.atomic AtomicLong)
-           (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
 (def ^:private ^AtomicLong next-command-id
   "A synchronized counter for SyncCommands. There is no requirement to be
-   either predictable or unpredictable, so we can store this as a global var."
+   either predictable or unpredictable, so this can be implemented as an
+   incrementing global var."
   (AtomicLong. 1))
 
 (defprotocol ICommand
   (command [this] "Returns a keyword representing an operation.")
   (timestamp [this] "Returns a DateTime"))
 
-(s/defrecord Command
+(t/defrecord ^:private Command
   [command   :- #{:term :stop}
    timestamp :- DateTime]
 
@@ -29,7 +30,7 @@
   (log-level [_] DEBUG)
   (->log [this] (->log-item this (str (class-name this) ": " command))))
 
-(s/defrecord SyncCommand
+(t/defrecord ^:private SyncCommand
   [mbchan->mbox :- {String [String]}
    timestamp    :- DateTime
    id           :- Int]
@@ -42,7 +43,6 @@
   Loggable
 
   (log-level [_] DEBUG)
-
   (->log [this]
     (->log-item this (format "%s: %d %s" (class-name this) id mbchan->mbox))))
 

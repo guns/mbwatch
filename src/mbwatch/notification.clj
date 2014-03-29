@@ -18,7 +18,7 @@
             [mbwatch.mbsync.command]
             [mbwatch.mbsync.events]
             [mbwatch.process :as process]
-            [mbwatch.types :refer [VOID]]
+            [mbwatch.types :as t :refer [VOID]]
             [mbwatch.util :refer [class-name poison-chan thread-loop to-ms
                                   with-chan-value]]
             [schema.core :as s :refer [Int defschema maybe protocol]])
@@ -27,7 +27,7 @@
            (mbwatch.mbsync.command SyncCommand)
            (mbwatch.mbsync.events MbsyncEventStop MbsyncUnknownChannelError)))
 
-(def ^:const MAX-SENDERS-SHOWN
+(def ^:const ^:private MAX-SENDERS-SHOWN
   "TODO: Make configurable?"
   8)
 
@@ -75,7 +75,7 @@
     (when (seq msgs)
       (string/join "\n\n" msgs))))
 
-(s/defn notify! :- VOID
+(s/defn ^:private notify! :- VOID
   [notify-cmd :- String
    notify-map :- {String #{String}}
    events     :- [MbsyncEventStop]]
@@ -88,11 +88,11 @@
         :events [MbsyncEventStop]}})
 
 (defprotocol INotification
-  (process [this sync-requests notify-service]
-           "Returns a new version of the sync-requests map, adding or removing
-            self from it as necessary."))
+  (process-event [this sync-requests notify-service]
+                 "Returns a new version of the sync-requests map, adding or
+                  removing self from it as necessary."))
 
-(s/defrecord NewMessageNotificationService
+(t/defrecord NewMessageNotificationService
   [notify-cmd     :- String
    notify-map-ref :- IDeref
    read-chan      :- ReadPort
@@ -108,7 +108,7 @@
              (with-chan-value [obj (<!! read-chan)]
                ;; Pass through ASAP
                (put! write-chan obj)
-               (recur (process obj sync-requests this))))))
+               (recur (process-event obj sync-requests this))))))
 
   (stop [this]
     (log! read-chan this)
@@ -125,7 +125,7 @@
                              (class-name this)
                              notify-cmd))))
 
-(s/defn record-event :- SyncRequestMap
+(s/defn ^:private process-stop-event :- SyncRequestMap
   [obj            :- Object
    sync-requests  :- SyncRequestMap
    notify-service :- NewMessageNotificationService
@@ -146,22 +146,23 @@
       sync-requests)))
 
 (extend-protocol INotification
+
   SyncCommand
 
-  (process [this sync-requests notify-service]
+  (process-event [this sync-requests notify-service]
     (let [{:keys [id mbchan->mbox]} this]
       (assoc sync-requests id {:countdown (count mbchan->mbox) :events []})))
 
   MbsyncEventStop
 
-  (process [this sync-requests notify-service]
-    (record-event this sync-requests notify-service true))
+  (process-event [this sync-requests notify-service]
+    (process-stop-event this sync-requests notify-service true))
 
   MbsyncUnknownChannelError
 
-  (process [this sync-requests notify-service]
-    (record-event this sync-requests notify-service false))
+  (process-event [this sync-requests notify-service]
+    (process-stop-event this sync-requests notify-service false))
 
   Object
 
-  (process [_ sync-requests _] sync-requests))
+  (process-event [_ sync-requests _] sync-requests))

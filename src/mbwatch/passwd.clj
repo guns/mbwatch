@@ -1,8 +1,9 @@
 (ns mbwatch.passwd
   (:require [clojure.string :as string]
+            [mbwatch.types :as t]
             [schema.core :as s :refer [Int]]))
 
-(s/defrecord Passwd
+(t/defrecord ^:private Passwd
   [name   :- String
    passwd :- String
    uid    :- Int
@@ -11,7 +12,7 @@
    dir    :- String
    shell  :- String])
 
-(s/defn parse-pwent :- Passwd
+(s/defn ^:private parse-pwent :- Passwd
   [line :- String]
   (-> (string/split line #"(?<!\\):" 7)
       (as-> ls (mapv #(string/replace % #"\\(.)" "$1") ls))

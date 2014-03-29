@@ -1,36 +1,31 @@
 (ns mbwatch.console-logger-test
   (:require [clojure.test :refer [deftest is]]
             [mbwatch.console-logger :as c]
-            [mbwatch.logging]
+            [mbwatch.logging :refer [->log log]]
             [schema.core :refer [validate]])
   (:import (clojure.lang Keyword)
            (java.io StringWriter)
-           (mbwatch.logging LogItem)
-           (org.joda.time DateTime)
            (org.joda.time.format DateTimeFormat)))
 
 (deftest test-sgr
   (is (validate {Keyword String} c/SGR)))
 
-(deftest test-sgr-join
-  (is (= "" (#'c/sgr-join nil) (#'c/sgr-join [])))
-  (is (= "31;48;5;100" (#'c/sgr-join [:red :bg100])))
-  (is (= "31;48;5;100" (#'c/sgr-join [31 "48;5;100"])))
-  (is (= "31;48;5;100" (#'c/sgr-join "31;48;5;100"))))
+(deftest test-get-default-colors
+  (is (= (count (c/get-default-colors)) 8)))
+
+(defn logger-out [colors log-item]
+  (let [s (StringWriter.)
+        logger (c/->ConsoleLogger s colors (DateTimeFormat/forPattern "❤"))]
+    (log logger log-item)
+    (str s)))
+
+(defn make-colors [color]
+  (vec (take 8 (repeat color))))
 
 (deftest test-ConsoleLogger
-  (let [s (StringWriter.)
-        dt (DateTime.)
-        dt-str (.print (DateTimeFormat/forPattern "HH:mm:ss") dt)
-        ms-str (.print (DateTimeFormat/forPattern "HH:mm:ss.SSS") dt)
-        item (LogItem. 0 dt "Hello world.")]
-    (.log (c/->ConsoleLogger s [[:red]]) item)
-    (is (= (format "\033[31m[%s] Hello world.\033[0m\n" dt-str) (str s)))
-    (.setLength (.getBuffer s) 0)
-
-    (.log (c/->ConsoleLogger s nil) item)
-    (is (= (format "[%s] Hello world.\n" dt-str) (str s)))
-    (.setLength (.getBuffer s) 0)
-
-    (.log (c/->ConsoleLogger s nil c/MILLIS-TIMESTAMP-FORMAT) item)
-    (is (= (format "[%s] Hello world.\n" ms-str) (str s)))))
+  (is (= "\033[31;48;5;100m[❤] Hello world.\033[0m\n"
+         (logger-out (make-colors [:red :bg100]) (->log "Hello world."))
+         (logger-out (make-colors [31 "48;5;100"]) (->log "Hello world."))
+         (logger-out (make-colors "31;48;5;100") (->log "Hello world."))))
+  (is (= "[❤] Hello world.\n"
+         (logger-out nil (->log "Hello world.")))))

@@ -11,7 +11,7 @@
   (:require [clojure.core.async :refer [<!! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
-            [mbwatch.types :refer [VOID]]
+            [mbwatch.types :as t :refer [VOID]]
             [mbwatch.util :refer [class-name poison-chan thread-loop
                                   with-chan-value]]
             [schema.core :as s :refer [Any Int maybe protocol]])
@@ -35,7 +35,7 @@
   (log-level [this] "Returns this object's logging level")
   (->log [this] "Returns a new LogItem object"))
 
-(s/defrecord LogItem
+(t/defrecord ^:private LogItem
   [level     :- Int
    timestamp :- DateTime
    message   :- String]
@@ -67,6 +67,7 @@
   (LogItem. (log-level loggable) (get-timestamp loggable) message))
 
 (extend-protocol Loggable
+
   ;; Fallback implementation
   Object
 
@@ -76,7 +77,7 @@
 (defprotocol IItemLogger
   (log [this ^LogItem log-item]))
 
-(s/defrecord LoggingService
+(t/defrecord LoggingService
   [level      :- Int
    logger     :- IItemLogger
    log-chan   :- ReadPort

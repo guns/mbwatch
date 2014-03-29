@@ -37,7 +37,7 @@
                                            strict-map->MbsyncEventStart
                                            strict-map->MbsyncEventStop]]
             [mbwatch.process :as process]
-            [mbwatch.types :refer [VOID]]
+            [mbwatch.types :as t :refer [VOID]]
             [mbwatch.util :refer [class-name poison-chan shell-escape
                                   sig-notify-all thread-loop with-chan-value]]
             [schema.core :as s :refer [Int maybe protocol]])
@@ -51,7 +51,7 @@
   "TODO: Move to Config?"
   0x1000)
 
-(s/defn spawn-sync :- Process
+(s/defn ^:private spawn-sync :- Process
   "Asynchronously launch an mbsync process to sync a single mail channel. The
    config string is passed to mbsync via `cat` and bash's <(/dev/fd) feature
    in order to avoid temporary files."
@@ -64,7 +64,7 @@
 
 (declare sync-boxes!)
 
-(s/defrecord MbsyncWorker
+(t/defrecord ^:private MbsyncWorker
   [mbsyncrc   :- String
    maildir    :- Maildirstore
    mbchan     :- String
@@ -132,7 +132,7 @@
 
 (declare handle-mbsync-command)
 
-(s/defrecord MbsyncMaster
+(t/defrecord MbsyncMaster
   [config     :- Config
    cmd-chan   :- ReadPort
    log-chan   :- WritePort
@@ -210,8 +210,7 @@
   [mbsync-master :- MbsyncMaster
    workers       :- {String MbsyncWorker}
    cmd           :- (maybe (protocol ICommand))]
-  (if (nil? cmd)
-    (stop-workers! (vals workers))
+  (if cmd
     (case (command cmd)
       :stop (stop-workers! (vals workers))
       :term (do (doseq [^MbsyncWorker w (vals workers)]
@@ -220,4 +219,5 @@
       :sync (dispatch-syncs workers
                             (:id cmd)
                             (:mbchan->mbox cmd)
-                            mbsync-master))))
+                            mbsync-master))
+    (stop-workers! (vals workers))))

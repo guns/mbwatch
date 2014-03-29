@@ -5,8 +5,6 @@
   (:import (mbwatch.mbsync.command Command SyncCommand)))
 
 (s/deftest test-command-ctor
-  (is (= (c/->command :term)
-         (Command. :term)))
-  (is (= (c/->command nil)
-         (Command. :stop)))
-  (is (instance? SyncCommand (c/->command {"foo" []}))))
+  (is (instance? Command (c/->command :term)))
+  (is (instance? SyncCommand (c/->command {})))
+  (is (= :stop (c/command (c/->command nil)))))

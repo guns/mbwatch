@@ -3,6 +3,7 @@
   (:require [clojure.java.shell :refer [sh]]
             [clojure.string :as string]
             [mbwatch.passwd :refer [expand-user-path parse-passwd]]
+            [mbwatch.types :as t]
             [mbwatch.util :refer [chomp dequote]]
             [schema.core :as s :refer [both defschema either enum eq maybe
                                        one optional-key pair pred]])
@@ -15,49 +16,49 @@
 (def ^:private DEFAULT-MBSYNC-INBOX
   (str (System/getProperty "user.home") \/ "Maildir"))
 
-(defschema Word
+(defschema ^:private Word
   (pred #(and (string? %)
               (seq %)
               (not (re-find #"\s" %)))))
 
-(defschema LowerCaseWord
+(defschema ^:private LowerCaseWord
   (both Word (pred #(not (re-find #"\p{Lu}" %)))))
 
-(defschema FilteredLine
+(defschema ^:private FilteredLine
   (pred #(and (string? %)
               (not (re-seq #"\n|\A\s*#|\A\s*\z|\A\s|\s\z" %)))
         "single non-comment line with no surrounding whitespace"))
 
-(defschema Entry
+(defschema ^:private Entry
   (pair LowerCaseWord "name"
         FilteredLine "value"))
 
-(defschema MapSectionToken
+(defschema ^:private MapSectionToken
   [(one (enum :imapstore :maildirstore :channel) "section type")
    (one Word "section name")
    (one [Entry] "config key-value entries")])
 
-(defschema GeneralSectionToken
+(defschema ^:private GeneralSectionToken
   [(one (eq :general) "section type")
    (one (eq nil) "nil")
    (one [FilteredLine] "general config lines")])
 
-(defschema Token
+(defschema ^:private Token
   (either GeneralSectionToken MapSectionToken))
 
-(defschema MapSectionValue
+(defschema ^:private MapSectionValue
   {Word {LowerCaseWord FilteredLine}})
 
-(defschema Sections
+(defschema ^:private Sections
   {(optional-key :general)      [FilteredLine]
    (optional-key :imapstore)    MapSectionValue
    (optional-key :maildirstore) MapSectionValue
    (optional-key :channel)      MapSectionValue})
 
-(defschema PortNumber
+(defschema ^:private PortNumber
   (pred #(and (integer? %) (< 0 % 0x1000))))
 
-(defschema IMAPCredentials
+(defschema ^:private IMAPCredentials
   {:host String
    :port PortNumber
    :user String
@@ -68,7 +69,7 @@
    :path    FilteredLine
    :flatten (maybe FilteredLine)})
 
-(s/defrecord Mbsyncrc
+(t/defrecord ^:private Mbsyncrc
   [text                    :- String
    sections                :- Sections
    names->credentials      :- {Word IMAPCredentials}

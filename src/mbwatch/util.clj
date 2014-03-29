@@ -92,6 +92,19 @@
 ;; core.async helpers
 ;;
 
+(defmacro first-alt
+  "Execute all expressions concurrently and return the value of the first to
+   return, prioritized by the given order. All expressions are left to run to
+   completion."
+  {:require [#'thread]}
+  [& exprs]
+  (let [n (count exprs)
+        chans (gensym "chans")]
+    `(let [~chans (repeatedly ~n ~chan)]
+       ~@(mapv (fn [i] `(thread (~>!! (nth ~chans ~i) ~(nth exprs i))))
+               (range n))
+       (first (~alts!! ~chans :priority true)))))
+
 (defmacro thread-loop
   {:require [#'thread]}
   [bindings & body]
@@ -112,16 +125,3 @@
   `(let [~sym ~form]
      (when (and ~sym (not= ~sym ::poison))
        ~@body)))
-
-(defmacro first-alt
-  "Execute all expressions concurrently and return the value of the first to
-   return, prioritized by the given order. All expressions are left to run to
-   completion."
-  {:require [#'thread]}
-  [& exprs]
-  (let [n (count exprs)
-        chans (gensym "chans")]
-    `(let [~chans (repeatedly ~n ~chan)]
-       ~@(mapv (fn [i] `(thread (~>!! (nth ~chans ~i) ~(nth exprs i))))
-               (range n))
-       (first (~alts!! ~chans :priority true)))))

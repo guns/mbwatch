@@ -1,19 +1,21 @@
 (ns mbwatch.config
-  (:require [clojure.java.io :as io]
+  "Top level options from all configuration sources."
+  (:require [clojure.java.io :as io :refer [Coercions]]
             [clojure.string :as string]
             [mbwatch.config.mbsyncrc :as mbs :refer [Maildirstore]]
             [mbwatch.config.mbwatchrc :as mbw]
+            [mbwatch.types :as t]
             [schema.core :as s])
   (:import (mbwatch.config.mbsyncrc Mbsyncrc)
            (mbwatch.config.mbwatchrc Mbwatchrc)))
 
-(s/defrecord Config
+(t/defrecord ^:private Config
   [mbsyncrc  :- Mbsyncrc
    mbwatchrc :- Mbwatchrc])
 
 (s/defn new-config :- Config
-  [mbsyncrc-path  :- String
-   mbwatchrc-path :- String]
+  [mbsyncrc-path  :- Coercions
+   mbwatchrc-path :- Coercions]
   (strict-map->Config
     {:mbsyncrc (mbs/parse (slurp mbsyncrc-path))
      :mbwatchrc (mbw/parse (slurp mbwatchrc-path))}))

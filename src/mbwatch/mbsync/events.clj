@@ -2,6 +2,7 @@
   (:require [clojure.string :as string]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [->log-item ERR Loggable WARNING]]
+            [mbwatch.types :as t]
             [mbwatch.util :refer [human-duration]]
             [schema.core :as s :refer [Int maybe]])
   (:import (mbwatch.logging LogItem)
@@ -14,7 +15,7 @@
     (str mbchan \: (string/join \, mboxes))
     (str mbchan)))
 
-(s/defrecord MbsyncEventStart
+(t/defrecord MbsyncEventStart
   [level  :- Int
    id     :- Int
    mbchan :- String
@@ -29,7 +30,7 @@
     (let [msg (format "Starting `mbsync %s`" (join-mbargs mbchan mboxes))]
       (LogItem. level start msg))))
 
-(s/defrecord MbsyncEventStop
+(t/defrecord MbsyncEventStop
   [level   :- Int
    id      :- Int
    mbchan  :- String
@@ -62,7 +63,7 @@
                   (str buf)))]
       (LogItem. level stop msg))))
 
-(s/defrecord MbsyncUnknownChannelError
+(t/defrecord MbsyncUnknownChannelError
   [id        :- Int
    mbchan    :- String
    timestamp :- DateTime]

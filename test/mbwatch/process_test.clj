@@ -20,8 +20,8 @@
 (s/deftest test-interruptible-wait
   (is (true? (p/interruptible-wait (Object.) (p/spawn "true"))))
   (is (false?
-        (let [sig (Object.)
-              f (future (p/interruptible-wait sig (p/spawn "sleep" "1")))]
+        (let [mon (Object.)
+              f (future (p/interruptible-wait mon (p/spawn "sleep" "1")))]
           (Thread/sleep 10) ; Give the future thread a chance to start
-          (sig-notify-all sig)
+          (sig-notify-all mon)
           @f))))

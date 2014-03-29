@@ -1,7 +1,12 @@
 (ns mbwatch.config-test
-  (:require [clojure.test :refer [is]]
+  (:require [clojure.java.io :as io]
+            [clojure.test :refer [is]]
             [mbwatch.config :as c]
             [schema.test :as s]))
+
+(s/deftest test-new-config
+  ;; Schema validation
+  (c/new-config (io/resource "mbsyncrc") (io/resource "mbwatchrc")))
 
 (s/deftest test-mdir-path
   (let [maildir {:inbox "/home/user/Mail/INBOX"

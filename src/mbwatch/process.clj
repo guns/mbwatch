@@ -2,7 +2,7 @@
   (:require [clojure.java.io :as io]
             [mbwatch.types :refer [VOID]]
             [mbwatch.util :refer [first-alt sig-wait]]
-            [schema.core :as s :refer [enum]])
+            [schema.core :as s :refer [either enum]])
   (:import (java.io File IOException OutputStream Writer)))
 
 (s/defn spawn :- Process
@@ -37,7 +37,7 @@
   "Dump a process's stdout or stderr into writer."
   [proc   :- Process
    stream :- (enum :out :err)
-   writer :- (enum OutputStream Writer File)]
+   writer :- (either OutputStream Writer File)]
   (try
     (io/copy (case stream
                :out (.getInputStream proc)
