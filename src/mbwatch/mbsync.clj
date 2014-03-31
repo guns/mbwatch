@@ -64,19 +64,19 @@
 (declare sync-boxes!)
 
 (t/defrecord ^:private MbsyncWorker
-  [rc         :- String
-   maildir    :- Maildirstore
-   mbchan     :- String
-   req-chan   :- ReadPort
-   log-chan   :- WritePort
-   monitor    :- AtomicBoolean
-   state-chan :- (maybe (protocol ReadPort))]
+  [rc        :- String
+   maildir   :- Maildirstore
+   mbchan    :- String
+   req-chan  :- ReadPort
+   log-chan  :- WritePort
+   monitor   :- AtomicBoolean
+   exit-chan :- (maybe (protocol ReadPort))]
 
   Lifecycle
 
   (start [this]
     (log! log-chan this)
-    (assoc this :state-chan
+    (assoc this :exit-chan
            (thread-loop []
              (when (.get monitor)
                (with-chan-value [req (<!! req-chan)]
@@ -86,8 +86,8 @@
 
   (stop [this]
     (log! log-chan this)
-    (poison-chan req-chan state-chan)
-    (dissoc this :state-chan))
+    (poison-chan req-chan exit-chan)
+    (dissoc this :exit-chan))
 
   Loggable
 
@@ -95,7 +95,7 @@
 
   (->log [this]
     (->LogItem this (format "%s MbsyncWorker for channel `%s`"
-                            (if state-chan "↓ Stopping" "↑ Starting")
+                            (if exit-chan "↓ Stopping" "↑ Starting")
                             mbchan))))
 
 (s/defn ^:private sync-boxes! :- VOID
@@ -131,16 +131,16 @@
 (declare handle-mbsync-command)
 
 (t/defrecord MbsyncMaster
-  [mbsyncrc   :- Mbsyncrc
-   cmd-chan   :- ReadPort
-   log-chan   :- WritePort
-   state-chan :- (maybe (protocol ReadPort))]
+  [mbsyncrc  :- Mbsyncrc
+   cmd-chan  :- ReadPort
+   log-chan  :- WritePort
+   exit-chan :- (maybe (protocol ReadPort))]
 
   Lifecycle
 
   (start [this]
     (log! log-chan this)
-    (assoc this :state-chan
+    (assoc this :exit-chan
            (thread-loop [workers {}]
              (let [cmd (<!! cmd-chan)]
                (when cmd
@@ -151,15 +151,15 @@
   (stop [this]
     (log! log-chan this)
     (>!! cmd-chan (->command :stop))
-    (<!! state-chan)
-    (dissoc this :state-chan))
+    (<!! exit-chan)
+    (dissoc this :exit-chan))
 
   Loggable
 
   (log-level [_] DEBUG)
 
   (->log [this]
-    (->LogItem this (if state-chan
+    (->LogItem this (if exit-chan
                       "↓ Stopping MbsyncMaster"
                       "↑ Starting MbsyncMaster"))))
 
@@ -184,7 +184,7 @@
        :req-chan (chan CHAN-SIZE)
        :log-chan log-chan
        :monitor (AtomicBoolean. true)
-       :state-chan nil})))
+       :exit-chan nil})))
 
 (s/defn ^:private dispatch-syncs :- {String MbsyncWorker}
   "Dispatch sync jobs to MbsyncWorker instances. Creates a new channel worker

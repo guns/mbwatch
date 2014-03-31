@@ -62,11 +62,11 @@
 (deftest test-core-async-helpers
   (let [ch (chan)
         vs (atom [])
-        state-chan (u/thread-loop []
+        exit-chan (u/thread-loop []
                      (u/with-chan-value [v (<!! ch)]
                        (swap! vs conj v)
                        (recur)))]
     (put! ch 0)
-    (u/poison-chan ch state-chan)
+    (u/poison-chan ch exit-chan)
     (put! ch 1)
     (is (= @vs [0]))))

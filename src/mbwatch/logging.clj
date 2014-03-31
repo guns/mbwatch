@@ -79,16 +79,16 @@
   (log [this ^LogItem log-item]))
 
 (t/defrecord LoggingService
-  [level      :- Int
-   logger     :- IItemLogger
-   log-chan   :- ReadPort
-   state-chan :- (maybe (protocol ReadPort))]
+  [level     :- Int
+   logger    :- IItemLogger
+   log-chan  :- ReadPort
+   exit-chan :- (maybe (protocol ReadPort))]
 
   Lifecycle
 
   (start [this]
     (log! log-chan this)
-    (assoc this :state-chan
+    (assoc this :exit-chan
            (thread-loop []
              (with-chan-value [obj (<!! log-chan)]
                (when (<= (log-level obj) level)
@@ -98,8 +98,8 @@
   (stop [this]
     ;; Log self then die
     (log! log-chan this)
-    (poison-chan log-chan state-chan)
-    (dissoc this :state-chan))
+    (poison-chan log-chan exit-chan)
+    (dissoc this :exit-chan))
 
   Loggable
 
@@ -107,6 +107,6 @@
 
   (->log [this]
     (->LogItem this (format "%s LoggingService [%s %s]"
-                            (if state-chan "↓ Stopping" "↑ Starting")
+                            (if exit-chan "↓ Stopping" "↑ Starting")
                             (get LOG-LEVELS level)
                             (class-name logger)))))

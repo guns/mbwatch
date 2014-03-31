@@ -132,13 +132,13 @@
    notify-map-ref :- IDeref
    read-chan      :- ReadPort
    write-chan     :- WritePort
-   state-chan     :- (maybe (protocol ReadPort))]
+   exit-chan      :- (maybe (protocol ReadPort))]
 
   Lifecycle
 
   (start [this]
     (log! write-chan this)
-    (assoc this :state-chan
+    (assoc this :exit-chan
            (thread-loop [sync-requests {}]
              (with-chan-value [obj (<!! read-chan)]
                ;; Pass through ASAP
@@ -147,8 +147,8 @@
 
   (stop [this]
     (log! read-chan this)
-    (poison-chan read-chan state-chan)
-    (dissoc this :state-chan))
+    (poison-chan read-chan exit-chan)
+    (dissoc this :exit-chan))
 
   Loggable
 
@@ -156,7 +156,7 @@
 
   (->log [this]
     (->LogItem this (format "%s NewMessageNotificationService: `%s`"
-                            (if state-chan "↓ Stopping" "↑ Starting")
+                            (if exit-chan "↓ Stopping" "↑ Starting")
                             notify-cmd))))
 
 (s/defn ^:private process-stop-event :- SyncRequestMap

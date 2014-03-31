@@ -45,15 +45,15 @@
         {:level DEBUG
          :logger (->ConsoleLogger System/out (get-default-colors) MILLIS-TIMESTAMP-FORMAT)
          :log-chan log-chan
-         :state-chan nil})
+         :exit-chan nil})
       (strict-map->NewMessageNotificationService
         {:notify-cmd (-> config :mbwatchrc :notify-cmd)
          :notify-map-ref (atom {"self" #{"INBOX"}})
          :read-chan notify-chan
          :write-chan log-chan
-         :state-chan nil})
+         :exit-chan nil})
       (strict-map->MbsyncMaster
         {:mbsyncrc (:mbsyncrc config)
          :cmd-chan cmd-chan
          :log-chan notify-chan
-         :state-chan nil}))))
+         :exit-chan nil}))))

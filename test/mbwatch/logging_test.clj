@@ -30,7 +30,7 @@
                      :logger (reify l/IItemLogger
                                (log [_ item] (swap! sink conj (:message item))))
                      :log-chan ch
-                     :state-chan nil}))
+                     :exit-chan nil}))
         values [(LogItem. l/WARNING (DateTime.) "SYN")
                 (LogItem. l/NOTICE (DateTime.) "ACK")
                 (LogItem. l/DEBUG (DateTime.) "SYN ACK")
