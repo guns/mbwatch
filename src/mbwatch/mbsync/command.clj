@@ -1,5 +1,5 @@
 (ns mbwatch.mbsync.command
-  (:require [mbwatch.logging :refer [->log-item DEBUG Loggable]]
+  (:require [mbwatch.logging :refer [->LogItem DEBUG Loggable]]
             [mbwatch.types :as t]
             [mbwatch.util :refer [class-name]]
             [schema.core :as s :refer [Int either enum]])
@@ -28,7 +28,7 @@
   Loggable
 
   (log-level [_] DEBUG)
-  (->log [this] (->log-item this (str (class-name this) ": " command))))
+  (->log [this] (->LogItem this (str (class-name this) ": " command))))
 
 (t/defrecord ^:private SyncCommand
   [mbchan->mbox :- {String [String]}
@@ -44,7 +44,7 @@
 
   (log-level [_] DEBUG)
   (->log [this]
-    (->log-item this (format "%s: %d %s" (class-name this) id mbchan->mbox))))
+    (->LogItem this (format "%s: %d %s" (class-name this) id mbchan->mbox))))
 
 (s/defn ->command :- ICommand
   [command :- (either {String [String]}

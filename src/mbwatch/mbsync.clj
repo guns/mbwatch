@@ -29,8 +29,8 @@
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
-            [mbwatch.logging :refer [->log-item DEBUG ERR INFO Loggable
-                                     NOTICE WARNING log!]]
+            [mbwatch.logging :refer [->LogItem DEBUG ERR INFO Loggable NOTICE
+                                     WARNING log!]]
             [mbwatch.mbsync.command :refer [->command ICommand command]]
             [mbwatch.mbsync.events :refer [join-mbargs
                                            strict-map->MbsyncEventStart
@@ -94,10 +94,10 @@
   (log-level [_] DEBUG)
 
   (->log [this]
-    (->log-item this (format "%s %s for channel `%s`"
-                             (if state-chan "↓ Stopping" "↑ Starting")
-                             (class-name this)
-                             mbchan))))
+    (->LogItem this (format "%s %s for channel `%s`"
+                            (if state-chan "↓ Stopping" "↑ Starting")
+                            (class-name this)
+                            mbchan))))
 
 (s/defn ^:private sync-boxes! :- VOID
   [mbsync-worker :- MbsyncWorker
@@ -160,7 +160,7 @@
   (log-level [_] DEBUG)
 
   (->log [this]
-    (->log-item this (str (if state-chan "↓ Stopping " "↑ Starting ") (class-name this)))))
+    (->LogItem this (str (if state-chan "↓ Stopping " "↑ Starting ") (class-name this)))))
 
 (s/defn ^:private stop-workers! :- VOID
   [workers :- [MbsyncWorker]]

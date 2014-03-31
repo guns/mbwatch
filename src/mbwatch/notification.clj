@@ -13,7 +13,7 @@
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.config :refer [mdir-path]]
-            [mbwatch.logging :refer [->log-item DEBUG INFO Loggable log!]]
+            [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable log!]]
             [mbwatch.maildir :refer [new-messages senders]]
             [mbwatch.mbsync.command]
             [mbwatch.mbsync.events]
@@ -46,7 +46,7 @@
                      (let [n (apply + (mapv (comp count val) mbox->messages))]
                        (str mbchan \( n \))))
                    mbchan->mbox->messages)]
-      (->log-item this (str "New messages: " (string/join " " ss))))))
+      (->LogItem this (str "New messages: " (string/join " " ss))))))
 
 (s/defn ^:private format-msg :- (maybe String)
   [messages :- [MimeMessage]]
@@ -152,10 +152,10 @@
   (log-level [_] DEBUG)
 
   (->log [this]
-    (->log-item this (format "%s %s: `%s`"
-                             (if state-chan "↓ Stopping" "↑ Starting")
-                             (class-name this)
-                             notify-cmd))))
+    (->LogItem this (format "%s %s: `%s`"
+                            (if state-chan "↓ Stopping" "↑ Starting")
+                            (class-name this)
+                            notify-cmd))))
 
 (s/defn ^:private process-stop-event :- SyncRequestMap
   [obj            :- Object

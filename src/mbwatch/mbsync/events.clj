@@ -1,7 +1,7 @@
 (ns mbwatch.mbsync.events
   (:require [clojure.string :as string]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
-            [mbwatch.logging :refer [->log-item ERR Loggable WARNING]]
+            [mbwatch.logging :refer [->LogItem ERR Loggable WARNING]]
             [mbwatch.types :as t]
             [mbwatch.util :refer [human-duration]]
             [schema.core :as s :refer [Int maybe]])
@@ -71,4 +71,4 @@
   Loggable
 
   (log-level [_] WARNING)
-  (->log [this] (->log-item this (format "Unknown channel: `%s`" mbchan))))
+  (->log [this] (->LogItem this (format "Unknown channel: `%s`" mbchan))))

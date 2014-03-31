@@ -59,7 +59,7 @@
   (put! chan (assoc-timestamp map))
   nil)
 
-(s/defn ->log-item :- LogItem
+(s/defn ->LogItem :- LogItem
   "Create a LogItem from a Loggable, assuming that the timestamp can be found
    in the :timestamp field of the Loggable."
   [loggable :- Loggable
@@ -72,7 +72,7 @@
   Object
 
   (log-level [_] DEBUG)
-  (->log [this] (->log-item this (str this))))
+  (->log [this] (->LogItem this (str this))))
 
 (defprotocol IItemLogger
   (log [this ^LogItem log-item]))
@@ -104,8 +104,8 @@
   (log-level [_] DEBUG)
 
   (->log [this]
-    (->log-item this (format "%s %s [%s %s]"
-                             (if state-chan "↓ Stopping" "↑ Starting")
-                             (class-name this)
-                             (get LOG-LEVELS level)
-                             (class-name logger)))))
+    (->LogItem this (format "%s %s [%s %s]"
+                            (if state-chan "↓ Stopping" "↑ Starting")
+                            (class-name this)
+                            (get LOG-LEVELS level)
+                            (class-name logger)))))

@@ -15,11 +15,11 @@
 (s/deftest test-Loggable->log-item
   (let [loggable (reify l/Loggable
                    (l/log-level [_] 0)
-                   (l/->log [this] (l/->log-item this "Hello from ->log-item.")))
+                   (l/->log [this] (l/->LogItem this "Hello from ->LogItem.")))
         {:keys [level timestamp message]} (->log loggable)]
     (is (zero? level))
     (is (instance? DateTime timestamp))
-    (is (= "Hello from ->log-item." message))))
+    (is (= "Hello from ->LogItem." message))))
 
 (s/deftest test-LoggingService
   (let [sink (atom [])
