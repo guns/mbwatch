@@ -54,6 +54,7 @@
   (or (:timestamp obj) (DateTime.)))
 
 (s/defn log! :- VOID
+  "Assoc :timestamp into map and put! onto chan."
   [chan :- WritePort
    map  :- Associative]
   (put! chan (assoc-timestamp map))
@@ -95,6 +96,7 @@
                (recur)))))
 
   (stop [this]
+    ;; Log self then die
     (log! log-chan this)
     (poison-chan log-chan state-chan)
     (dissoc this :state-chan))
