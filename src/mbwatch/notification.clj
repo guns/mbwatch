@@ -42,11 +42,14 @@
   (log-level [_] INFO)
 
   (->log [this]
-    (let [ss (mapv (fn [[mbchan mbox->messages]]
-                     (let [n (apply + (mapv (comp count val) mbox->messages))]
-                       (str mbchan \( n \))))
-                   mbchan->mbox->messages)]
-      (->LogItem this (str "New messages: " (string/join " " ss))))))
+    (let [sb (reduce-kv
+               (fn [s mbchan mbox->messages]
+                 (reduce-kv
+                   (fn [^StringBuilder s mbox messages]
+                     (.append s (format " [%s/%s:%d]" mbchan mbox (count messages))))
+                   s mbox->messages))
+               (StringBuilder. "NewMessageNotification:") mbchan->mbox->messages)]
+      (->LogItem this (str sb)))))
 
 (s/defn ^:private format-msg :- (maybe String)
   [messages :- [MimeMessage]]
