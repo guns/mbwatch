@@ -8,7 +8,7 @@
    via `bash -c 'mbsync -c <(cat)'`. These child processes can be terminated
    by MbsyncMaster at any time.
 
-   Calling .stop on MbsyncMaster also stops all MbsyncWorkers.
+   Stopping MbsyncMaster also stops all spawned MbsyncWorkers.
 
      ─────── ICommand ───────┐
                              │
@@ -69,7 +69,7 @@
    mbchan    :- String
    req-chan  :- ReadPort
    log-chan  :- WritePort
-   monitor   :- AtomicBoolean
+   status    :- AtomicBoolean
    exit-chan :- (maybe (protocol ReadPort))]
 
   Lifecycle
@@ -78,7 +78,7 @@
     (log! log-chan this)
     (assoc this :exit-chan
            (thread-loop []
-             (when (.get monitor)
+             (when (.get status)
                (with-chan-value [req (<!! req-chan)]
                  (let [[id boxes] req]
                    (sync-boxes! this id boxes))
@@ -102,7 +102,7 @@
   [mbsync-worker :- MbsyncWorker
    id            :- Int
    mboxes        :- [String]]
-  (let [{:keys [rc maildir mbchan log-chan monitor]} mbsync-worker
+  (let [{:keys [rc maildir mbchan log-chan status]} mbsync-worker
         ev (strict-map->MbsyncEventStart
              {:level INFO
               :id id
@@ -112,7 +112,7 @@
         proc (spawn-sync rc mbchan mboxes)
         _ (put! log-chan ev)
 
-        graceful? (process/interruptible-wait monitor proc)
+        graceful? (process/interruptible-wait status proc)
 
         v (.exitValue proc)
         ev' (strict-map->MbsyncEventStop
@@ -167,9 +167,9 @@
   [workers :- [MbsyncWorker]]
   (dorun
     (pmap (fn [^MbsyncWorker w]
-            (let [mon ^AtomicBoolean (.monitor w)]
-              (.set mon false)
-              (sig-notify-all mon)
+            (let [status ^AtomicBoolean (:status w)]
+              (.set status false)
+              (sig-notify-all status)
               (.stop w)))
           workers)))
 
@@ -183,7 +183,7 @@
        :mbchan mbchan
        :req-chan (chan CHAN-SIZE)
        :log-chan log-chan
-       :monitor (AtomicBoolean. true)
+       :status (AtomicBoolean. true)
        :exit-chan nil})))
 
 (s/defn ^:private dispatch-syncs :- {String MbsyncWorker}
@@ -214,7 +214,7 @@
     (case (command cmd)
       :stop (stop-workers! (vals workers))
       :term (do (doseq [^MbsyncWorker w (vals workers)]
-                  (sig-notify-all (.monitor w)))
+                  (sig-notify-all (:status w)))
                 workers)
       :sync (dispatch-syncs workers
                             (:id cmd)
