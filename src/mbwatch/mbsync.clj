@@ -27,7 +27,7 @@
    "
   (:require [clojure.core.async :refer [<!! >!! chan put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
-            [com.stuartsierra.component :refer [Lifecycle]]
+            [com.stuartsierra.component :as comp :refer [Lifecycle]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [->LogItem DEBUG ERR INFO Loggable NOTICE
                                      WARNING log!]]
@@ -37,8 +37,8 @@
                                            strict-map->MbsyncEventStop]]
             [mbwatch.process :as process]
             [mbwatch.types :as t :refer [VOID]]
-            [mbwatch.util :refer [class-name poison-chan shell-escape
-                                  sig-notify-all thread-loop with-chan-value]]
+            [mbwatch.util :refer [poison-chan shell-escape sig-notify-all
+                                  thread-loop with-chan-value]]
             [schema.core :as s :refer [Int maybe protocol]])
   (:import (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
@@ -173,7 +173,7 @@
               (.stop w)))
           workers)))
 
-(s/defn ^:private new-mbsync-worker :- MbsyncWorker
+(s/defn ^:private ->MbsyncWorker :- MbsyncWorker
   [mbchan        :- String
    mbsync-master :- MbsyncMaster]
   (let [{:keys [mbsyncrc log-chan]} mbsync-master]
@@ -199,11 +199,15 @@
         (if (contains? channels ch)
           (let [ws (if (contains? ws ch)
                      ws
-                     (assoc ws ch (.start (new-mbsync-worker ch mbsync-master))))]
+                     (->> (->MbsyncWorker ch mbsync-master)
+                          comp/start
+                          (assoc ws ch)))]
             (put! (get-in ws [ch :req-chan]) [id bs])
             ws)
-          (do (put! (:log-chan mbsync-master) (MbsyncUnknownChannelError. id ch (DateTime.)))
-              ws)))
+          (do
+            (put! (:log-chan mbsync-master)
+                  (MbsyncUnknownChannelError. id ch (DateTime.)))
+            ws)))
       workers sync-req)))
 
 (s/defn ^:private handle-mbsync-command :- (maybe {String MbsyncWorker})
