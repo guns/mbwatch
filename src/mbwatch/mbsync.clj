@@ -94,9 +94,8 @@
   (log-level [_] DEBUG)
 
   (->log [this]
-    (->LogItem this (format "%s %s for channel `%s`"
+    (->LogItem this (format "%s MbsyncWorker for channel `%s`"
                             (if state-chan "↓ Stopping" "↑ Starting")
-                            (class-name this)
                             mbchan))))
 
 (s/defn ^:private sync-boxes! :- VOID
@@ -160,7 +159,9 @@
   (log-level [_] DEBUG)
 
   (->log [this]
-    (->LogItem this (str (if state-chan "↓ Stopping " "↑ Starting ") (class-name this)))))
+    (->LogItem this (if state-chan
+                      "↓ Stopping MbsyncMaster"
+                      "↑ Starting MbsyncMaster"))))
 
 (s/defn ^:private stop-workers! :- VOID
   [workers :- [MbsyncWorker]]

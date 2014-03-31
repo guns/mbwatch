@@ -104,8 +104,7 @@
   (log-level [_] DEBUG)
 
   (->log [this]
-    (->LogItem this (format "%s %s [%s %s]"
+    (->LogItem this (format "%s LoggingService [%s %s]"
                             (if state-chan "↓ Stopping" "↑ Starting")
-                            (class-name this)
                             (get LOG-LEVELS level)
                             (class-name logger)))))

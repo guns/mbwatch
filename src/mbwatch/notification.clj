@@ -19,7 +19,7 @@
             [mbwatch.mbsync.events]
             [mbwatch.process :as process]
             [mbwatch.types :as t :refer [VOID]]
-            [mbwatch.util :refer [class-name poison-chan thread-loop to-ms
+            [mbwatch.util :refer [poison-chan thread-loop to-ms
                                   with-chan-value]]
             [schema.core :as s :refer [Int defschema maybe protocol]])
   (:import (clojure.lang IDeref)
@@ -152,9 +152,8 @@
   (log-level [_] DEBUG)
 
   (->log [this]
-    (->LogItem this (format "%s %s: `%s`"
+    (->LogItem this (format "%s NewMessageNotificationService: `%s`"
                             (if state-chan "↓ Stopping" "↑ Starting")
-                            (class-name this)
                             notify-cmd))))
 
 (s/defn ^:private process-stop-event :- SyncRequestMap

@@ -1,7 +1,6 @@
 (ns mbwatch.mbsync.command
   (:require [mbwatch.logging :refer [->LogItem DEBUG Loggable]]
             [mbwatch.types :as t]
-            [mbwatch.util :refer [class-name]]
             [schema.core :as s :refer [Int either enum]])
   (:import (java.util.concurrent.atomic AtomicLong)
            (org.joda.time DateTime)))
@@ -28,7 +27,7 @@
   Loggable
 
   (log-level [_] DEBUG)
-  (->log [this] (->LogItem this (str (class-name this) ": " command))))
+  (->log [this] (->LogItem this (str "Command: " command))))
 
 (t/defrecord ^:private SyncCommand
   [mbchan->mbox :- {String [String]}
@@ -44,7 +43,7 @@
 
   (log-level [_] DEBUG)
   (->log [this]
-    (->LogItem this (format "%s: %d %s" (class-name this) id mbchan->mbox))))
+    (->LogItem this (format "SyncCommand: %d %s" id mbchan->mbox))))
 
 (s/defn ->command :- ICommand
   [command :- (either {String [String]}
