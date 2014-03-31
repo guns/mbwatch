@@ -13,7 +13,7 @@
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.config :refer [mdir-path]]
-            [mbwatch.logging :refer [->log-item DEBUG Loggable log!]]
+            [mbwatch.logging :refer [->log-item DEBUG INFO Loggable log!]]
             [mbwatch.maildir :refer [new-messages senders]]
             [mbwatch.mbsync.command]
             [mbwatch.mbsync.events]
@@ -23,22 +23,40 @@
                                   with-chan-value]]
             [schema.core :as s :refer [Int defschema maybe protocol]])
   (:import (clojure.lang IDeref)
+           (java.io StringWriter)
            (javax.mail.internet MimeMessage)
            (mbwatch.mbsync.command SyncCommand)
-           (mbwatch.mbsync.events MbsyncEventStop MbsyncUnknownChannelError)))
+           (mbwatch.mbsync.events MbsyncEventStop MbsyncUnknownChannelError)
+           (org.joda.time DateTime)))
 
 (def ^:const ^:private MAX-SENDERS-SHOWN
   "TODO: Make configurable?"
   8)
+
+(t/defrecord ^:private NewMessageNotification
+  [mbchan->mbox->messages :- {String {String [MimeMessage]}}
+   timestamp              :- DateTime]
+
+  Loggable
+
+  (log-level [_] INFO)
+
+  (->log [this]
+    (let [ss (mapv (fn [[mbchan mbox->messages]]
+                     (let [n (apply + (mapv (comp count val) mbox->messages))]
+                       (str mbchan \( n \))))
+                   mbchan->mbox->messages)]
+      (->log-item this (str "New messages: " (string/join " " ss))))))
 
 (s/defn ^:private format-msg :- (maybe String)
   [messages :- [MimeMessage]]
   (let [n (count messages)
         ss (vec (senders messages))
         ss (if (> (count ss) MAX-SENDERS-SHOWN)
-             (conj ss (format "… and %d other%s"
-                              (- (count ss) MAX-SENDERS-SHOWN)
-                              (if (= n 1) "" \s)))
+             (conj (subvec ss 0 MAX-SENDERS-SHOWN)
+                   (format "… and %d other%s"
+                           (- (count ss) MAX-SENDERS-SHOWN)
+                           (if (= n 1) "" \s)))
              ss)]
     (when (pos? n)
       (format "%d new message%s from:\n%s"
@@ -46,7 +64,7 @@
               (if (= n 1) "" \s)
               (string/join \newline ss)))))
 
-(s/defn ^:private sync-event->notification :- (maybe String)
+(s/defn ^:private sync-event->new-messages-by-box :- (maybe {String [MimeMessage]})
   [notify-map :- {String #{String}}
    event      :- MbsyncEventStop]
   (let [{:keys [mbchan mboxes maildir start]} event]
@@ -54,34 +72,48 @@
       (let [nboxes (notify-map mbchan)
             bs (if (empty? mboxes)
                  nboxes ; [] means full channel sync
-                 (set/intersection (set mboxes) nboxes))]
-        (when (seq bs)
-          (let [ts (to-ms start)
-                msgs (reduce
-                       (fn [v b]
-                         (if-let [msg (format-msg (new-messages (mdir-path maildir b) ts))]
-                           (conj v (str "[" mbchan "/" b "]\t" msg))
-                           v))
-                       [] (sort bs))]
-            (when (seq msgs)
-              (string/join "\n\n" msgs))))))))
+                 (set/intersection (set mboxes) nboxes))
+            timestamp (to-ms start)]
+        (reduce
+          (fn [m b]
+            (let [msgs (new-messages (mdir-path maildir b) timestamp)]
+              (cond-> m
+                (seq msgs) (assoc b msgs))))
+          {} (sort bs))))))
 
-(s/defn ^:private new-message-notification :- (maybe String)
+(s/defn ^:private ->NewMessageNotification :- (maybe NewMessageNotification)
   [notify-map :- {String #{String}}
    events     :- [MbsyncEventStop]]
-  (let [msgs (->> events
-                  (map (partial sync-event->notification notify-map))
-                  (remove nil?))]
-    (when (seq msgs)
-      (string/join "\n\n" msgs))))
+  (let [m (reduce
+            (fn [m ev]
+              (let [bs->msgs (sync-event->new-messages-by-box notify-map ev)]
+                (cond-> m
+                  (seq bs->msgs) (assoc (:mbchan ev) bs->msgs))))
+            {} events)]
+    (when (seq m)
+      (NewMessageNotification. m (DateTime.)))))
 
 (s/defn ^:private notify! :- VOID
-  [notify-cmd :- String
-   notify-map :- {String #{String}}
-   events     :- [MbsyncEventStop]]
-  (when-let [msg (new-message-notification notify-map events)]
-    (process/spawn "bash" "-c" notify-cmd :in msg)
-    nil))
+  [notify-cmd   :- String
+   notification :- NewMessageNotification]
+  (let [msgs (mapcat
+               (fn [[mbchan mbox->messages]]
+                 (map
+                   (fn [[mbox messages]]
+                     (format "[%s/%s]\t%s" mbchan mbox (format-msg messages)))
+                   (sort mbox->messages)))
+               (sort (:mbchan->mbox->messages notification)))
+        proc (process/spawn
+               "bash" "-c" notify-cmd :in (string/join "\n\n" msgs))]
+    (when-not (zero? (.waitFor proc))
+      (let [ebuf (StringWriter.)
+            _ (process/dump! proc :err ebuf)
+            emsg (str ebuf)
+            emsg (format "`%s` failed with status %d.%s"
+                         notify-cmd
+                         (.exitValue proc)
+                         (if (seq emsg) (str "\n" emsg) ""))]
+        (throw (RuntimeException. emsg))))))
 
 (defschema SyncRequestMap
   {Int {:countdown Int
@@ -138,9 +170,14 @@
                      conj-event? (conj obj))]
         (if (zero? countdown)
           (do (future
-                (notify! (:notify-cmd notify-service)
-                         (deref (:notify-map-ref notify-service))
-                         events))
+                (try
+                  (when-let [note (->NewMessageNotification
+                                    (deref (:notify-map-ref notify-service))
+                                    events)]
+                    (put! (:write-chan notify-service) note)
+                    (notify! (:notify-cmd notify-service) note))
+                  (catch Throwable e
+                    (.println System/err e))))
               (dissoc sync-requests id))
           (assoc sync-requests id {:countdown countdown :events events})))
       sync-requests)))
