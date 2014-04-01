@@ -5,10 +5,10 @@
             [schema.core :as s :refer [Int]])
   (:import (java.io StringReader)))
 
-(def DEFAULT-PATH
+(def ^:const DEFAULT-PATH
   (str (System/getProperty "user.home") "/.config/mbwatch/rc"))
 
-(def DEFAULT-OPTIONS
+(def ^:const DEFAULT-OPTIONS
   {:notify-cmd "notify-send \"$(cat)\""
    :imap-timeout "10000"})
 

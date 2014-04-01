@@ -9,11 +9,11 @@
                                        one optional-key pair pred]])
   (:import (clojure.lang IPersistentSet)))
 
-(def DEFAULT-PATH
+(def ^:const DEFAULT-PATH
   "Default path of mbsyncrc."
   (str (System/getProperty "user.home") \/ ".mbsyncrc"))
 
-(def ^:private DEFAULT-MBSYNC-INBOX
+(def ^:private ^:const DEFAULT-MBSYNC-INBOX
   (str (System/getProperty "user.home") \/ "Maildir"))
 
 (defschema ^:private Word

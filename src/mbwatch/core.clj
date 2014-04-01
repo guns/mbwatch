@@ -17,7 +17,7 @@
            (mbwatch.mbsync MbsyncMaster)
            (mbwatch.notification NewMessageNotificationService)))
 
-(def ^:const ^:private CHAN-SIZE
+(def ^:private ^:const CHAN-SIZE
   "TODO: Move to Config?"
   0x1000)
 

@@ -30,7 +30,7 @@
            (mbwatch.mbsync.events MbsyncEventStop MbsyncUnknownChannelError)
            (org.joda.time DateTime)))
 
-(def ^:const ^:private MAX-SENDERS-SHOWN
+(def ^:private ^:const MAX-SENDERS-SHOWN
   "TODO: Make configurable?"
   8)
 
