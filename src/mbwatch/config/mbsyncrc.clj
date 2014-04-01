@@ -6,8 +6,7 @@
             [mbwatch.types :as t]
             [mbwatch.util :refer [chomp dequote]]
             [schema.core :as s :refer [both defschema either enum eq maybe
-                                       one optional-key pair pred]])
-  (:import (clojure.lang IPersistentSet)))
+                                       one optional-key pair pred]]))
 
 (def ^:const DEFAULT-PATH
   "Default path of mbsyncrc."
@@ -72,7 +71,7 @@
 (t/defrecord ^:private Mbsyncrc
   [text                  :- String
    sections              :- Sections
-   channels              :- IPersistentSet
+   channels              :- #{Word}
    channel->Maildirstore :- {Word Maildirstore}])
 
 (s/defn ^:private paragraphs :- [[String]]
