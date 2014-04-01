@@ -11,7 +11,7 @@
    map->name constructors are made private. The strict-map->name constructor
    remains public if the schema version is used and the first argument after
    the name is the keyword :private."
-  {:require [#'cc/defrecord #'s/defrecord]}
+  {:requires [#'cc/defrecord #'s/defrecord]}
   [name & body]
   (let [fields (first body)
         schema? (and (coll? fields) (some #{:-} fields))

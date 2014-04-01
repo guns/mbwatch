@@ -5,7 +5,7 @@
 (def ^:const POISON ::poison)
 
 (defmacro thread-loop
-  {:require [#'thread #'catch-print]}
+  {:requires [#'thread #'catch-print]}
   [bindings & body]
   `(thread
      (catch-print
@@ -27,7 +27,7 @@
   "Execute all expressions concurrently and return the value of the first to
    return, prioritized by the given order. All expressions are left to run to
    completion."
-  {:require [#'thread]}
+  {:requires [#'thread]}
   [& exprs]
   (let [n (count exprs)
         chans (gensym "chans")]
