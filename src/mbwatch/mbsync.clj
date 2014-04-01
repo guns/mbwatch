@@ -28,8 +28,8 @@
   (:require [clojure.core.async :refer [<!! >!! chan put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
-            [mbwatch.concurrent :refer [poison-chan sig-notify-all
-                                        thread-loop with-chan-value]]
+            [mbwatch.concurrent :refer [POISON sig-notify-all thread-loop
+                                        with-chan-value]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [->LogItem DEBUG ERR INFO Loggable NOTICE
                                      WARNING log!]]
@@ -87,7 +87,14 @@
 
   (stop [this]
     (log! log-chan this)
-    (poison-chan req-chan exit-chan)
+    ;; Exit after current loop iteration
+    (.set status false)
+    ;; Or after reading the poison value
+    (>!! req-chan POISON)
+    ;; Interrupt the current sync if any
+    (sig-notify-all status)
+    ;; Wait for graceful exit
+    (<!! exit-chan)
     (dissoc this :exit-chan))
 
   Loggable
@@ -129,7 +136,7 @@
     (put! log-chan ev')
     nil))
 
-(declare handle-mbsync-command)
+(declare process-command)
 
 (t/defrecord MbsyncMaster
   [mbsyncrc  :- Mbsyncrc
@@ -146,11 +153,12 @@
              (let [cmd (<!! cmd-chan)]
                (when cmd
                  (put! log-chan cmd))
-               (when-let [workers (handle-mbsync-command this workers cmd)]
+               (when-let [workers (process-command this workers cmd)]
                  (recur workers))))))
 
   (stop [this]
     (log! log-chan this)
+    ;; Enqueue the stop-workers command and wait for graceful exit
     (>!! cmd-chan (->command :stop))
     (<!! exit-chan)
     (dissoc this :exit-chan))
@@ -163,16 +171,6 @@
     (->LogItem this (if exit-chan
                       "↓ Stopping MbsyncMaster"
                       "↑ Starting MbsyncMaster"))))
-
-(s/defn ^:private stop-workers! :- VOID
-  [workers :- [MbsyncWorker]]
-  (dorun
-    (pmap (fn [^MbsyncWorker w]
-            (let [status ^AtomicBoolean (:status w)]
-              (.set status false)
-              (sig-notify-all status)
-              (.stop w)))
-          workers)))
 
 (s/defn ^:private ->MbsyncWorker :- MbsyncWorker
   [mbchan        :- String
@@ -211,18 +209,16 @@
             ws)))
       workers sync-req)))
 
-(s/defn ^:private handle-mbsync-command :- (maybe {String MbsyncWorker})
+(s/defn ^:private process-command :- (maybe {String MbsyncWorker})
   [mbsync-master :- MbsyncMaster
    workers       :- {String MbsyncWorker}
    cmd           :- (maybe (protocol ICommand))]
-  (if cmd
-    (case (command cmd)
-      :stop (stop-workers! (vals workers))
-      :term (do (doseq [^MbsyncWorker w (vals workers)]
-                  (sig-notify-all (:status w)))
-                workers)
-      :sync (dispatch-syncs workers
-                            (:id cmd)
-                            (:mbchan->mbox cmd)
-                            mbsync-master))
-    (stop-workers! (vals workers))))
+  (case (if cmd (command cmd) :stop)
+    :sync (dispatch-syncs workers
+                          (:id cmd)
+                          (:mbchan->mbox cmd)
+                          mbsync-master)
+    :term (do (doseq [w (vals workers)]
+                (sig-notify-all (:status w)))
+              workers)
+    :stop (dorun (pmap comp/stop (vals workers)))))

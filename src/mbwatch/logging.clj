@@ -97,7 +97,6 @@
                (recur)))))
 
   (stop [this]
-    ;; Log self then die
     (log! log-chan this)
     (poison-chan log-chan exit-chan)
     (dissoc this :exit-chan))
