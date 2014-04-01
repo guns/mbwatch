@@ -1,4 +1,30 @@
 (ns mbwatch.core
+  "
+     ─────── ICommand ───────┐
+                             │
+                             ▼                      ─┐
+                      ┌──────────────┐               │
+                      │ MbsyncMaster │               │
+                      └──────┬───────┘               │
+                             │                       │
+                 ┌───────────┴──────────┐            ├── Loggable ──┐
+                 ▼                      ▼            │              │
+          ┌──────────────┐       ┌──────────────┐    │              │
+          │ MbsyncWorker │   …   │ MbsyncWorker │    │              │
+          └──────────────┘       └──────────────┘    │              │
+                                                    ─┘              │
+                                                                    │
+                                                                    │
+             ┌───────────────────────────────┐                      │
+             │ NewMessageNotificationService │ ◀────────────────────┘
+             └───────────────┬───────────────┘
+                             │
+                             │ Loggable
+                             ▼
+                     ┌────────────────┐
+                     │ LoggingService │
+                     └────────────────┘
+  "
   (:require [clojure.core.async :refer [chan]]
             [clojure.core.async.impl.protocols :refer [ReadPort]]
             [com.stuartsierra.component :refer [Lifecycle start-system
