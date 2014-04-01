@@ -1,19 +1,28 @@
 (ns mbwatch.concurrent
   (:require [clojure.core.async :refer [<!! >!! alts!! chan thread]]))
 
-(defn sig-wait
-  ([^Object monitor]
-   (locking monitor (.wait monitor)))
-  ([^Object monitor ^long timeout]
-   (when (pos? timeout)
-     (locking monitor
-       (.wait monitor timeout)))))
+(def ^:const POISON ::poison)
 
-(defn sig-notify [^Object monitor]
-  (locking monitor (.notify monitor)))
+(defmacro thread-loop
+  {:require [#'thread]}
+  [bindings & body]
+  `(thread
+     (try
+       (loop ~bindings
+         ~@body)
+       (catch Throwable e#
+         (.println System/err e#)))))
 
-(defn sig-notify-all [^Object monitor]
-  (locking monitor (.notifyAll monitor)))
+(defmacro with-chan-value [[sym form] & body]
+  `(let [~sym ~form]
+     (when (and ~sym (not= ~sym ~POISON))
+       ~@body)))
+
+(defn poison-chan
+  "Send a poison value on wr-chan and wait for a response on rd-chan."
+  [wr-chan rd-chan]
+  (>!! wr-chan POISON)
+  (<!! rd-chan))
 
 (defmacro first-alt
   "Execute all expressions concurrently and return the value of the first to
@@ -28,23 +37,16 @@
                (range n))
        (first (~alts!! ~chans :priority true)))))
 
-(defmacro thread-loop
-  {:require [#'thread]}
-  [bindings & body]
-  `(thread
-     (try
-       (loop ~bindings
-         ~@body)
-       (catch Throwable e#
-         (.println System/err e#)))))
+(defn sig-wait
+  ([^Object monitor]
+   (locking monitor (.wait monitor)))
+  ([^Object monitor ^long timeout]
+   (when (pos? timeout)
+     (locking monitor
+       (.wait monitor timeout)))))
 
-(defn poison-chan
-  "Send a poison value on wr-chan and wait for a response on rd-chan."
-  [wr-chan rd-chan]
-  (>!! wr-chan ::poison)
-  (<!! rd-chan))
+(defn sig-notify [^Object monitor]
+  (locking monitor (.notify monitor)))
 
-(defmacro with-chan-value [[sym form] & body]
-  `(let [~sym ~form]
-     (when (and ~sym (not= ~sym ::poison))
-       ~@body)))
+(defn sig-notify-all [^Object monitor]
+  (locking monitor (.notifyAll monitor)))
