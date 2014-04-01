@@ -177,7 +177,7 @@
   (let [{:keys [mbsyncrc log-chan]} mbsync-master]
     (strict-map->MbsyncWorker
       {:rc (-> mbsyncrc :text)
-       :maildir (get-in mbsyncrc [:channels->maildirstores mbchan])
+       :maildir (get-in mbsyncrc [:channel->Maildirstore mbchan])
        :mbchan mbchan
        :req-chan (chan CHAN-SIZE)
        :log-chan log-chan

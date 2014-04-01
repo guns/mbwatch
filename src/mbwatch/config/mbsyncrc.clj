@@ -70,10 +70,10 @@
    :flatten (maybe FilteredLine)})
 
 (t/defrecord ^:private Mbsyncrc
-  [text                    :- String
-   sections                :- Sections
-   channels                :- IPersistentSet
-   channels->maildirstores :- {Word Maildirstore}])
+  [text                  :- String
+   sections              :- Sections
+   channels              :- IPersistentSet
+   channel->Maildirstore :- {Word Maildirstore}])
 
 (s/defn ^:private paragraphs :- [[String]]
   [s :- String]
@@ -208,11 +208,11 @@
   [s :- String]
   (let [sections (parse-tokens (tokenize s))
         imapstore-names->credentials (map-credentials (:imapstore sections))
-        channels->maildirstores (map-slave-maildirstores
-                                  (:channel sections)
-                                  (map-maildirstores (:maildirstore sections)))]
+        channel->Maildirstore (map-slave-maildirstores
+                                (:channel sections)
+                                (map-maildirstores (:maildirstore sections)))]
     (strict-map->Mbsyncrc
       {:text (render sections imapstore-names->credentials)
        :sections sections
        :channels (-> sections :channel keys set)
-       :channels->maildirstores channels->maildirstores})))
+       :channel->Maildirstore channel->Maildirstore})))
