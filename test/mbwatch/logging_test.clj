@@ -2,7 +2,7 @@
   (:require [clojure.core.async :refer [<!! >!! chan]]
             [clojure.test :refer [is]]
             [com.stuartsierra.component :as comp]
-            [mbwatch.logging :as l :refer [->log]]
+            [mbwatch.logging :as l]
             [schema.test :as s])
   (:import (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
@@ -16,7 +16,7 @@
   (let [loggable (reify l/Loggable
                    (l/log-level [_] 0)
                    (l/->log [this] (l/->LogItem this "Hello from ->LogItem.")))
-        {:keys [level timestamp message]} (->log loggable)]
+        {:keys [level timestamp message]} (l/->log loggable)]
     (is (zero? level))
     (is (instance? DateTime timestamp))
     (is (= "Hello from ->LogItem." message))))

@@ -50,7 +50,7 @@
           Δt (human-duration start stop)
           msg (if (zero? status)
                 (format "Finished `mbsync %s` in %s." mbarg Δt)
-                (let [buf (StringBuffer.)
+                (let [buf (StringBuilder.)
                       fail (if (<= level ERR)
                              (format "FAILURE: `mbsync %s` aborted in %s with status %d."
                                      mbarg Δt status)
