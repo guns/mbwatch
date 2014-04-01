@@ -3,6 +3,6 @@
 ;
 
 notify-cmd = notify - --audio="/home/guns/.sounds/new-message.mp3"
-imap-timeout = 5000
+imap-socket-timeout = 5000
 
 ; vim:ft=dosini:

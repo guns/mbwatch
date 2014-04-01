@@ -7,4 +7,4 @@
 (s/deftest test-parse
   (let [mbwatchrc (mbw/parse (slurp (io/resource "mbwatchrc")))]
     (is (= (:notify-cmd mbwatchrc) "notify - --audio=\"/home/guns/.sounds/new-message.mp3\""))
-    (is (= (:imap-timeout mbwatchrc) 5000))))
+    (is (= (:imap-socket-timeout mbwatchrc) 5000))))

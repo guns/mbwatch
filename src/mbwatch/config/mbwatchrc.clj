@@ -10,15 +10,15 @@
 
 (def ^:const DEFAULT-OPTIONS
   {:notify-cmd "notify-send \"$(cat)\""
-   :imap-timeout "10000"})
+   :imap-socket-timeout "10000"})
 
 (t/defrecord ^:private Mbwatchrc
-  [notify-cmd   :- String
-   imap-timeout :- Int])
+  [notify-cmd          :- String
+   imap-socket-timeout :- Int])
 
 (s/defn parse :- Mbwatchrc
   [s :- String]
   (strict-map->Mbwatchrc
     (-> DEFAULT-OPTIONS
         (merge (read-ini (StringReader. s) :keywordize? true))
-        (update-in [:imap-timeout] #(Long/parseLong %)))))
+        (update-in [:imap-socket-timeout] #(Long/parseLong %)))))
