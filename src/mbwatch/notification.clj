@@ -47,7 +47,7 @@
                (fn [s mbchan mbox->messages]
                  (reduce-kv
                    (fn [^StringBuilder s mbox messages]
-                     (.append s (format " [%s/%s:%d]" mbchan mbox (count messages))))
+                     (.append s (format " [%s/%s %d]" mbchan mbox (count messages))))
                    s mbox->messages))
                (StringBuilder. "NewMessageNotification:") mbchan->mbox->messages)]
       (->LogItem this (str sb)))))
