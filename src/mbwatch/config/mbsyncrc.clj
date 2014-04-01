@@ -72,7 +72,6 @@
 (t/defrecord ^:private Mbsyncrc
   [text                    :- String
    sections                :- Sections
-   names->credentials      :- {Word IMAPCredentials}
    channels                :- IPersistentSet
    channels->maildirstores :- {Word Maildirstore}])
 
@@ -174,13 +173,14 @@
     {} channels))
 
 (s/defn ^:private replace-passcmd :- MapSectionValue
-  [imapstore          :- MapSectionValue
-   names->credentials :- {Word IMAPCredentials}]
+  [imapstore                    :- MapSectionValue
+   imapstore-names->credentials :- {Word IMAPCredentials}]
   (reduce-kv
     (fn [m k v]
-      (assoc m k (-> v
-                     (dissoc "passcmd")
-                     (assoc "pass" (pr-str (get-in names->credentials [k :pass]))))))
+      (let [pass (pr-str (get-in imapstore-names->credentials [k :pass]))]
+        (assoc m k (-> v
+                       (dissoc "passcmd")
+                       (assoc "pass" pass)))))
     {} imapstore))
 
 (s/defn ^:private render-section :- [String]
@@ -193,9 +193,10 @@
           (sort-by key (get sections type))))
 
 (s/defn ^:private render :- String
-  [sections           :- Sections
-   names->credentials :- {Word IMAPCredentials}]
-  (let [s (update-in sections [:imapstore] #(replace-passcmd % names->credentials))
+  [sections                     :- Sections
+   imapstore-names->credentials :- {Word IMAPCredentials}]
+  (let [s (update-in sections [:imapstore]
+                     #(replace-passcmd % imapstore-names->credentials))
         r (partial render-section s)]
     (string/join \newline (concat (:general s)
                                   [""]
@@ -206,13 +207,12 @@
 (s/defn parse :- Mbsyncrc
   [s :- String]
   (let [sections (parse-tokens (tokenize s))
-        names->credentials (map-credentials (:imapstore sections))
+        imapstore-names->credentials (map-credentials (:imapstore sections))
         channels->maildirstores (map-slave-maildirstores
                                   (:channel sections)
                                   (map-maildirstores (:maildirstore sections)))]
     (strict-map->Mbsyncrc
-      {:text (render sections names->credentials)
+      {:text (render sections imapstore-names->credentials)
        :sections sections
-       :names->credentials names->credentials
        :channels (-> sections :channel keys set)
        :channels->maildirstores channels->maildirstores})))
