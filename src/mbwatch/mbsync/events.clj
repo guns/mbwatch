@@ -26,7 +26,7 @@
 
   (log-level [_] level)
 
-  (->log [_]
+  (log-item [_]
     (let [msg (format "Starting `mbsync %s`" (join-mbargs mbchan mboxes))]
       (LogItem. level start msg))))
 
@@ -45,7 +45,7 @@
 
   (log-level [_] level)
 
-  (->log [_]
+  (log-item [_]
     (let [mbarg (join-mbargs mbchan mboxes)
           Δt (human-duration start stop)
           msg (if (zero? status)
@@ -71,4 +71,4 @@
   Loggable
 
   (log-level [_] WARNING)
-  (->log [this] (->LogItem this (format "Unknown channel: `%s`" mbchan))))
+  (log-item [this] (->LogItem this (format "Unknown channel: `%s`" mbchan))))

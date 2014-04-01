@@ -42,7 +42,7 @@
 
   (log-level [_] INFO)
 
-  (->log [this]
+  (log-item [this]
     (let [sb (reduce-kv
                (fn [s mbchan mbox->messages]
                  (reduce-kv
@@ -155,7 +155,7 @@
 
   (log-level [_] DEBUG)
 
-  (->log [this]
+  (log-item [this]
     (->LogItem this (format "%s NewMessageNotificationService: `%s`"
                             (if exit-chan "↓ Stopping" "↑ Starting")
                             notify-cmd))))

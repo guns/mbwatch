@@ -34,7 +34,7 @@
 
 (defprotocol Loggable
   (log-level [this] "Returns this object's logging level")
-  (->log [this] "Returns a new LogItem object"))
+  (log-item [this] "Returns a new LogItem object"))
 
 (t/defrecord ^:private LogItem
   [level     :- Int
@@ -44,7 +44,7 @@
   Loggable
 
   (log-level [_] level)
-  (->log [this] this))
+  (log-item [this] this))
 
 (s/defn ^:private assoc-timestamp :- {:timestamp DateTime Any Any}
   [map :- Associative]
@@ -74,7 +74,7 @@
   Object
 
   (log-level [_] DEBUG)
-  (->log [this] (->LogItem this (str this))))
+  (log-item [this] (->LogItem this (str this))))
 
 (defprotocol IItemLogger
   (log [this ^LogItem log-item]))
@@ -93,7 +93,7 @@
            (thread-loop []
              (with-chan-value [obj (<!! log-chan)]
                (when (<= (log-level obj) level)
-                 (log logger (->log obj)))
+                 (log logger (log-item obj)))
                (recur)))))
 
   (stop [this]
@@ -105,7 +105,7 @@
 
   (log-level [_] DEBUG)
 
-  (->log [this]
+  (log-item [this]
     (->LogItem this (format "%s LoggingService [%s %s]"
                             (if exit-chan "↓ Stopping" "↑ Starting")
                             (get LOG-LEVELS level)

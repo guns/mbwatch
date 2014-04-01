@@ -27,7 +27,7 @@
   Loggable
 
   (log-level [_] DEBUG)
-  (->log [this] (->LogItem this (str "Command: " command))))
+  (log-item [this] (->LogItem this (str "Command: " command))))
 
 (t/defrecord ^:private SyncCommand
   [mbchan->mbox :- {String [String]}
@@ -42,10 +42,10 @@
   Loggable
 
   (log-level [_] DEBUG)
-  (->log [this]
+  (log-item [this]
     (->LogItem this (format "SyncCommand: %d %s" id mbchan->mbox))))
 
-(s/defn ->command :- ICommand
+(s/defn ->ICommand :- ICommand
   [command :- (either {String [String]}
                       (enum :term :stop nil))]
   (if (map? command)

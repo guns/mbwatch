@@ -1,6 +1,6 @@
 (ns mbwatch.mbsync.events-test
   (:require [clojure.test :refer [is]]
-            [mbwatch.logging :refer [->log DEBUG ERR WARNING log-level]]
+            [mbwatch.logging :refer [log-item DEBUG ERR WARNING log-level]]
             [mbwatch.mbsync.events :as e]
             [schema.test :as s])
   (:import (mbwatch.logging LogItem)
@@ -35,9 +35,9 @@
                    :timestamp dt})]
     (is (= [DEBUG ERR WARNING]
            (map log-level [start stop unknown])))
-    (is (= (->log start)
+    (is (= (log-item start)
            (LogItem. DEBUG dt "Starting `mbsync test:INBOX`")))
-    (is (= (->log stop)
+    (is (= (log-item stop)
            (LogItem. ERR dt "FAILURE: `mbsync test` aborted in zero seconds with status 1.\nERROR")))
-    (is (= (->log unknown)
+    (is (= (log-item unknown)
            (LogItem. WARNING dt "Unknown channel: `FOO`")))))

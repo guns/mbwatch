@@ -1,7 +1,7 @@
 (ns mbwatch.console-logger-test
   (:require [clojure.test :refer [deftest is]]
             [mbwatch.console-logger :as c]
-            [mbwatch.logging :refer [->log log]]
+            [mbwatch.logging :refer [log-item log]]
             [schema.core :refer [validate]])
   (:import (clojure.lang Keyword)
            (java.io StringWriter)
@@ -24,8 +24,8 @@
 
 (deftest test-ConsoleLogger
   (is (= "\033[31;48;5;100m[❤] Hello world.\033[0m\n"
-         (logger-out (make-colors [:red :bg100]) (->log "Hello world."))
-         (logger-out (make-colors [31 "48;5;100"]) (->log "Hello world."))
-         (logger-out (make-colors "31;48;5;100") (->log "Hello world."))))
+         (logger-out (make-colors [:red :bg100]) (log-item "Hello world."))
+         (logger-out (make-colors [31 "48;5;100"]) (log-item "Hello world."))
+         (logger-out (make-colors "31;48;5;100") (log-item "Hello world."))))
   (is (= "[❤] Hello world.\n"
-         (logger-out nil (->log "Hello world.")))))
+         (logger-out nil (log-item "Hello world.")))))

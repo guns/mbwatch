@@ -32,7 +32,7 @@
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [->LogItem DEBUG ERR INFO Loggable NOTICE
                                      WARNING log!]]
-            [mbwatch.mbsync.command :refer [->command ICommand command]]
+            [mbwatch.mbsync.command :refer [->ICommand ICommand command]]
             [mbwatch.mbsync.events :refer [join-mbargs
                                            strict-map->MbsyncEventStart
                                            strict-map->MbsyncEventStop]]
@@ -100,7 +100,7 @@
 
   (log-level [_] DEBUG)
 
-  (->log [this]
+  (log-item [this]
     (->LogItem this (format "%s MbsyncWorker for channel `%s`"
                             (if exit-chan "↓ Stopping" "↑ Starting")
                             mbchan))))
@@ -158,7 +158,7 @@
   (stop [this]
     (log! log-chan this)
     ;; Enqueue the stop-workers command and wait for graceful exit
-    (>!! cmd-chan (->command :stop))
+    (>!! cmd-chan (->ICommand :stop))
     (<!! exit-chan)
     (dissoc this :exit-chan))
 
@@ -166,7 +166,7 @@
 
   (log-level [_] DEBUG)
 
-  (->log [this]
+  (log-item [this]
     (->LogItem this (if exit-chan
                       "↓ Stopping MbsyncMaster"
                       "↑ Starting MbsyncMaster"))))
