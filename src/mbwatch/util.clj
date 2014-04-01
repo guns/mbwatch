@@ -68,3 +68,9 @@
   "Returns scheme://user@host:port with appropriate escaping."
   [scheme user host port]
   (str scheme "://" (URLEncoder/encode user) \@ (URLEncoder/encode host) \: port))
+
+(defmacro catch-print [& body]
+  `(try
+     ~@body
+     (catch Throwable e#
+       (.println System/err e#))))

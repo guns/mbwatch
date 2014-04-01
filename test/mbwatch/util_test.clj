@@ -41,3 +41,6 @@
 (deftest test-url-for
   (is (= "imaps://foo%40example.com@example.com:993"
          (u/url-for "imaps" "foo@example.com" "example.com" 993))))
+
+(deftest test-catch-print
+  (is (nil? (u/catch-print (assert false)))))

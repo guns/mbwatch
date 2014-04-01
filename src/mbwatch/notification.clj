@@ -21,7 +21,7 @@
             [mbwatch.mbsync.events]
             [mbwatch.process :as process]
             [mbwatch.types :as t :refer [VOID]]
-            [mbwatch.util :refer [to-ms]]
+            [mbwatch.util :refer [catch-print to-ms]]
             [schema.core :as s :refer [Int defschema maybe protocol]])
   (:import (clojure.lang IDeref)
            (java.io StringWriter)
@@ -173,14 +173,12 @@
                      conj-event? (conj obj))]
         (if (zero? countdown)
           (do (future
-                (try
+                (catch-print
                   (when-let [note (->NewMessageNotification
                                     (deref (:notify-map-ref notify-service))
                                     events)]
                     (put! (:write-chan notify-service) note)
-                    (notify! (:notify-cmd notify-service) note))
-                  (catch Throwable e
-                    (.println System/err e))))
+                    (notify! (:notify-cmd notify-service) note))))
               (dissoc sync-requests id))
           (assoc sync-requests id {:countdown countdown :events events})))
       sync-requests)))

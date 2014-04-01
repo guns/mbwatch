@@ -1,17 +1,16 @@
 (ns mbwatch.concurrent
-  (:require [clojure.core.async :refer [<!! >!! alts!! chan thread]]))
+  (:require [clojure.core.async :refer [<!! >!! alts!! chan thread]]
+            [mbwatch.util :refer [catch-print]]))
 
 (def ^:const POISON ::poison)
 
 (defmacro thread-loop
-  {:require [#'thread]}
+  {:require [#'thread #'catch-print]}
   [bindings & body]
   `(thread
-     (try
+     (catch-print
        (loop ~bindings
-         ~@body)
-       (catch Throwable e#
-         (.println System/err e#)))))
+         ~@body))))
 
 (defmacro with-chan-value [[sym form] & body]
   `(let [~sym ~form]
