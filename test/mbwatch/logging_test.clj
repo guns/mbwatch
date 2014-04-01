@@ -12,7 +12,7 @@
     (l/log! ch {})
     (is (instance? DateTime (:timestamp (<!! ch))))))
 
-(s/deftest test-Loggable->log-item
+(s/deftest test-Loggable->LogItem
   (let [loggable (reify l/Loggable
                    (l/log-level [_] 0)
                    (l/log-item [this] (l/->LogItem this "Hello from ->LogItem.")))

@@ -50,7 +50,7 @@
                             "expunge" "Both"}}))
     (is (= (:channels mbsyncrc)
            #{"FOO-chan" "BAR-chan" "FOO-BAR-chan" "FOO-ROOT-chan"}))
-    #_(is (= (:imapstore-names->credentials mbsyncrc)
+    #_(is (= (:imapname->IMAPCredential mbsyncrc)
            {"FOO-imap" {:host "imap.example.com"
                         :user "foo@example.com"
                         :port 993

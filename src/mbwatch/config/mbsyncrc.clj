@@ -57,7 +57,7 @@
 (defschema ^:private PortNumber
   (pred #(and (integer? %) (< 0 % 0x1000))))
 
-(defschema ^:private IMAPCredentials
+(defschema ^:private IMAPCredential
   {:host String
    :port PortNumber
    :user String
@@ -118,7 +118,7 @@
         (update-in m [stype sname] merge (apply hash-map (apply concat sbody)))))
     {} tokens))
 
-(s/defn ^:private parse-credentials :- IMAPCredentials
+(s/defn ^:private parse-credentials :- IMAPCredential
   "Extract credentials from an IMAPStore key-value map. Shells out for
    evaluation of PassCmd."
   [imap :- {LowerCaseWord FilteredLine}]
@@ -132,7 +132,7 @@
         (update-in [:user] #(or % (System/getProperty "user.name")))
         (update-in [:port] #(or % (if (= (imap "useimaps") "no") 143 993))))))
 
-(s/defn ^:private map-credentials :- {Word IMAPCredentials}
+(s/defn ^:private map-credentials :- {Word IMAPCredential}
   "Extract all credentials from IMAPStore sections.
 
    Running this in parallel minimizes blocking IO, but also causes a pinentry
@@ -172,11 +172,11 @@
     {} channels))
 
 (s/defn ^:private replace-passcmd :- MapSectionValue
-  [imapstore                    :- MapSectionValue
-   imapstore-names->credentials :- {Word IMAPCredentials}]
+  [imapstore                :- MapSectionValue
+   imapname->IMAPCredential :- {Word IMAPCredential}]
   (reduce-kv
     (fn [m k v]
-      (let [pass (pr-str (get-in imapstore-names->credentials [k :pass]))]
+      (let [pass (pr-str (get-in imapname->IMAPCredential [k :pass]))]
         (assoc m k (-> v
                        (dissoc "passcmd")
                        (assoc "pass" pass)))))
@@ -192,10 +192,10 @@
           (sort-by key (get sections type))))
 
 (s/defn ^:private render :- String
-  [sections                     :- Sections
-   imapstore-names->credentials :- {Word IMAPCredentials}]
+  [sections                 :- Sections
+   imapname->IMAPCredential :- {Word IMAPCredential}]
   (let [s (update-in sections [:imapstore]
-                     #(replace-passcmd % imapstore-names->credentials))
+                     #(replace-passcmd % imapname->IMAPCredential))
         r (partial render-section s)]
     (string/join \newline (concat (:general s)
                                   [""]
@@ -206,12 +206,12 @@
 (s/defn parse :- Mbsyncrc
   [s :- String]
   (let [sections (parse-tokens (tokenize s))
-        imapstore-names->credentials (map-credentials (:imapstore sections))
+        imapname->IMAPCredential (map-credentials (:imapstore sections))
         channel->Maildirstore (map-slave-maildirstores
                                 (:channel sections)
                                 (map-maildirstores (:maildirstore sections)))]
     (strict-map->Mbsyncrc
-      {:text (render sections imapstore-names->credentials)
+      {:text (render sections imapname->IMAPCredential)
        :sections sections
        :channels (-> sections :channel keys set)
        :channel->Maildirstore channel->Maildirstore})))
