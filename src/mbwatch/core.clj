@@ -73,7 +73,7 @@
          :log-chan log-chan
          :exit-chan nil})
       (strict-map->NewMessageNotificationService
-        {:notify-cmd (-> config :mbwatchrc :notify-cmd)
+        {:notify-command (-> config :mbwatchrc :notify-command)
          :notify-map-ref (atom {"self" #{"INBOX"}})
          :read-chan notify-chan
          :write-chan log-chan

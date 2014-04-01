@@ -9,11 +9,11 @@
   (str (System/getProperty "user.home") "/.config/mbwatch/rc"))
 
 (def ^:const DEFAULT-OPTIONS
-  {:notify-cmd "notify-send \"$(cat)\""
+  {:notify-command "notify-send \"$(cat)\""
    :imap-socket-timeout "10000"})
 
 (t/defrecord ^:private Mbwatchrc
-  [notify-cmd          :- String
+  [notify-command      :- String
    imap-socket-timeout :- Int])
 
 (s/defn parse :- Mbwatchrc

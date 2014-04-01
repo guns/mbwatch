@@ -2,7 +2,7 @@
 ; Test mbwatchrc
 ;
 
-notify-cmd = notify - --audio="/home/guns/.sounds/new-message.mp3"
+notify-command = notify - --audio="/home/guns/.sounds/new-message.mp3"
 imap-socket-timeout = 5000
 
 ; vim:ft=dosini:

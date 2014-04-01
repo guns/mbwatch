@@ -98,8 +98,8 @@
       (NewMessageNotification. m (DateTime.)))))
 
 (s/defn ^:private notify! :- VOID
-  [notify-cmd   :- String
-   notification :- NewMessageNotification]
+  [notify-command :- String
+   notification   :- NewMessageNotification]
   (let [msgs (mapcat
                (fn [[mbchan mbox->messages]]
                  (map
@@ -108,13 +108,13 @@
                    (sort mbox->messages)))
                (sort (:mbchan->mbox->messages notification)))
         proc (process/spawn
-               "bash" "-c" notify-cmd :in (string/join "\n\n" msgs))]
+               "bash" "-c" notify-command :in (string/join "\n\n" msgs))]
     (when-not (zero? (.waitFor proc))
       (let [ebuf (StringWriter.)
             _ (process/dump! proc :err ebuf)
             emsg (str ebuf)
             emsg (format "`%s` failed with status %d.%s"
-                         notify-cmd
+                         notify-command
                          (.exitValue proc)
                          (if (seq emsg) (str "\n" emsg) ""))]
         (throw (RuntimeException. emsg))))))
@@ -129,7 +129,7 @@
                   removing self from it as necessary."))
 
 (t/defrecord NewMessageNotificationService
-  [notify-cmd     :- String
+  [notify-command :- String
    notify-map-ref :- IDeref
    read-chan      :- ReadPort
    write-chan     :- WritePort
@@ -158,7 +158,7 @@
   (log-item [this]
     (->LogItem this (format "%s NewMessageNotificationService: `%s`"
                             (if exit-chan "↓ Stopping" "↑ Starting")
-                            notify-cmd))))
+                            notify-command))))
 
 (s/defn ^:private process-stop-event :- SyncRequestMap
   [obj            :- Object
@@ -178,7 +178,7 @@
                                     (deref (:notify-map-ref notify-service))
                                     events)]
                     (put! (:write-chan notify-service) note)
-                    (notify! (:notify-cmd notify-service) note))))
+                    (notify! (:notify-command notify-service) note))))
               (dissoc sync-requests id))
           (assoc sync-requests id {:countdown countdown :events events})))
       sync-requests)))
