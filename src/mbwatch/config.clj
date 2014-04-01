@@ -13,12 +13,11 @@
   [mbsyncrc  :- Mbsyncrc
    mbwatchrc :- Mbwatchrc])
 
-(s/defn new-config :- Config
+(s/defn ->Config :- Config
   [mbsyncrc-path  :- Coercions
    mbwatchrc-path :- Coercions]
-  (strict-map->Config
-    {:mbsyncrc (mbs/parse (slurp mbsyncrc-path))
-     :mbwatchrc (mbw/parse (slurp mbwatchrc-path))}))
+  (Config. (mbs/parse (slurp mbsyncrc-path))
+           (mbw/parse (slurp mbwatchrc-path))))
 
 (s/defn mdir-path :- String
   [maildir :- Maildirstore

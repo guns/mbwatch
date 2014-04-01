@@ -4,9 +4,9 @@
             [mbwatch.config :as c]
             [schema.test :as s]))
 
-(s/deftest test-new-config
+(s/deftest test-Config
   ;; Schema validation
-  (c/new-config (io/resource "mbsyncrc") (io/resource "mbwatchrc")))
+  (c/->Config (io/resource "mbsyncrc") (io/resource "mbwatchrc")))
 
 (s/deftest test-mdir-path
   (let [maildir {:inbox "/home/user/Mail/INBOX"
