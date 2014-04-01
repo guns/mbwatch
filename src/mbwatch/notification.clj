@@ -12,6 +12,8 @@
             [clojure.set :as set]
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
+            [mbwatch.concurrent :refer [poison-chan thread-loop
+                                        with-chan-value]]
             [mbwatch.config :refer [mdir-path]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable log!]]
             [mbwatch.maildir :refer [new-messages senders]]
@@ -19,8 +21,7 @@
             [mbwatch.mbsync.events]
             [mbwatch.process :as process]
             [mbwatch.types :as t :refer [VOID]]
-            [mbwatch.util :refer [poison-chan thread-loop to-ms
-                                  with-chan-value]]
+            [mbwatch.util :refer [to-ms]]
             [schema.core :as s :refer [Int defschema maybe protocol]])
   (:import (clojure.lang IDeref)
            (java.io StringWriter)

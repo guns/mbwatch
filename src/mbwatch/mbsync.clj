@@ -28,6 +28,8 @@
   (:require [clojure.core.async :refer [<!! >!! chan put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
+            [mbwatch.concurrent :refer [poison-chan sig-notify-all
+                                        thread-loop with-chan-value]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [->LogItem DEBUG ERR INFO Loggable NOTICE
                                      WARNING log!]]
@@ -37,8 +39,7 @@
                                            strict-map->MbsyncEventStop]]
             [mbwatch.process :as process]
             [mbwatch.types :as t :refer [VOID]]
-            [mbwatch.util :refer [poison-chan shell-escape sig-notify-all
-                                  thread-loop with-chan-value]]
+            [mbwatch.util :refer [shell-escape]]
             [schema.core :as s :refer [Int maybe protocol]])
   (:import (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)

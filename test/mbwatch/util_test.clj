@@ -1,6 +1,5 @@
 (ns mbwatch.util-test
-  (:require [clojure.core.async :refer [<!! chan put!]]
-            [clojure.java.shell :refer [sh]]
+  (:require [clojure.java.shell :refer [sh]]
             [clojure.test :refer [deftest is]]
             [mbwatch.util :as u])
   (:import (org.joda.time DateTime)))
@@ -42,31 +41,3 @@
 (deftest test-url-for
   (is (= "imaps://foo%40example.com@example.com:993"
          (u/url-for "imaps" "foo@example.com" "example.com" 993))))
-
-(deftest test-concurrency-helpers
-  (let [mon (Object.)
-        p (promise)
-        f (future (u/sig-wait mon) (deliver p 1))]
-    (try
-      (is (nil? (deref p 10 nil)))
-      (u/sig-notify-all mon)
-      (is (= (deref p 10 nil) 1))
-      (finally
-        (future-cancel f)))))
-
-(deftest test-first-alt
-  (is (= (u/first-alt (do (Thread/sleep 10) :first)
-                      (do (Thread/sleep 20) :second))
-         :first)))
-
-(deftest test-core-async-helpers
-  (let [ch (chan)
-        vs (atom [])
-        exit-chan (u/thread-loop []
-                     (u/with-chan-value [v (<!! ch)]
-                       (swap! vs conj v)
-                       (recur)))]
-    (put! ch 0)
-    (u/poison-chan ch exit-chan)
-    (put! ch 1)
-    (is (= @vs [0]))))

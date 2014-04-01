@@ -11,9 +11,10 @@
   (:require [clojure.core.async :refer [<!! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
+            [mbwatch.concurrent :refer [poison-chan thread-loop
+                                        with-chan-value]]
             [mbwatch.types :as t :refer [VOID]]
-            [mbwatch.util :refer [class-name poison-chan thread-loop
-                                  with-chan-value]]
+            [mbwatch.util :refer [class-name]]
             [schema.core :as s :refer [Any Int maybe protocol]])
   (:import (clojure.lang Associative)
            (org.joda.time DateTime)))

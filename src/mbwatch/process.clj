@@ -1,7 +1,7 @@
 (ns mbwatch.process
   (:require [clojure.java.io :as io]
+            [mbwatch.concurrent :refer [first-alt sig-wait]]
             [mbwatch.types :refer [VOID]]
-            [mbwatch.util :refer [first-alt sig-wait]]
             [schema.core :as s :refer [either enum]])
   (:import (java.io File IOException OutputStream Writer)))
 

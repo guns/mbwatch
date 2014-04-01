@@ -1,7 +1,7 @@
 (ns mbwatch.process-test
   (:require [clojure.test :refer [is testing]]
+            [mbwatch.concurrent :refer [sig-notify-all]]
             [mbwatch.process :as p]
-            [mbwatch.util :refer [sig-notify-all]]
             [schema.test :as s]))
 
 (s/deftest test-spawn-and-dump!
