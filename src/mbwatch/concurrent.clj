@@ -2,8 +2,6 @@
   (:require [clojure.core.async :refer [<!! >!! alts!! chan thread]]
             [mbwatch.util :refer [catch-print]]))
 
-(def ^:const POISON ::poison)
-
 (defmacro thread-loop
   {:requires [#'thread #'catch-print]}
   [bindings & body]
@@ -11,17 +9,6 @@
      (catch-print
        (loop ~bindings
          ~@body))))
-
-(defmacro with-chan-value [[sym form] & body]
-  `(let [~sym ~form]
-     (when (and ~sym (not= ~sym ~POISON))
-       ~@body)))
-
-(defn poison-chan
-  "Send a poison value on wr-chan and wait for a response on rd-chan."
-  [wr-chan rd-chan]
-  (>!! wr-chan POISON)
-  (<!! rd-chan))
 
 (defmacro first-alt
   "Execute all expressions concurrently and return the value of the first to

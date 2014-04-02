@@ -7,14 +7,13 @@
      ─── Loggable ──▶ │ NewMessageNotificationService │ ─── Loggable ──▶
                       └───────────────────────────────┘
   "
-  (:require [clojure.core.async :refer [<!! put!]]
+  (:require [clojure.core.async :refer [<!! close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [clojure.set :as set]
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command]
-            [mbwatch.concurrent :refer [poison-chan thread-loop
-                                        with-chan-value]]
+            [mbwatch.concurrent :refer [thread-loop]]
             [mbwatch.config :refer [mdir-path]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable log!]]
             [mbwatch.maildir :refer [new-messages senders]]
@@ -25,6 +24,7 @@
             [schema.core :as s :refer [Int defschema maybe protocol]])
   (:import (clojure.lang IDeref)
            (java.io StringWriter)
+           (java.util.concurrent.atomic AtomicBoolean)
            (javax.mail.internet MimeMessage)
            (mbwatch.command SyncCommand)
            (mbwatch.mbsync.events MbsyncEventStop MbsyncUnknownChannelError)
@@ -133,6 +133,7 @@
    notify-map-ref :- IDeref
    read-chan      :- ReadPort
    write-chan     :- WritePort
+   status         :- AtomicBoolean
    exit-chan      :- (maybe (protocol ReadPort))]
 
   Lifecycle
@@ -141,14 +142,18 @@
     (log! write-chan this)
     (assoc this :exit-chan
            (thread-loop [sync-requests {}]
-             (with-chan-value [obj (<!! read-chan)]
-               ;; Pass through ASAP
-               (put! write-chan obj)
-               (recur (process-event obj sync-requests this))))))
+             (when (.get status)
+               (when-some [obj (<!! read-chan)]
+                 ;; Pass through ASAP
+                 (put! write-chan obj)
+                 (recur (process-event obj sync-requests this)))))))
 
   (stop [this]
+    ;; Exit ASAP
+    (.set status false)
     (log! write-chan this)
-    (poison-chan read-chan exit-chan)
+    (close! read-chan)
+    (<!! exit-chan)
     (dissoc this :exit-chan))
 
   Loggable

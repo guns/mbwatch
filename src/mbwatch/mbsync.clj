@@ -24,12 +24,11 @@
           └──────────────┘       └──────────────┘    │
                                                     ─┘
    "
-  (:require [clojure.core.async :refer [<!! >!! chan put!]]
+  (:require [clojure.core.async :refer [<!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
-            [mbwatch.command :refer [->ICommand ICommand command]]
-            [mbwatch.concurrent :refer [POISON sig-notify-all thread-loop
-                                        with-chan-value]]
+            [mbwatch.command :refer [ICommand command]]
+            [mbwatch.concurrent :refer [sig-notify-all thread-loop]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [->LogItem DEBUG ERR INFO Loggable NOTICE
                                      WARNING log!]]
@@ -79,20 +78,17 @@
     (assoc this :exit-chan
            (thread-loop []
              (when (.get status)
-               (with-chan-value [req (<!! req-chan)]
+               (when-some [req (<!! req-chan)]
                  (let [[id boxes] req]
                    (sync-boxes! this id boxes))
                  (recur))))))
 
   (stop [this]
-    (log! log-chan this)
-    ;; Exit after current loop iteration
+    ;; Exit ASAP
     (.set status false)
-    ;; Or after reading the poison value
-    (>!! req-chan POISON)
-    ;; Interrupt the current sync if any
+    (log! log-chan this)
     (sig-notify-all status)
-    ;; Wait for graceful exit
+    (close! req-chan)
     (<!! exit-chan)
     (dissoc this :exit-chan))
 
@@ -141,6 +137,7 @@
   [mbsyncrc  :- Mbsyncrc
    cmd-chan  :- ReadPort
    log-chan  :- WritePort
+   status    :- AtomicBoolean
    exit-chan :- (maybe (protocol ReadPort))]
 
   Lifecycle
@@ -149,16 +146,18 @@
     (log! log-chan this)
     (assoc this :exit-chan
            (thread-loop [workers {}]
-             (let [cmd (<!! cmd-chan)]
+             (let [cmd (when (.get status)
+                         (<!! cmd-chan))]
                (when cmd
                  (put! log-chan cmd))
                (when-let [workers (process-command this workers cmd)]
                  (recur workers))))))
 
   (stop [this]
+    ;; Exit ASAP
+    (.set status false)
     (log! log-chan this)
-    ;; Enqueue the stop-workers command and wait for graceful exit
-    (>!! cmd-chan (->ICommand :stop))
+    (close! cmd-chan)
     (<!! exit-chan)
     (dissoc this :exit-chan))
 

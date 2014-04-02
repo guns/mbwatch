@@ -8,11 +8,10 @@
       ─── Loggable ──▶ │ LoggingService │
                        └────────────────┘
   "
-  (:require [clojure.core.async :refer [<!! put!]]
+  (:require [clojure.core.async :refer [<!! close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
-            [mbwatch.concurrent :refer [poison-chan thread-loop
-                                        with-chan-value]]
+            [mbwatch.concurrent :refer [thread-loop]]
             [mbwatch.types :as t :refer [VOID]]
             [mbwatch.util :refer [class-name]]
             [schema.core :as s :refer [Any Int maybe protocol]])
@@ -91,14 +90,16 @@
     (log! log-chan this)
     (assoc this :exit-chan
            (thread-loop []
-             (with-chan-value [obj (<!! log-chan)]
+             (when-some [obj (<!! log-chan)]
                (when (<= (log-level obj) level)
                  (log logger (log-item obj)))
                (recur)))))
 
   (stop [this]
+    ;; Exit gracefully
     (log! log-chan this)
-    (poison-chan log-chan exit-chan)
+    (close! log-chan)
+    (<!! exit-chan)
     (dissoc this :exit-chan))
 
   Loggable

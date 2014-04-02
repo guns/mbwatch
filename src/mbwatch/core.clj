@@ -38,7 +38,8 @@
             [mbwatch.notification :refer [strict-map->NewMessageNotificationService]]
             [mbwatch.types :as t]
             [schema.core :as s])
-  (:import (mbwatch.config Config)
+  (:import (java.util.concurrent.atomic AtomicBoolean)
+           (mbwatch.config Config)
            (mbwatch.logging LoggingService)
            (mbwatch.mbsync MbsyncMaster)
            (mbwatch.notification NewMessageNotificationService)))
@@ -77,9 +78,11 @@
          :notify-map-ref (atom {"self" #{"INBOX"}})
          :read-chan notify-chan
          :write-chan log-chan
+         :status (AtomicBoolean. true)
          :exit-chan nil})
       (strict-map->MbsyncMaster
         {:mbsyncrc (:mbsyncrc config)
          :cmd-chan cmd-chan
          :log-chan notify-chan
+         :status (AtomicBoolean. true)
          :exit-chan nil}))))
