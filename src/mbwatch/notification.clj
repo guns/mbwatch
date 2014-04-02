@@ -147,7 +147,7 @@
                (recur (process-event obj sync-requests this))))))
 
   (stop [this]
-    (log! read-chan this)
+    (log! write-chan this)
     (poison-chan read-chan exit-chan)
     (dissoc this :exit-chan))
 
