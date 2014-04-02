@@ -1,6 +1,5 @@
 (ns mbwatch.concurrent-test
-  (:require [clojure.core.async :refer [<!! chan put!]]
-            [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is]]
             [mbwatch.concurrent :as c]))
 
 (deftest test-first-alt

@@ -1,5 +1,5 @@
 (ns mbwatch.concurrent
-  (:require [clojure.core.async :refer [<!! >!! alts!! chan thread]]
+  (:require [clojure.core.async :refer [>!! alts!! chan thread]]
             [mbwatch.util :refer [catch-print]]))
 
 (defmacro thread-loop
