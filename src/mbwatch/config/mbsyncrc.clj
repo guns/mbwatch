@@ -69,10 +69,10 @@
    :flatten (maybe FilteredLine)})
 
 (t/defrecord ^:private Mbsyncrc
-  [text                  :- String
-   sections              :- Sections
-   channels              :- #{Word}
-   channel->Maildirstore :- {Word Maildirstore}])
+  [text                    :- String
+   sections                :- Sections
+   channels                :- #{Word}
+   channel->Maildirstore   :- {Word Maildirstore}])
 
 (s/defn ^:private paragraphs :- [[String]]
   [s :- String]

@@ -1,8 +1,8 @@
-(ns mbwatch.mbsync.command-test
+(ns mbwatch.command-test
   (:require [clojure.test :refer [is]]
-            [mbwatch.mbsync.command :as c]
+            [mbwatch.command :as c]
             [schema.test :as s])
-  (:import (mbwatch.mbsync.command Command SyncCommand)))
+  (:import (mbwatch.command Command SyncCommand)))
 
 (s/deftest test-command-ctor
   (is (instance? Command (c/->ICommand :term)))

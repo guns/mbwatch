@@ -27,12 +27,12 @@
   (:require [clojure.core.async :refer [<!! >!! chan put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
+            [mbwatch.command :refer [->ICommand ICommand command]]
             [mbwatch.concurrent :refer [POISON sig-notify-all thread-loop
                                         with-chan-value]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [->LogItem DEBUG ERR INFO Loggable NOTICE
                                      WARNING log!]]
-            [mbwatch.mbsync.command :refer [->ICommand ICommand command]]
             [mbwatch.mbsync.events :refer [join-mbargs
                                            strict-map->MbsyncEventStart
                                            strict-map->MbsyncEventStop]]

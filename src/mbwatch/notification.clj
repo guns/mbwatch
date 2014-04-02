@@ -12,12 +12,12 @@
             [clojure.set :as set]
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
+            [mbwatch.command]
             [mbwatch.concurrent :refer [poison-chan thread-loop
                                         with-chan-value]]
             [mbwatch.config :refer [mdir-path]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable log!]]
             [mbwatch.maildir :refer [new-messages senders]]
-            [mbwatch.mbsync.command]
             [mbwatch.mbsync.events]
             [mbwatch.process :as process]
             [mbwatch.types :as t :refer [VOID]]
@@ -26,7 +26,7 @@
   (:import (clojure.lang IDeref)
            (java.io StringWriter)
            (javax.mail.internet MimeMessage)
-           (mbwatch.mbsync.command SyncCommand)
+           (mbwatch.command SyncCommand)
            (mbwatch.mbsync.events MbsyncEventStop MbsyncUnknownChannelError)
            (org.joda.time DateTime)))
 

@@ -1,4 +1,4 @@
-(ns mbwatch.mbsync.command
+(ns mbwatch.command
   (:require [mbwatch.logging :refer [->LogItem DEBUG Loggable]]
             [mbwatch.types :as t]
             [schema.core :as s :refer [Int either enum]])
