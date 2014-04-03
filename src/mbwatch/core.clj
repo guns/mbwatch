@@ -29,6 +29,7 @@
             [clojure.core.async.impl.protocols :refer [ReadPort]]
             [com.stuartsierra.component :refer [Lifecycle start-system
                                                 stop-system]]
+            [mbwatch.concurrent :refer [failsafe-pipe]]
             [mbwatch.config]
             [mbwatch.console-logger :refer [->ConsoleLogger
                                             MILLIS-TIMESTAMP-FORMAT
@@ -65,7 +66,8 @@
 (s/defn ->Application :- Application
   [config   :- Config
    cmd-chan :- ReadPort]
-  (let [notify-chan (chan CHAN-SIZE)
+  (let [mbsync-cmd-chan (failsafe-pipe cmd-chan (chan CHAN-SIZE))
+        notify-chan (chan CHAN-SIZE)
         log-chan (chan CHAN-SIZE)]
     (Application.
       (strict-map->LoggingService
@@ -82,7 +84,7 @@
          :exit-chan nil})
       (strict-map->MbsyncMaster
         {:mbsyncrc (:mbsyncrc config)
-         :cmd-chan cmd-chan
+         :cmd-chan mbsync-cmd-chan
          :log-chan notify-chan
          :status (AtomicBoolean. true)
          :exit-chan nil}))))
