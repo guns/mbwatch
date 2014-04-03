@@ -27,7 +27,6 @@
   (:require [clojure.core.async :refer [<!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
-            [mbwatch.command :refer [ICommand command]]
             [mbwatch.concurrent :refer [sig-notify-all thread-loop]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [->LogItem DEBUG ERR INFO Loggable NOTICE
@@ -36,7 +35,7 @@
                                            strict-map->MbsyncEventStart
                                            strict-map->MbsyncEventStop]]
             [mbwatch.process :as process]
-            [mbwatch.types :as t :refer [VOID]]
+            [mbwatch.types :as t :refer [ICommand VOID command]]
             [mbwatch.util :refer [shell-escape]]
             [schema.core :as s :refer [Int maybe protocol]])
   (:import (java.io StringWriter)
