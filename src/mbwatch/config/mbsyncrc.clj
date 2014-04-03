@@ -72,7 +72,8 @@
   [text                    :- String
    sections                :- Sections
    channels                :- #{Word}
-   channel->Maildirstore   :- {Word Maildirstore}])
+   channel->Maildirstore   :- {Word Maildirstore}
+   channel->IMAPCredential :- {Word IMAPCredential}])
 
 (s/defn ^:private paragraphs :- [[String]]
   [s :- String]
@@ -158,14 +159,29 @@
                 :flatten (mdirmap "flatten")}))
       {} stores)))
 
+(s/defn ^:private get-store-name :- String
+  [s :- String]
+  (second (re-find #"\A:([^:]+):" s)))
+
+(s/defn ^:private map-master-credentials :- {Word IMAPCredential}
+  [channels                 :- MapSectionValue
+   imapname->IMAPCredential :- {Word IMAPCredential}]
+  (reduce-kv
+    (fn [m ch-name ch-map]
+      (if-let [cred (->> (ch-map "master")
+                         get-store-name
+                         imapname->IMAPCredential)]
+        (assoc m ch-name cred)
+        m))
+    {} channels))
+
 (s/defn ^:private map-slave-maildirstores :- {Word Maildirstore}
   [channels      :- MapSectionValue
    maildirstores :- {Word Maildirstore}]
   (reduce-kv
     (fn [m ch-name ch-map]
       (if-let [mdir (->> (ch-map "slave")
-                         (re-find #"\A:([^:]+):")
-                         second
+                         get-store-name
                          maildirstores)]
         (assoc m ch-name mdir)
         m))
@@ -207,6 +223,9 @@
   [s :- String]
   (let [sections (parse-tokens (tokenize s))
         imapname->IMAPCredential (map-credentials (:imapstore sections))
+        channel->IMAPCredential (map-master-credentials
+                                  (:channel sections)
+                                  imapname->IMAPCredential)
         channel->Maildirstore (map-slave-maildirstores
                                 (:channel sections)
                                 (map-maildirstores (:maildirstore sections)))]
@@ -214,4 +233,5 @@
       {:text (render sections imapname->IMAPCredential)
        :sections sections
        :channels (-> sections :channel keys set)
-       :channel->Maildirstore channel->Maildirstore})))
+       :channel->Maildirstore channel->Maildirstore
+       :channel->IMAPCredential channel->IMAPCredential})))

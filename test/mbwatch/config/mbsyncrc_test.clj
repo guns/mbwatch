@@ -50,12 +50,12 @@
                             "expunge" "Both"}}))
     (is (= (:channels mbsyncrc)
            #{"FOO-chan" "BAR-chan" "FOO-BAR-chan" "FOO-ROOT-chan"}))
-    #_(is (= (:imapname->IMAPCredential mbsyncrc)
-           {"FOO-imap" {:host "imap.example.com"
+    (is (= (:channel->IMAPCredential mbsyncrc)
+           {"FOO-chan" {:host "imap.example.com"
                         :user "foo@example.com"
                         :port 993
                         :pass "@Y9GZa G!Dsl ZQ'PC(Gj5#6`-Sv->$xH0s{5|bMgq/0.R&g.u714\"; F3aN"}
-            "BAR-imap" {:host "imap.example.com"
+            "BAR-chan" {:host "imap.example.com"
                         :user "bar@example.com"
                         :port 993
                         :pass "H'|&z]0pIcU2?T/(<!zaIq[wW\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\""}}))
