@@ -53,12 +53,11 @@
   [obj :- Any]
   (or (:timestamp obj) (DateTime.)))
 
-(s/defn log! :- VOID
+(s/defn log! :- (maybe Boolean)
   "Assoc :timestamp into map and put! onto chan."
   [chan :- WritePort
    map  :- Associative]
-  (put! chan (assoc-timestamp map))
-  nil)
+  (put! chan (assoc-timestamp map)))
 
 (s/defn ->LogItem :- LogItem
   "Create a LogItem from a Loggable, assuming that the timestamp can be found
