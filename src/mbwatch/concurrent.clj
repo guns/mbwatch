@@ -1,5 +1,5 @@
 (ns mbwatch.concurrent
-  (:require [clojure.core.async :refer [>!! alts!! chan thread]]
+  (:require [clojure.core.async :refer [<!! >!! alts!! chan close! thread]]
             [mbwatch.util :refer [catch-print]]))
 
 (defmacro thread-loop
@@ -22,6 +22,19 @@
        ~@(mapv (fn [i] `(thread (~>!! (nth ~chans ~i) ~(nth exprs i))))
                (range n))
        (first (~alts!! ~chans :priority true)))))
+
+(defn failsafe-pipe
+  "Conveys elements from the from channel to the to channel. If the from
+   channel closes, to is closed as well. If a transfer fails because the
+   to channel is closed, the element is placed back on the from channel.
+   Therefore, from should be a buffered channel to prevent hangs."
+  [from to]
+  (thread-loop []
+    (let [v (<!! from)]
+      (cond (nil? v) (close! to)
+            (>!! to v) (recur)
+            :else (>!! from v))))
+  to)
 
 (defn sig-wait
   ([^Object monitor]
