@@ -3,9 +3,10 @@
             [mbwatch.concurrent :as c]))
 
 (deftest test-first-alt
-  (is (= (c/first-alt (do (Thread/sleep 10) :first)
-                      (do (Thread/sleep 20) :second))
-         :first)))
+  (is (= :first
+         (c/first-alt (do (Thread/sleep 20) :second)
+                      (do (Thread/sleep 10) :first))
+         (c/first-alt :first :second :third))))
 
 (deftest test-concurrency-helpers
   (let [mon (Object.)
