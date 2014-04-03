@@ -12,7 +12,7 @@
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.concurrent :refer [thread-loop]]
-            [mbwatch.types :as t :refer [VOID]]
+            [mbwatch.types :as t]
             [mbwatch.util :refer [class-name]]
             [schema.core :as s :refer [Any Int maybe protocol]])
   (:import (clojure.lang Associative)
