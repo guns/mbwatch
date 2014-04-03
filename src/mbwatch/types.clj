@@ -3,10 +3,6 @@
             [schema.core :as s :refer [defschema eq]])
   (:refer-clojure :exclude [defrecord]))
 
-(defprotocol ICommand
-  (command [this] "Returns a keyword representing an operation.")
-  (timestamp [this] "Returns a DateTime"))
-
 (defschema VOID
   (eq nil))
 
