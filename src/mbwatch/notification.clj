@@ -119,14 +119,15 @@
                          (if (seq emsg) (str "\n" emsg) ""))]
         (throw (RuntimeException. emsg))))))
 
-(defschema SyncRequestMap
+(defschema ^:private SyncRequestMap
   {Int {:countdown Int
         :events [MbsyncEventStop]}})
 
-(defprotocol INotification
-  (process-event [this sync-requests notify-service]
-                 "Returns a new version of the sync-requests map, adding or
-                  removing self from it as necessary."))
+(defprotocol ^:private INotification
+  (^:private
+    process-event [this sync-requests notify-service]
+    "Returns a new version of the sync-requests map, adding or removing self
+     from it as necessary."))
 
 (t/defrecord NewMessageNotificationService
   [notify-command :- String
