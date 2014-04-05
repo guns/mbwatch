@@ -2,8 +2,10 @@
   "Contains ConsoleLogger, an implementation of mbwatch.logging.IItemLogger."
   (:require [clojure.java.shell :refer [sh]]
             [clojure.string :as string]
-            [mbwatch.logging :refer [IItemLogger]])
-  (:import (org.joda.time DateTime)
+            [mbwatch.logging :refer [IItemLogger]]
+            [schema.core :as s :refer [Any Int either maybe]])
+  (:import (clojure.lang Keyword)
+           (org.joda.time DateTime)
            (org.joda.time.format DateTimeFormat DateTimeFormatter)))
 
 (def ^DateTimeFormatter TIMESTAMP-FORMAT
@@ -55,13 +57,15 @@
                           (keyword (str "bg" n)) (str "48;5;" n)))
                  {} (range 256))))
 
-(defn tty-color-count []
+(s/defn tty-color-count :- Int
+  []
   (try
     (Integer/parseInt (re-find #"\d+" (:out (sh "tput" "colors"))))
     (catch Throwable _
       8)))
 
-(defn get-default-colors []
+(s/defn get-default-colors :- [[Keyword]]
+  []
   (let [c256 (= (tty-color-count) 256)]
     [[:red :inverse :bold]        ; EMERG
      [:red :inverse]              ; ALERT
@@ -73,15 +77,19 @@
      (if c256 [:fg81] [:cyan])    ; DEBUG
      ]))
 
-(defn tty? []
+(s/defn tty? :- Boolean
+  []
   (boolean (System/console)))
 
-(defn- sgr-join [styles]
+(s/defn ^:private sgr-join :- String
+  [styles :- (either String [Any])]
   (if (string? styles)
     styles
     (string/join \; (mapv #(if (keyword? %) (SGR %) %) styles))))
 
-(defn- ^String wrap [msg sgr-string]
+(s/defn ^:private wrap :- String
+  [msg        :- Object
+   sgr-string :- (maybe String)]
   (if (seq sgr-string)
     (str "\033[" sgr-string "m" msg "\033[0m")
     msg))
@@ -97,10 +105,12 @@
       (.append stream msg)
       (.append stream \newline))))
 
-(defn ^ConsoleLogger ->ConsoleLogger
-  ([^Appendable stream]
-   (ConsoleLogger. stream (mapv sgr-join (get-default-colors)) TIMESTAMP-FORMAT))
-  ([^Appendable stream colors]
-   (ConsoleLogger. stream (mapv sgr-join colors) TIMESTAMP-FORMAT))
-  ([^Appendable stream colors ^DateTimeFormatter dt-formatter]
+(s/defn ->ConsoleLogger :- ConsoleLogger
+  ([stream]
+   (->ConsoleLogger stream (get-default-colors) TIMESTAMP-FORMAT))
+  ([stream colors]
+   (->ConsoleLogger stream colors TIMESTAMP-FORMAT))
+  ([stream       :- Appendable
+    colors       :- [Any]
+    dt-formatter :- DateTimeFormatter]
    (ConsoleLogger. stream (mapv sgr-join colors) dt-formatter)))
