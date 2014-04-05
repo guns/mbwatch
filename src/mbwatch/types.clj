@@ -4,10 +4,10 @@
   (:refer-clojure :exclude [defrecord]))
 
 (defmacro defrecord
-  "Same as defrecord or schema.core/defrecord, except that the ->name and
-   map->name constructors are made private. The strict-map->name constructor
-   remains public if the schema version is used and the first argument after
-   the name is the keyword :private."
+  "Same as clojure.core/defrecord or schema.core/defrecord, except that the
+   ->name and map->name constructors are made private. The strict-map->name
+   constructor remains public if the schema version is used and the first
+   argument after the name is the keyword :private."
   {:requires [#'cc/defrecord #'s/defrecord]}
   [name & body]
   (let [fields (first body)
