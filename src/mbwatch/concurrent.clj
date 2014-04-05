@@ -7,6 +7,11 @@
   "TODO: Move to Config?"
   0x1000)
 
+(defmacro future-catch-print
+  {:requires [#'catch-print]}
+  [& body]
+  `(future (catch-print ~@body)))
+
 (defmacro thread-loop
   {:requires [#'thread #'catch-print]}
   [bindings & body]

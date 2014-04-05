@@ -13,14 +13,15 @@
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command]
-            [mbwatch.concurrent :refer [CHAN-SIZE thread-loop]]
+            [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
+                                        thread-loop]]
             [mbwatch.config :refer [mdir-path]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable log!]]
             [mbwatch.maildir :refer [new-messages senders]]
             [mbwatch.mbsync.events]
             [mbwatch.process :as process]
             [mbwatch.types :as t :refer [VOID]]
-            [mbwatch.util :refer [catch-print to-ms]]
+            [mbwatch.util :refer [to-ms]]
             [schema.core :as s :refer [Int defschema maybe protocol]])
   (:import (clojure.lang IDeref)
            (java.io StringWriter)
@@ -190,13 +191,12 @@
             events (cond-> events
                      conj-event? (conj obj))]
         (if (zero? countdown)
-          (do (future
-                (catch-print
-                  (when-let [note (->NewMessageNotification
-                                    (deref (:notify-map-ref notify-service))
-                                    events)]
-                    (put! (:output-chan notify-service) note)
-                    (notify! (:notify-command notify-service) note))))
+          (do (future-catch-print
+                (when-let [note (->NewMessageNotification
+                                  (deref (:notify-map-ref notify-service))
+                                  events)]
+                  (put! (:output-chan notify-service) note)
+                  (notify! (:notify-command notify-service) note)))
               (dissoc sync-requests id))
           (assoc sync-requests id {:countdown countdown :events events})))
       sync-requests)))
