@@ -1,14 +1,15 @@
 (ns mbwatch.util
-  (:require [clojure.string :as string])
+  (:require [clojure.string :as string]
+            [schema.core :as s :refer [Int]])
   (:import (java.net URLEncoder)
-           (org.joda.time Instant ReadableInstant Seconds)))
+           (org.joda.time DateTime Instant ReadableInstant Seconds)))
 
-(defn chomp
-  "Like Ruby's String#chomp, remove either trailing newlines or a constant
-   suffix."
-  ([^String s]
+(s/defn chomp :- String
+  "Like Ruby's String#chomp, remove trailing newlines or a constant suffix."
+  ([s :- String]
    (string/trim-newline s))
-  ([^String s ^String suffix]
+  ([s      :- String
+    suffix :- String]
    (let [len (.length s)
          slen (.length suffix)]
      (cond (zero? len) ""
@@ -24,25 +25,25 @@
 
                          :else s))))))
 
-(defn dequote
+(s/defn dequote :- String
   "Dequote a double-quoted string."
-  [^String s]
+  [s :- String]
   (let [len (.length s)]
     (if (and (> len 1) (= \" (.charAt s 0) (.charAt s (dec len))))
       (string/replace (subs s 1 (dec len)) #"\\(.)" "$1")
       s)))
 
-(defn shell-escape
+(s/defn shell-escape :- String
   "Adapted from Ruby's Shellwords#shellescape()"
-  [s]
+  [s :- String]
   (if (empty? s)
     "''"
     (-> s
         (string/replace #"([^A-Za-z0-9_\-.,:\/@\n])" "\\\\$1")
         (string/replace #"\n" "'\n'"))))
 
-(defn human-duration
-  ([seconds]
+(s/defn human-duration :- String
+  ([seconds :- Int]
    (let [h (quot seconds 3600)
          m (quot (rem seconds 3600) 60)
          s (rem seconds 60)
@@ -55,18 +56,24 @@
        1 (first xs)
        2 (apply format "%s and %s" xs)
        3 (apply format "%s, %s, and %s" xs))))
-  ([^ReadableInstant start ^ReadableInstant stop]
+  ([start :- ReadableInstant
+    stop  :- ReadableInstant]
    (human-duration (.getSeconds (Seconds/secondsBetween start stop)))))
 
-(defn class-name [obj]
+(s/defn class-name :- String
+  [obj :- Object]
   (.getSimpleName (class obj)))
 
-(defn to-ms [datetime]
+(s/defn to-ms :- Long
+  [datetime :- DateTime]
   (.getMillis (Instant. datetime)))
 
-(defn url-for
+(s/defn url-for :- String
   "Returns scheme://user@host:port with appropriate escaping."
-  [scheme user host port]
+  [scheme :- Object
+   user   :- String
+   host   :- String
+   port   :- Object]
   (str scheme "://" (URLEncoder/encode user) \@ (URLEncoder/encode host) \: port))
 
 (defmacro catch-print [& body]
