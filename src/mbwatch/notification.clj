@@ -162,9 +162,9 @@
   (log-level [_] DEBUG)
 
   (log-item [this]
-    (->LogItem this (format "%s NewMessageNotificationService: `%s`"
-                            (if exit-chan "↓ Stopping" "↑ Starting")
-                            notify-command))))
+    (->LogItem this (if exit-chan
+                      "↓ Stopping NewMessageNotificationService"
+                      "↑ Starting NewMessageNotificationService"))))
 
 (s/defn ->NewMessageNotificationService :- NewMessageNotificationService
   [notify-command :- String
