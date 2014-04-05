@@ -77,7 +77,7 @@
 (defprotocol IItemLogger
   (log [this ^LogItem log-item]))
 
-(t/defrecord LoggingService
+(t/defrecord ^:private LoggingService
   [level     :- Int
    logger    :- IItemLogger
    log-chan  :- ReadPort
@@ -110,3 +110,11 @@
                             (if exit-chan "↓ Stopping" "↑ Starting")
                             (get LOG-LEVELS level)
                             (class-name logger)))))
+
+(s/defn ->LoggingService :- LoggingService
+  [level logger log-chan]
+  (strict-map->LoggingService
+    {:level level
+     :logger logger
+     :log-chan log-chan
+     :exit-chan nil}))

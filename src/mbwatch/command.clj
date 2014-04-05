@@ -1,53 +1,37 @@
 (ns mbwatch.command
+  "Commands are broadcast to all command listeners, therefore the namespace of
+   Opcodes is global (KISS)."
   (:require [mbwatch.logging :refer [->LogItem DEBUG Loggable]]
             [mbwatch.types :as t]
-            [schema.core :as s :refer [Int either enum]])
+            [schema.core :as s :refer [Any defschema enum]])
   (:import (java.util.concurrent.atomic AtomicLong)
            (org.joda.time DateTime)))
 
-(def ^:private ^AtomicLong next-command-id
-  "A synchronized counter for SyncCommands. There is no requirement to be
-   either predictable or unpredictable, so this can be implemented as an
-   incrementing global var."
-  (AtomicLong. 1))
+(def ^:private ^AtomicLong command-id
+  "A synchronized counter for Commands. There is no requirement to be either
+   predictable or unpredictable, so this can be implemented as an incrementing
+   global var."
+  (AtomicLong. 0))
 
-(defprotocol ICommand
-  (command [this] "Returns a keyword representing an operation.")
-  (timestamp [this] "Returns a DateTime"))
+(defschema ^:private Opcode
+  (enum :sync ; Synchronize mailboxes
+        :term ; Terminate any running mbsync processes
+        ))
 
 (t/defrecord ^:private Command
-  [command   :- #{:term :stop}
+  [opcode    :- Opcode
+   payload   :- Any
+   id        :- Long
    timestamp :- DateTime]
 
-  ICommand
-
-  (command [_] command)
-  (timestamp [_] timestamp)
-
   Loggable
 
   (log-level [_] DEBUG)
-  (log-item [this] (->LogItem this (str "Command: " command))))
+  (log-item [this] (->LogItem this (str "Command: " opcode " " payload))))
 
-(t/defrecord ^:private SyncCommand
-  [mbchan->mbox :- {String [String]}
-   timestamp    :- DateTime
-   id           :- Int]
-
-  ICommand
-
-  (command [_] :sync)
-  (timestamp [_] timestamp)
-
-  Loggable
-
-  (log-level [_] DEBUG)
-  (log-item [this]
-    (->LogItem this (format "SyncCommand: %d %s" id mbchan->mbox))))
-
-(s/defn ->ICommand :- ICommand
-  [command :- (either {String [String]}
-                      (enum :term :stop nil))]
-  (if (map? command)
-    (SyncCommand. command (DateTime.) (.getAndIncrement next-command-id))
-    (Command. (or command :stop) (DateTime.))))
+(s/defn ->Command :- Command
+  ([opcode]
+   (->Command opcode nil))
+  ([opcode  :- Opcode
+    payload :- Any]
+   (Command. opcode payload (.incrementAndGet command-id) (DateTime.))))

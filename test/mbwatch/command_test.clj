@@ -1,10 +1,10 @@
 (ns mbwatch.command-test
   (:require [clojure.test :refer [is]]
             [mbwatch.command :as c]
-            [schema.test :as s])
-  (:import (mbwatch.command Command SyncCommand)))
+            [schema.test :as s]))
 
-(s/deftest test-command-ctor
-  (is (instance? Command (c/->ICommand :term)))
-  (is (instance? SyncCommand (c/->ICommand {})))
-  (is (= :stop (c/command (c/->ICommand nil)))))
+(s/deftest test-Command
+  ;; Schema validation
+  (c/->Command :term)
+  (c/->Command :sync {"foo" ["bar"]})
+  (is (thrown? Exception (c/->Command :UNKNOWN))))

@@ -2,7 +2,7 @@
   (:require [clojure.core.async :refer [<!! >!! chan]]
             [clojure.test :refer [is]]
             [com.stuartsierra.component :as comp]
-            [mbwatch.logging :as l]
+            [mbwatch.logging :as l :refer [->LoggingService]]
             [schema.test :as s])
   (:import (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
@@ -25,12 +25,11 @@
   (let [sink (atom [])
         ch (chan)
         service (comp/start
-                  (l/strict-map->LoggingService
-                    {:level l/NOTICE
-                     :logger (reify l/IItemLogger
-                               (log [_ item] (swap! sink conj (:message item))))
-                     :log-chan ch
-                     :exit-chan nil}))
+                  (->LoggingService
+                    l/NOTICE
+                    (reify l/IItemLogger
+                      (log [_ item] (swap! sink conj (:message item))))
+                    ch))
         values [(LogItem. l/WARNING (DateTime.) "SYN")
                 (LogItem. l/NOTICE (DateTime.) "ACK")
                 (LogItem. l/DEBUG (DateTime.) "SYN ACK")

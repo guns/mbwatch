@@ -1,16 +1,16 @@
 (ns mbwatch.mbsync
-  "The MbsyncMaster component takes an ICommand from a channel, then sends
-   mail synchronization jobs to an MbsyncWorker via a buffered channel,
-   spawning a new worker if necessary. Each worker is responsible for syncing
-   a single mbsync channel.
+  "The MbsyncMaster component listens for :sync Commands on a channel, then
+   sends mail synchronization jobs to MbsyncWorkers via buffered channels,
+   spawning new workers if necessary. Each worker is responsible for syncing a
+   single mbsync channel.
 
    The workers shell out to `mbsync`, passing a parsed configuration string
    via `bash -c 'mbsync -c <(cat)'`. These child processes can be terminated
-   by MbsyncMaster at any time.
+   by MbsyncMaster on receipt of a :term Command.
 
-   Stopping MbsyncMaster also stops all spawned MbsyncWorkers.
+   Stopping the MbsyncMaster also stops all spawned MbsyncWorkers.
 
-     ─────── ICommand ───────┐
+     ─────── Command ────────┐
                              │
                              ▼                      ─┐
                       ┌──────────────┐               │
@@ -27,7 +27,7 @@
   (:require [clojure.core.async :refer [<!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
-            [mbwatch.command :refer [ICommand command]]
+            [mbwatch.command]
             [mbwatch.concurrent :refer [CHAN-SIZE sig-notify-all thread-loop]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [->LogItem DEBUG ERR INFO Loggable NOTICE
@@ -41,6 +41,7 @@
             [schema.core :as s :refer [Int maybe protocol]])
   (:import (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
+           (mbwatch.command Command)
            (mbwatch.config.mbsyncrc Mbsyncrc)
            (mbwatch.mbsync.events MbsyncUnknownChannelError)
            (org.joda.time DateTime)))
@@ -129,7 +130,7 @@
 
 (declare process-command)
 
-(t/defrecord MbsyncMaster
+(t/defrecord ^:private MbsyncMaster
   [mbsyncrc  :- Mbsyncrc
    cmd-chan  :- ReadPort
    log-chan  :- WritePort
@@ -144,8 +145,6 @@
            (thread-loop [workers {}]
              (let [cmd (when (.get status)
                          (<!! cmd-chan))]
-               (when cmd
-                 (put! log-chan cmd))
                (when-let [workers (process-command this workers cmd)]
                  (recur workers))))))
 
@@ -165,6 +164,15 @@
     (->LogItem this (if exit-chan
                       "↓ Stopping MbsyncMaster"
                       "↑ Starting MbsyncMaster"))))
+
+(s/defn ->MbsyncMaster :- MbsyncMaster
+  [mbsyncrc cmd-chan log-chan]
+  (strict-map->MbsyncMaster
+    {:mbsyncrc mbsyncrc
+     :cmd-chan cmd-chan
+     :log-chan log-chan
+     :status (AtomicBoolean.)
+     :exit-chan nil}))
 
 (s/defn ^:private ->MbsyncWorker :- MbsyncWorker
   [mbchan        :- String
@@ -206,13 +214,16 @@
 (s/defn ^:private process-command :- (maybe {String MbsyncWorker})
   [mbsync-master :- MbsyncMaster
    workers       :- {String MbsyncWorker}
-   cmd           :- (maybe (protocol ICommand))]
-  (case (if cmd (command cmd) :stop)
-    :sync (dispatch-syncs workers
-                          (:id cmd)
-                          (:mbchan->mbox cmd)
-                          mbsync-master)
-    :term (do (doseq [w (vals workers)]
-                (sig-notify-all (:status w)))
-              workers)
-    :stop (dorun (pmap comp/stop (vals workers)))))
+   cmd           :- (maybe Command)]
+  (if cmd
+    (case (:opcode cmd)
+      :sync (dispatch-syncs workers
+                            (:id cmd)
+                            (:payload cmd)
+                            mbsync-master)
+      :term (do (doseq [w (vals workers)]
+                  (sig-notify-all (:status w)))
+                workers)
+      ;; Disregard unrecognized command
+      nil)
+    (dorun (pmap comp/stop (vals workers)))))

@@ -1,19 +1,19 @@
 (ns mbwatch.notification
-  "NewMessageNotificationService is a Loggable middleware that tracks
-   SyncCommands and spawns a notification when all requested channels have
-   been synchronized.
+  "NewMessageNotificationService is a Loggable middleware that tracks :sync
+   Commands and spawns a notification when all requested channels have been
+   synchronized.
 
                       ┌───────────────────────────────┐
      ─── Loggable ──▶ │ NewMessageNotificationService │ ─── Loggable ──▶
                       └───────────────────────────────┘
   "
-  (:require [clojure.core.async :refer [<!! close! put!]]
+  (:require [clojure.core.async :refer [<!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [clojure.set :as set]
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command]
-            [mbwatch.concurrent :refer [thread-loop]]
+            [mbwatch.concurrent :refer [CHAN-SIZE thread-loop]]
             [mbwatch.config :refer [mdir-path]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable log!]]
             [mbwatch.maildir :refer [new-messages senders]]
@@ -26,7 +26,7 @@
            (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
            (javax.mail.internet MimeMessage)
-           (mbwatch.command SyncCommand)
+           (mbwatch.command Command)
            (mbwatch.mbsync.events MbsyncEventStop MbsyncUnknownChannelError)
            (org.joda.time DateTime)))
 
@@ -129,31 +129,31 @@
     "Returns a new version of the sync-requests map, adding or removing self
      from it as necessary."))
 
-(t/defrecord NewMessageNotificationService
+(t/defrecord ^:private NewMessageNotificationService
   [notify-command :- String
    notify-map-ref :- IDeref
-   read-chan      :- ReadPort
-   write-chan     :- WritePort
+   input-chan     :- ReadPort
+   output-chan    :- WritePort
    status         :- AtomicBoolean
    exit-chan      :- (maybe (protocol ReadPort))]
 
   Lifecycle
 
   (start [this]
-    (log! write-chan this)
+    (log! output-chan this)
     (assoc this :exit-chan
            (thread-loop [sync-requests {}]
              (when (.get status)
-               (when-some [obj (<!! read-chan)]
+               (when-some [obj (<!! input-chan)]
                  ;; Pass through ASAP
-                 (put! write-chan obj)
+                 (put! output-chan obj)
                  (recur (process-event obj sync-requests this)))))))
 
   (stop [this]
     ;; Exit ASAP
     (.set status false)
-    (log! write-chan this)
-    (close! read-chan)
+    (log! output-chan this)
+    (close! input-chan)
     (<!! exit-chan)
     (dissoc this :exit-chan))
 
@@ -165,6 +165,16 @@
     (->LogItem this (format "%s NewMessageNotificationService: `%s`"
                             (if exit-chan "↓ Stopping" "↑ Starting")
                             notify-command))))
+
+(s/defn ->NewMessageNotificationService :- NewMessageNotificationService
+  [notify-command notify-map-ref input-chan]
+  (strict-map->NewMessageNotificationService
+    {:notify-command notify-command
+     :notify-map-ref notify-map-ref
+     :input-chan input-chan
+     :output-chan (chan CHAN-SIZE)
+     :status (AtomicBoolean. true)
+     :exit-chan nil}))
 
 (s/defn ^:private process-stop-event :- SyncRequestMap
   [obj            :- Object
@@ -183,7 +193,7 @@
                   (when-let [note (->NewMessageNotification
                                     (deref (:notify-map-ref notify-service))
                                     events)]
-                    (put! (:write-chan notify-service) note)
+                    (put! (:output-chan notify-service) note)
                     (notify! (:notify-command notify-service) note))))
               (dissoc sync-requests id))
           (assoc sync-requests id {:countdown countdown :events events})))
@@ -191,11 +201,13 @@
 
 (extend-protocol INotification
 
-  SyncCommand
+  Command
 
-  (process-event [this sync-requests notify-service]
-    (let [{:keys [id mbchan->mbox]} this]
-      (assoc sync-requests id {:countdown (count mbchan->mbox) :events []})))
+  (process-event [this sync-requests _]
+    (if (= (:opcode this) :sync)
+      (let [{:keys [id payload]} this]
+        (assoc sync-requests id {:countdown (count payload) :events []}))
+      sync-requests))
 
   MbsyncEventStop
 

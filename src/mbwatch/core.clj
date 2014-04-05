@@ -1,6 +1,6 @@
 (ns mbwatch.core
   "
-     ─────── ICommand ───────┐
+     ─────── Command ────────┐
                              │
                              ▼                      ─┐
                       ┌──────────────┐               │
@@ -25,22 +25,21 @@
                      │ LoggingService │
                      └────────────────┘
   "
-  (:require [clojure.core.async :refer [chan]]
+  (:require [clojure.core.async :refer [chan mult tap]]
             [clojure.core.async.impl.protocols :refer [ReadPort]]
             [com.stuartsierra.component :refer [Lifecycle start-system
                                                 stop-system]]
-            [mbwatch.concurrent :refer [CHAN-SIZE failsafe-pipe]]
+            [mbwatch.concurrent :refer [CHAN-SIZE]]
             [mbwatch.config]
             [mbwatch.console-logger :refer [->ConsoleLogger
                                             MILLIS-TIMESTAMP-FORMAT
                                             get-default-colors]]
-            [mbwatch.logging :refer [DEBUG strict-map->LoggingService]]
-            [mbwatch.mbsync :refer [strict-map->MbsyncMaster]]
-            [mbwatch.notification :refer [strict-map->NewMessageNotificationService]]
+            [mbwatch.logging :refer [->LoggingService DEBUG]]
+            [mbwatch.mbsync :refer [->MbsyncMaster]]
+            [mbwatch.notification :refer [->NewMessageNotificationService]]
             [mbwatch.types :as t]
             [schema.core :as s])
-  (:import (java.util.concurrent.atomic AtomicBoolean)
-           (mbwatch.config Config)
+  (:import (mbwatch.config Config)
            (mbwatch.logging LoggingService)
            (mbwatch.mbsync MbsyncMaster)
            (mbwatch.notification NewMessageNotificationService)))
@@ -62,25 +61,16 @@
 (s/defn ->Application :- Application
   [config   :- Config
    cmd-chan :- ReadPort]
-  (let [mbsync-cmd-chan (failsafe-pipe cmd-chan (chan CHAN-SIZE))
-        notify-chan (chan CHAN-SIZE)
-        log-chan (chan CHAN-SIZE)]
+  (let [logger (->ConsoleLogger System/out (get-default-colors) MILLIS-TIMESTAMP-FORMAT)
+        broadcast (mult cmd-chan)
+        mbsync-chan (tap broadcast (chan CHAN-SIZE))
+        log-chan (tap broadcast (chan CHAN-SIZE))
+        notification-service (->NewMessageNotificationService
+                               (-> config :mbwatchrc :notify-command)
+                               (atom {"self" #{"INBOX"}}) ; FIXME: Move to config
+                               log-chan)
+        log-chan (:output-chan notification-service)]
     (Application.
-      (strict-map->LoggingService
-        {:level DEBUG
-         :logger (->ConsoleLogger System/out (get-default-colors) MILLIS-TIMESTAMP-FORMAT)
-         :log-chan log-chan
-         :exit-chan nil})
-      (strict-map->NewMessageNotificationService
-        {:notify-command (-> config :mbwatchrc :notify-command)
-         :notify-map-ref (atom {"self" #{"INBOX"}})
-         :read-chan notify-chan
-         :write-chan log-chan
-         :status (AtomicBoolean. true)
-         :exit-chan nil})
-      (strict-map->MbsyncMaster
-        {:mbsyncrc (:mbsyncrc config)
-         :cmd-chan mbsync-cmd-chan
-         :log-chan notify-chan
-         :status (AtomicBoolean. true)
-         :exit-chan nil}))))
+      (->LoggingService DEBUG logger log-chan)
+      notification-service
+      (->MbsyncMaster (:mbsyncrc config) mbsync-chan log-chan))))
