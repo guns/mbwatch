@@ -14,8 +14,9 @@
   (AtomicLong. 0))
 
 (defschema ^:private Opcode
-  (enum :sync ; Synchronize mailboxes
-        :term ; Terminate any running mbsync processes
+  (enum :sync       ; Synchronize mailboxes
+        :term       ; Terminate any running mbsync processes
+        :check-conn ; Re-check connections
         ))
 
 (t/defrecord ^:private Command

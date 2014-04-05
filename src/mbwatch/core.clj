@@ -31,6 +31,7 @@
                                                 stop-system]]
             [mbwatch.concurrent :refer [CHAN-SIZE]]
             [mbwatch.config]
+            [mbwatch.connection :refer [->ConnectionWatcher]]
             [mbwatch.console-logger :refer [->ConsoleLogger
                                             MILLIS-TIMESTAMP-FORMAT
                                             get-default-colors]]
@@ -40,6 +41,7 @@
             [mbwatch.types :as t]
             [schema.core :as s])
   (:import (mbwatch.config Config)
+           (mbwatch.connection ConnectionWatcher)
            (mbwatch.logging LoggingService)
            (mbwatch.mbsync MbsyncMaster)
            (mbwatch.notification NewMessageNotificationService)))
@@ -47,6 +49,7 @@
 (t/defrecord ^:private Application
   [logging-service      :- LoggingService
    notification-service :- NewMessageNotificationService
+   connection-watcher   :- ConnectionWatcher
    mbsync-master        :- MbsyncMaster]
 
   Lifecycle
@@ -62,18 +65,27 @@
   [config   :- Config
    cmd-chan :- ReadPort]
   (let [logger (->ConsoleLogger System/out (get-default-colors) MILLIS-TIMESTAMP-FORMAT)
+        ;; Broadcast commands to all top-level channels
         broadcast (mult cmd-chan)
         mbsync-chan (tap broadcast (chan CHAN-SIZE))
+        conn-chan (tap broadcast (chan CHAN-SIZE))
         log-chan (tap broadcast (chan CHAN-SIZE))
+        ;; Create middleware components
         notification-service (->NewMessageNotificationService
                                (-> config :mbwatchrc :notify-command)
                                (atom {"self" #{"INBOX"}}) ; FIXME: Move to config
-                               log-chan)]
+                               log-chan)
+        log-chan (:input-chan notification-service)]
     (Application.
       (->LoggingService DEBUG
                         logger
                         (:output-chan notification-service))
       notification-service
+      (->ConnectionWatcher (-> config :mbsyncrc :channel->IMAPCredential)
+                           (atom {}) ; FIXME: Move to config
+                           (* 30 1000) ; FIXME: Move to config
+                           conn-chan
+                           log-chan)
       (->MbsyncMaster (:mbsyncrc config)
                       mbsync-chan
-                      (:input-chan notification-service)))))
+                      log-chan))))
