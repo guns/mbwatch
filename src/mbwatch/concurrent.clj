@@ -1,6 +1,7 @@
 (ns mbwatch.concurrent
-  (:require [clojure.core.async :refer [<!! >!! alts!! chan close! thread]]
-            [mbwatch.util :refer [catch-print]]))
+  (:require [clojure.core.async :refer [>!! alts!! chan thread]]
+            [mbwatch.util :refer [catch-print]]
+            [schema.core :as s]))
 
 (def ^:const CHAN-SIZE
   "TODO: Move to Config?"
@@ -27,29 +28,23 @@
                (range n))
        (first (~alts!! ~chans :priority true)))))
 
-(defn failsafe-pipe
-  "Conveys elements from the from channel to the to channel. If the from
-   channel closes, to is closed as well. If a transfer fails because the
-   to channel is closed, the element is placed back on the from channel.
-   Therefore, from should be a buffered channel to prevent hangs."
-  [from to]
-  (thread-loop []
-    (let [v (<!! from)]
-      (cond (nil? v) (close! to)
-            (>!! to v) (recur)
-            :else (>!! from v))))
-  to)
-
-(defn sig-wait
-  ([^Object monitor]
-   (locking monitor (.wait monitor)))
-  ([^Object monitor ^long timeout]
+(s/defn sig-wait :- Object
+  ([monitor :- Object]
+   (locking monitor (.wait monitor))
+   monitor)
+  ([monitor :- Object
+    timeout :- long]
    (when (pos? timeout)
      (locking monitor
-       (.wait monitor timeout)))))
+       (.wait monitor timeout)))
+   monitor))
 
-(defn sig-notify [^Object monitor]
-  (locking monitor (.notify monitor)))
+(s/defn sig-notify :- Object
+  [monitor :- Object]
+  (locking monitor (.notify monitor))
+  monitor)
 
-(defn sig-notify-all [^Object monitor]
-  (locking monitor (.notifyAll monitor)))
+(s/defn sig-notify-all :- Object
+  [monitor :- Object]
+  (locking monitor (.notifyAll monitor))
+  monitor)
