@@ -167,7 +167,9 @@
                             notify-command))))
 
 (s/defn ->NewMessageNotificationService :- NewMessageNotificationService
-  [notify-command notify-map-ref input-chan]
+  [notify-command :- String
+   notify-map-ref :- IDeref
+   input-chan     :- ReadPort]
   (strict-map->NewMessageNotificationService
     {:notify-command notify-command
      :notify-map-ref notify-map-ref

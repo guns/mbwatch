@@ -166,7 +166,9 @@
                       "↑ Starting MbsyncMaster"))))
 
 (s/defn ->MbsyncMaster :- MbsyncMaster
-  [mbsyncrc cmd-chan log-chan]
+  [mbsyncrc :- Mbsyncrc
+   cmd-chan :- ReadPort
+   log-chan :- WritePort]
   (strict-map->MbsyncMaster
     {:mbsyncrc mbsyncrc
      :cmd-chan cmd-chan

@@ -112,7 +112,9 @@
                             (class-name logger)))))
 
 (s/defn ->LoggingService :- LoggingService
-  [level logger log-chan]
+  [level    :- Int
+   logger   :- IItemLogger
+   log-chan :- ReadPort]
   (strict-map->LoggingService
     {:level level
      :logger logger
