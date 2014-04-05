@@ -3,10 +3,11 @@
   (:require [clojure.java.shell :refer [sh]]
             [clojure.string :as string]
             [mbwatch.passwd :refer [expand-user-path parse-passwd]]
-            [mbwatch.types :as t :refer [FilteredLine LowerCaseWord Word]]
+            [mbwatch.types :as t :refer [FilteredLine LowerCaseWord
+                                         PortNumber Word]]
             [mbwatch.util :refer [chomp dequote]]
             [schema.core :as s :refer [defschema either enum eq maybe one
-                                       optional-key pair pred]]))
+                                       optional-key pair]]))
 
 (def ^:const DEFAULT-PATH
   "Default path of mbsyncrc."
@@ -40,9 +41,6 @@
    (optional-key :imapstore)    MapSectionValue
    (optional-key :maildirstore) MapSectionValue
    (optional-key :channel)      MapSectionValue})
-
-(defschema ^:private PortNumber
-  (pred #(and (integer? %) (< 0 % 0x1000))))
 
 (defschema IMAPCredential
   {:host String

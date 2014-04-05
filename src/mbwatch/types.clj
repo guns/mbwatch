@@ -36,3 +36,6 @@
   (pred #(and (string? %)
               (not (re-seq #"\n|\A\s*#|\A\s*\z|\A\s|\s\z" %)))
         "single non-comment line with no surrounding whitespace"))
+
+(defschema PortNumber
+  (pred #(and (integer? %) (< 0 % 0x1000))))
