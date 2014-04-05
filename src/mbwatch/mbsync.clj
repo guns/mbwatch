@@ -226,6 +226,5 @@
       :term (do (doseq [w (vals workers)]
                   (sig-notify-all (:status w)))
                 workers)
-      ;; Disregard unrecognized command
-      nil)
+      workers)
     (dorun (pmap comp/stop (vals workers)))))
