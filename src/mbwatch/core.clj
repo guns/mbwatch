@@ -1,13 +1,13 @@
 (ns mbwatch.core
   "
-     ─────── Command ────────┐
-                             │
-                             ▼                      ─┐
-                      ┌──────────────┐               │
-                      │ MbsyncMaster │               │
-                      └──────┬───────┘               │
-                             │                       │
-                 ┌───────────┴──────────┐            ├── Loggable ──┐
+     ────── Command ─────────┬──────────────────────────────────────┐
+                             │                                      │
+                             ▼                      ─┐              │
+                      ┌──────────────┐               │              │
+                      │ MbsyncMaster │               │              │
+                      └──────┬───────┘               │              │
+                             │                       │              │
+                 ┌───────────┴──────────┐            ├── Loggable ──┤
                  ▼                      ▼            │              │
           ┌──────────────┐       ┌──────────────┐    │              │
           │ MbsyncWorker │   …   │ MbsyncWorker │    │              │
@@ -68,9 +68,12 @@
         notification-service (->NewMessageNotificationService
                                (-> config :mbwatchrc :notify-command)
                                (atom {"self" #{"INBOX"}}) ; FIXME: Move to config
-                               log-chan)
-        log-chan (:output-chan notification-service)]
+                               log-chan)]
     (Application.
-      (->LoggingService DEBUG logger log-chan)
+      (->LoggingService DEBUG
+                        logger
+                        (:output-chan notification-service))
       notification-service
-      (->MbsyncMaster (:mbsyncrc config) mbsync-chan log-chan))))
+      (->MbsyncMaster (:mbsyncrc config)
+                      mbsync-chan
+                      (:input-chan notification-service)))))

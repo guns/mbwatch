@@ -171,7 +171,7 @@
     {:mbsyncrc mbsyncrc
      :cmd-chan cmd-chan
      :log-chan log-chan
-     :status (AtomicBoolean.)
+     :status (AtomicBoolean. true)
      :exit-chan nil}))
 
 (s/defn ^:private ->MbsyncWorker :- MbsyncWorker
