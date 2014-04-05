@@ -62,12 +62,11 @@
 (s/defn ->LogItem :- LogItem
   "Create a LogItem from a Loggable, assuming that the timestamp can be found
    in the :timestamp field of the Loggable."
-  [loggable :- Loggable
+  [loggable :- Object
    message  :- String]
   (LogItem. (log-level loggable) (get-timestamp loggable) message))
 
 (extend-protocol Loggable
-
   ;; Fallback implementation
   Object
 
