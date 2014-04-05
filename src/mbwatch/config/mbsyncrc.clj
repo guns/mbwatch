@@ -3,10 +3,10 @@
   (:require [clojure.java.shell :refer [sh]]
             [clojure.string :as string]
             [mbwatch.passwd :refer [expand-user-path parse-passwd]]
-            [mbwatch.types :as t]
+            [mbwatch.types :as t :refer [FilteredLine LowerCaseWord Word]]
             [mbwatch.util :refer [chomp dequote]]
-            [schema.core :as s :refer [both defschema either enum eq maybe
-                                       one optional-key pair pred]]))
+            [schema.core :as s :refer [defschema either enum eq maybe one
+                                       optional-key pair pred]]))
 
 (def ^:const DEFAULT-PATH
   "Default path of mbsyncrc."
@@ -14,19 +14,6 @@
 
 (def ^:private ^:const DEFAULT-MBSYNC-INBOX
   (str (System/getProperty "user.home") \/ "Maildir"))
-
-(defschema ^:private Word
-  (pred #(and (string? %)
-              (seq %)
-              (not (re-find #"\s" %)))))
-
-(defschema ^:private LowerCaseWord
-  (both Word (pred #(not (re-find #"\p{Lu}" %)))))
-
-(defschema ^:private FilteredLine
-  (pred #(and (string? %)
-              (not (re-seq #"\n|\A\s*#|\A\s*\z|\A\s|\s\z" %)))
-        "single non-comment line with no surrounding whitespace"))
 
 (defschema ^:private Entry
   (pair LowerCaseWord "name"
@@ -57,7 +44,7 @@
 (defschema ^:private PortNumber
   (pred #(and (integer? %) (< 0 % 0x1000))))
 
-(defschema ^:private IMAPCredential
+(defschema IMAPCredential
   {:host String
    :port PortNumber
    :user String

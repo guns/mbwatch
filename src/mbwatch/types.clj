@@ -1,10 +1,7 @@
 (ns mbwatch.types
   (:require [clojure.core :as cc]
-            [schema.core :as s :refer [defschema eq]])
+            [schema.core :as s :refer [both defschema eq pred]])
   (:refer-clojure :exclude [defrecord]))
-
-(defschema VOID
-  (eq nil))
 
 (defmacro defrecord
   "Same as defrecord or schema.core/defrecord, except that the ->name and
@@ -23,3 +20,20 @@
          (alter-meta! ~(get-var "map->") assoc :private true)
          ~(when (and schema? (-> name meta :private))
             `(alter-meta! ~(get-var "strict-map->") assoc :private true)))))
+
+(defschema VOID
+  (eq nil))
+
+(defschema Word
+  (pred #(and (string? %)
+              (seq %)
+              (not (re-find #"\s" %)))))
+
+(defschema LowerCaseWord
+  (both Word (pred #(not (re-find #"\p{Lu}" %)))))
+
+(defschema FilteredLine
+  (pred #(and (string? %)
+              (not (re-seq #"\n|\A\s*#|\A\s*\z|\A\s|\s\z" %)))
+        "single non-comment line with no surrounding whitespace"))
+
