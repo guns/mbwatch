@@ -1,7 +1,8 @@
 (ns mbwatch.util-test
   (:require [clojure.java.shell :refer [sh]]
-            [clojure.test :refer [deftest is]]
-            [mbwatch.util :as u])
+            [clojure.test :refer [is]]
+            [mbwatch.util :as u]
+            [schema.test :refer [deftest]])
   (:import (org.joda.time DateTime)))
 
 (deftest test-chomp

@@ -1,5 +1,6 @@
 (ns mbwatch.types-test
-  (:require [clojure.test :refer [deftest is]]))
+  (:require [clojure.test :refer [is]]
+            [schema.test :refer [deftest]]))
 
 (deftest test-defrecord
   (let [ns-sym `types-test#]

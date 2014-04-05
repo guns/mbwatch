@@ -2,13 +2,13 @@
   (:require [clojure.java.io :as io]
             [clojure.test :refer [is]]
             [mbwatch.config :as c]
-            [schema.test :as s]))
+            [schema.test :refer [deftest]]))
 
-(s/deftest test-Config
+(deftest test-Config
   ;; Schema validation
   (c/->Config (io/resource "mbsyncrc") (io/resource "mbwatchrc")))
 
-(s/deftest test-mdir-path
+(deftest test-mdir-path
   (let [maildir {:inbox "/home/user/Mail/INBOX"
                  :path "/home/user/Mail/gmail"
                  :flatten "."}]

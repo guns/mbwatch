@@ -2,9 +2,9 @@
   (:require [clojure.java.io :as io]
             [clojure.test :refer [is]]
             [mbwatch.config.mbsyncrc :as mb]
-            [schema.test :as s]))
+            [schema.test :refer [deftest]]))
 
-(s/deftest test-parse
+(deftest test-parse
   (let [mbsyncrc (mb/parse (slurp (io/resource "mbsyncrc")))]
     (is (= (:text mbsyncrc)
            (slurp (io/resource "mbsyncrc.out"))))

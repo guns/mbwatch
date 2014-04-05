@@ -1,9 +1,9 @@
 (ns mbwatch.command-test
   (:require [clojure.test :refer [is]]
             [mbwatch.command :as c]
-            [schema.test :as s]))
+            [schema.test :refer [deftest]]))
 
-(s/deftest test-Command
+(deftest test-Command
   ;; Schema validation
   (c/->Command :term)
   (c/->Command :sync {"foo" ["bar"]})

@@ -1,8 +1,9 @@
 (ns mbwatch.console-logger-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [is]]
             [mbwatch.console-logger :as c]
-            [mbwatch.logging :refer [log-item log]]
-            [schema.core :refer [validate]])
+            [mbwatch.logging :refer [log log-item]]
+            [schema.core :refer [validate]]
+            [schema.test :refer [deftest]])
   (:import (clojure.lang Keyword)
            (java.io StringWriter)
            (org.joda.time.format DateTimeFormat)))

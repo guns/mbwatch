@@ -1,8 +1,9 @@
 (ns mbwatch.concurrent-test
   (:require [clojure.core.async :refer [<!! chan close! put! thread]]
             [clojure.set :as set]
-            [clojure.test :refer [deftest is]]
-            [mbwatch.concurrent :as c]))
+            [clojure.test :refer [is]]
+            [mbwatch.concurrent :as c]
+            [schema.test :refer [deftest]]))
 
 (deftest test-first-alt
   (is (= :first

@@ -1,17 +1,17 @@
 (ns mbwatch.mbsync.events-test
   (:require [clojure.test :refer [is]]
-            [mbwatch.logging :refer [log-item DEBUG ERR WARNING log-level]]
+            [mbwatch.logging :refer [DEBUG ERR WARNING log-item log-level]]
             [mbwatch.mbsync.events :as e]
-            [schema.test :as s])
+            [schema.test :refer [deftest]])
   (:import (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
-(s/deftest test-join-mbargs
+(deftest test-join-mbargs
   (is (= "foo" (e/join-mbargs "foo" [])))
   (is (= "foo:bar" (e/join-mbargs "foo" ["bar"])))
   (is (= "foo:bar,baz" (e/join-mbargs "foo" ["bar" "baz"]))))
 
-(s/deftest test-events
+(deftest test-events
   (let [dt (DateTime.)
         start (e/strict-map->MbsyncEventStart
                 {:level DEBUG

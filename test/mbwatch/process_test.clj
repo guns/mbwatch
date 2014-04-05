@@ -2,9 +2,9 @@
   (:require [clojure.test :refer [is testing]]
             [mbwatch.concurrent :refer [sig-notify-all]]
             [mbwatch.process :as p]
-            [schema.test :as s]))
+            [schema.test :refer [deftest]]))
 
-(s/deftest test-spawn-and-dump!
+(deftest test-spawn-and-dump!
   (is (= "Hello world.\n"
          (with-out-str
            (p/dump! (p/spawn "sh" "-c" "echo Hello world.") :out *out*))
@@ -17,7 +17,7 @@
       (.close (.getInputStream proc))
       (is (= "" (with-out-str (p/dump! proc :out *out*)))))))
 
-(s/deftest test-interruptible-wait
+(deftest test-interruptible-wait
   (is (true? (p/interruptible-wait (Object.) (p/spawn "true"))))
   (is (false?
         (let [mon (Object.)

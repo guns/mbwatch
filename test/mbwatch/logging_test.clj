@@ -3,16 +3,16 @@
             [clojure.test :refer [is]]
             [com.stuartsierra.component :as comp]
             [mbwatch.logging :as l :refer [->LoggingService]]
-            [schema.test :as s])
+            [schema.test :refer [deftest]])
   (:import (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
-(s/deftest test-log!
+(deftest test-log!
   (let [ch (chan)]
     (l/log! ch {})
     (is (instance? DateTime (:timestamp (<!! ch))))))
 
-(s/deftest test-Loggable->LogItem
+(deftest test-Loggable->LogItem
   (let [loggable (reify l/Loggable
                    (l/log-level [_] 0)
                    (l/log-item [this] (l/->LogItem this "Hello from ->LogItem.")))
@@ -21,7 +21,7 @@
     (is (instance? DateTime timestamp))
     (is (= "Hello from ->LogItem." message))))
 
-(s/deftest test-LoggingService
+(deftest test-LoggingService
   (let [sink (atom [])
         ch (chan)
         service (comp/start
