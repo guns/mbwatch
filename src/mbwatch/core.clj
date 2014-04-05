@@ -29,7 +29,7 @@
             [clojure.core.async.impl.protocols :refer [ReadPort]]
             [com.stuartsierra.component :refer [Lifecycle start-system
                                                 stop-system]]
-            [mbwatch.concurrent :refer [failsafe-pipe]]
+            [mbwatch.concurrent :refer [CHAN-SIZE failsafe-pipe]]
             [mbwatch.config]
             [mbwatch.console-logger :refer [->ConsoleLogger
                                             MILLIS-TIMESTAMP-FORMAT
@@ -44,10 +44,6 @@
            (mbwatch.logging LoggingService)
            (mbwatch.mbsync MbsyncMaster)
            (mbwatch.notification NewMessageNotificationService)))
-
-(def ^:private ^:const CHAN-SIZE
-  "TODO: Move to Config?"
-  0x1000)
 
 (t/defrecord ^:private Application
   [logging-service      :- LoggingService

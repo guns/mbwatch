@@ -2,6 +2,10 @@
   (:require [clojure.core.async :refer [<!! >!! alts!! chan close! thread]]
             [mbwatch.util :refer [catch-print]]))
 
+(def ^:const CHAN-SIZE
+  "TODO: Move to Config?"
+  0x1000)
+
 (defmacro thread-loop
   {:requires [#'thread #'catch-print]}
   [bindings & body]

@@ -28,7 +28,7 @@
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
             [mbwatch.command :refer [ICommand command]]
-            [mbwatch.concurrent :refer [sig-notify-all thread-loop]]
+            [mbwatch.concurrent :refer [CHAN-SIZE sig-notify-all thread-loop]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [->LogItem DEBUG ERR INFO Loggable NOTICE
                                      WARNING log!]]
@@ -44,10 +44,6 @@
            (mbwatch.config.mbsyncrc Mbsyncrc)
            (mbwatch.mbsync.events MbsyncUnknownChannelError)
            (org.joda.time DateTime)))
-
-(def ^:const ^:private CHAN-SIZE
-  "TODO: Move to Config?"
-  0x1000)
 
 (s/defn ^:private spawn-sync :- Process
   "Asynchronously launch an mbsync process to sync a single mail channel. The
