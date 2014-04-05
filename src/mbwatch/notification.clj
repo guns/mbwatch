@@ -1,6 +1,6 @@
 (ns mbwatch.notification
   "NewMessageNotificationService is a Loggable middleware that tracks :sync
-   Commands and spawns a notification when all requested channels have been
+   Commands and spawns a notification when all requested mbchans have been
    synchronized.
 
                       ┌───────────────────────────────┐
@@ -75,7 +75,7 @@
     (when (and maildir (contains? notify-map mbchan))
       (let [nboxes (notify-map mbchan)
             bs (if (empty? mboxes)
-                 nboxes ; [] means full channel sync
+                 nboxes ; [] means full sync
                  (set/intersection (set mboxes) nboxes))
             timestamp (to-ms start)]
         (reduce

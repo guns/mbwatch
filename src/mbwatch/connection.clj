@@ -13,7 +13,7 @@
            (java.util.concurrent.atomic AtomicBoolean AtomicLong)))
 
 (t/defrecord ^:private ConnectionWatcher
-  [channel->IMAPCredential :- {Word IMAPCredential}
+  [mbchan->IMAPCredential :- {Word IMAPCredential}
    connection-atom         :- Atom ; {mbchan Boolean}
    poll-ms                 :- AtomicLong
    cmd-chan                :- ReadPort
@@ -68,13 +68,13 @@
                       "↑ Starting ConnectionWatcher"))))
 
 (s/defn ->ConnectionWatcher :- ConnectionWatcher
-  [channel->IMAPCredential :- {Word IMAPCredential}
-   connection-atom         :- Atom
-   poll-ms                 :- Int
-   cmd-chan                :- ReadPort
-   log-chan                :- WritePort]
+  [mbchan->IMAPCredential :- {Word IMAPCredential}
+   connection-atom        :- Atom
+   poll-ms                :- Int
+   cmd-chan               :- ReadPort
+   log-chan               :- WritePort]
   (strict-map->ConnectionWatcher
-    {:channel->IMAPCredential channel->IMAPCredential
+    {:mbchan->IMAPCredential mbchan->IMAPCredential
      :connection-atom connection-atom
      :poll-ms (AtomicLong. poll-ms)
      :cmd-chan cmd-chan

@@ -48,9 +48,9 @@
                             "sync" "All"
                             "create" "Both"
                             "expunge" "Both"}}))
-    (is (= (:channels mbsyncrc)
+    (is (= (:mbchans mbsyncrc)
            #{"FOO-chan" "BAR-chan" "FOO-BAR-chan" "FOO-ROOT-chan"}))
-    (is (= (:channel->IMAPCredential mbsyncrc)
+    (is (= (:mbchan->IMAPCredential mbsyncrc)
            {"FOO-chan" {:host "imap.example.com"
                         :user "foo@example.com"
                         :port 993
@@ -59,7 +59,7 @@
                         :user "bar@example.com"
                         :port 993
                         :pass "H'|&z]0pIcU2?T/(<!zaIq[wW\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\""}}))
-    (is (= (:channel->Maildirstore mbsyncrc)
+    (is (= (:mbchan->Maildirstore mbsyncrc)
            {"FOO-chan" {:inbox "test-resources/maildir/foo-mdir/INBOX"
                         :path "test-resources/maildir/foo-mdir/"
                         :flatten "."}

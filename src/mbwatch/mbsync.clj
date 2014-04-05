@@ -2,7 +2,7 @@
   "The MbsyncMaster component listens for :sync Commands on a channel, then
    sends mail synchronization jobs to MbsyncWorkers via buffered channels,
    spawning new workers if necessary. Each worker is responsible for syncing a
-   single mbsync channel.
+   single mbsync channel (mbchan).
 
    The workers shell out to `mbsync`, passing a parsed configuration string
    via `bash -c 'mbsync -c <(cat)'`. These child processes can be terminated
@@ -47,9 +47,9 @@
            (org.joda.time DateTime)))
 
 (s/defn ^:private spawn-sync :- Process
-  "Asynchronously launch an mbsync process to sync a single mail channel. The
-   config string is passed to mbsync via `cat` and bash's <(/dev/fd) feature
-   in order to avoid temporary files."
+  "Asynchronously launch an mbsync process to sync a single mbchan. The config
+   string is passed to mbsync via `cat` and bash's <(/dev/fd) feature in order
+   to avoid temporary files."
   [rc     :- String
    mbchan :- String
    mboxes :- [String]]
@@ -182,7 +182,7 @@
   (let [{:keys [mbsyncrc log-chan]} mbsync-master]
     (strict-map->MbsyncWorker
       {:rc (-> mbsyncrc :text)
-       :maildir (get-in mbsyncrc [:channel->Maildirstore mbchan])
+       :maildir (get-in mbsyncrc [:mbchan->Maildirstore mbchan])
        :mbchan mbchan
        :req-chan (chan CHAN-SIZE)
        :log-chan log-chan
@@ -190,16 +190,16 @@
        :exit-chan nil})))
 
 (s/defn ^:private dispatch-syncs :- {String MbsyncWorker}
-  "Dispatch sync jobs to MbsyncWorker instances. Creates a new channel worker
+  "Dispatch sync jobs to MbsyncWorker instances. Creates a new mbchan worker
    if it does not exist."
   [workers       :- {String MbsyncWorker}
    id            :- Int
    sync-req      :- {String [String]}
    mbsync-master :- MbsyncMaster]
-  (let [channels (-> mbsync-master :mbsyncrc :channels)]
+  (let [mbchans (-> mbsync-master :mbsyncrc :mbchans)]
     (reduce-kv
       (fn [ws ch bs]
-        (if (contains? channels ch)
+        (if (contains? mbchans ch)
           (let [ws (if (contains? ws ch)
                      ws
                      (->> (->MbsyncWorker ch mbsync-master)
