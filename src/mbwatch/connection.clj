@@ -2,17 +2,20 @@
   (:require [clojure.core.async :refer [<!! close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
+            [mbwatch.command]
             [mbwatch.concurrent :refer [future-catch-print sig-notify-all
                                         sig-wait thread-loop]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable NOTICE
                                      WARNING log!]]
             [mbwatch.network :refer [reachable?]]
-            [mbwatch.types :as t :refer [Word]]
-            [schema.core :as s :refer [Int maybe protocol]])
+            [mbwatch.types :as t :refer [VOID Word]]
+            [schema.core :as s :refer [Int maybe protocol]]
+            [schema.utils :refer [class-schema]])
   (:import (clojure.lang Atom IFn)
            (java.util.concurrent Future)
            (java.util.concurrent.atomic AtomicBoolean AtomicLong)
+           (mbwatch.command Command)
            (org.joda.time DateTime)))
 
 (t/defrecord ConnectionEvent
@@ -59,6 +62,9 @@
             (put! log-chan (ConnectionEvent. mbchan conn dt)))
           (put! log-chan (ConnectionEvent. mbchan nil dt)))))))
 
+(declare update-conn-and-wait!)
+(declare process-command)
+
 (t/defrecord ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
    connection-atom        :- Atom ; {mbchan Boolean}
@@ -81,19 +87,13 @@
            (future-catch-print
              (loop []
                (when (.get status)
-                 (swap! connection-atom
-                        #(update-conn-map % mbchan->IMAPCredential 2000)) ; FIXME: Move to config
-                 (let [poll (.get poll-ms)]
-                   (.set next-check (+ (System/currentTimeMillis) poll))
-                   (sig-wait status poll)
-                   (recur)))))
+                 (update-conn-and-wait! this)
+                 (recur))))
            :exit-chan
            (thread-loop []
              (when (.get status)
                (when-some [cmd (<!! cmd-chan)]
-                 (case (:opcode cmd)
-                   :check-conn (sig-notify-all status)
-                   nil)
+                 (process-command this cmd)
                  (recur))))))
 
   (stop [this]
@@ -115,6 +115,25 @@
     (->LogItem this (if exit-chan
                       "↓ Stopping ConnectionWatcher"
                       "↑ Starting ConnectionWatcher"))))
+
+(s/defn ^:private update-conn-and-wait! :- VOID
+  [connection-watcher :- (class-schema ConnectionWatcher)]
+  (let [{:keys [connection-atom
+                mbchan->IMAPCredential
+                ^AtomicLong poll-ms
+                ^AtomicLong next-check
+                status]} connection-watcher]
+    (swap! connection-atom #(update-conn-map % mbchan->IMAPCredential 2000)) ; FIXME: Move to config
+    (let [poll (.get poll-ms)]
+      (.set next-check (+ (System/currentTimeMillis) poll))
+      (sig-wait status poll))))
+
+(s/defn ^:private process-command :- VOID
+  [connection-watcher :- (class-schema ConnectionWatcher)
+   command            :- Command]
+  (case (:opcode command)
+    :check-conn (sig-notify-all (:status connection-watcher))
+    nil))
 
 (s/defn ->ConnectionWatcher :- ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
