@@ -1,6 +1,7 @@
 (ns mbwatch.command
   "Commands are broadcast to all command listeners, therefore the namespace of
-   Opcodes is global (KISS)."
+   Opcodes is global (KISS). The final consumer of the Command is responsible
+   for placing it on the log channel."
   (:require [mbwatch.logging :refer [->LogItem DEBUG Loggable]]
             [mbwatch.types :as t]
             [schema.core :as s :refer [Any defschema enum]])
