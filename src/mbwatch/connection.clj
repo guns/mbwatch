@@ -1,29 +1,38 @@
 (ns mbwatch.connection
-  (:require [clojure.core.async :refer [<!! close!]]
+  (:require [clojure.core.async :refer [<!! close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.concurrent :refer [future-catch-print sig-notify-all
                                         sig-wait thread-loop]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
-            [mbwatch.logging :refer [->LogItem DEBUG Loggable NOTICE WARNING
-                                     log!]]
+            [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable NOTICE
+                                     WARNING log!]]
             [mbwatch.network :refer [reachable?]]
             [mbwatch.types :as t :refer [Word]]
             [schema.core :as s :refer [Int maybe protocol]])
   (:import (clojure.lang Atom IFn)
            (java.util.concurrent Future)
-           (java.util.concurrent.atomic AtomicBoolean AtomicLong)))
+           (java.util.concurrent.atomic AtomicBoolean AtomicLong)
+           (org.joda.time DateTime)))
 
 (t/defrecord ^:private ConnectionEvent
-  [mbchan :- String
-   status :- Boolean]
+  [mbchan    :- String
+   status    :- (maybe Boolean)
+   timestamp :- DateTime]
 
   Loggable
 
-  (log-level [_] (if status NOTICE WARNING))
+  (log-level [_]
+    (case status
+      true  NOTICE
+      false WARNING
+      nil   INFO))
 
   (log-item [this]
-    (let [msg (str "Channel " mbchan " → " (if status "reachable" "unreachable"))]
+    (let [msg (str "Channel " mbchan (case status
+                                       true  " → reachable"
+                                       false " ✖ unreachable"
+                                       nil   " ∅ unregistered"))]
       (->LogItem this msg))))
 
 (s/defn ^:private update-conn-map :- {String Boolean}
@@ -42,10 +51,13 @@
 (s/defn ^:private log-conn-changes-fn :- IFn
   [log-chan]
   (fn [_ _ old-map new-map]
-    (doseq [[mbchan conn] new-map
-            :let [old-conn (old-map mbchan)]]
-      (when-not (= old-conn conn)
-        (log! log-chan (ConnectionEvent. mbchan conn))))))
+    ;; Statuses were swapped in atomically, so don't mislead the user
+    (let [dt (DateTime.)]
+      (doseq [mbchan (distinct (mapcat keys [old-map new-map]))]
+        (if-some [conn (new-map mbchan)]
+          (when-not (= (old-map mbchan) conn)
+            (put! log-chan (ConnectionEvent. mbchan conn dt)))
+          (put! log-chan (ConnectionEvent. mbchan nil dt)))))))
 
 (t/defrecord ^:private ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
