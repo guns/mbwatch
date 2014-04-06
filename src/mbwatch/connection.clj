@@ -12,7 +12,7 @@
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command]
             [mbwatch.concurrent :refer [future-catch-print sig-notify-all
-                                        sig-wait thread-loop]]
+                                        sig-wait-and-set-forward thread-loop]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable NOTICE
                                      WARNING log!]]
@@ -126,16 +126,12 @@
 
 (s/defn ^:private update-conn-and-wait! :- VOID
   [connection-watcher :- (class-schema ConnectionWatcher)]
-  (let [{:keys [connection-atom
-                mbchan->IMAPCredential
-                ^AtomicLong poll-ms
-                ^AtomicLong next-check
-                status]} connection-watcher]
+  (let [{:keys [connection-atom mbchan->IMAPCredential
+                next-check poll-ms status]} connection-watcher]
+    (sig-wait-and-set-forward status next-check poll-ms)
     (swap! connection-atom
            #(map-connections (keys %) mbchan->IMAPCredential 2000)) ; FIXME: Move to config
-    (let [poll (.get poll-ms)]
-      (.set next-check (+ (System/currentTimeMillis) poll))
-      (sig-wait status poll))))
+    ))
 
 (s/defn ^:private process-command :- VOID
   [connection-watcher :- (class-schema ConnectionWatcher)

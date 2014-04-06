@@ -2,7 +2,8 @@
   (:require [clojure.core.async :refer [>!! alts!! chan thread]]
             [mbwatch.types :refer [VOID]]
             [mbwatch.util :refer [catch-print]]
-            [schema.core :as s]))
+            [schema.core :as s])
+  (:import (java.util.concurrent.atomic AtomicLong)))
 
 (def ^:const CHAN-SIZE
   "TODO: Move to Config?"
@@ -50,3 +51,13 @@
 (s/defn sig-notify-all :- VOID
   [monitor :- Object]
   (locking monitor (.notifyAll monitor)))
+
+(s/defn sig-wait-and-set-forward :- VOID
+  "Wait for signals on monitor or wake up at alarm time, then reset the
+   alarm `interval` milliseconds forward. This allows a periodic timer to be
+   interrupted and reset on signal."
+  [monitor  :- Object
+   alarm    :- AtomicLong
+   interval :- AtomicLong]
+  (sig-wait monitor (- (.get alarm) (System/currentTimeMillis)))
+  (.set alarm (+ (System/currentTimeMillis) (.get interval))))

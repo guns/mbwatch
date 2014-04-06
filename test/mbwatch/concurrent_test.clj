@@ -1,9 +1,8 @@
 (ns mbwatch.concurrent-test
-  (:require [clojure.core.async :refer [<!! chan close! put! thread]]
-            [clojure.set :as set]
-            [clojure.test :refer [is]]
+  (:require [clojure.test :refer [is]]
             [mbwatch.concurrent :as c]
-            [schema.test :refer [deftest]]))
+            [schema.test :refer [deftest]])
+  (:import (java.util.concurrent.atomic AtomicLong)))
 
 (deftest test-first-alt
   (is (= :first
@@ -14,10 +13,14 @@
 (deftest test-concurrency-helpers
   (let [mon (Object.)
         p (promise)
-        f (future (c/sig-wait mon) (deliver p mon))]
+        alarm (AtomicLong.)
+        interval (AtomicLong. 5000)
+        f (future (c/sig-wait mon) (deliver p mon))
+        g (future (c/sig-wait-and-set-forward mon alarm interval))]
     (try
       (is (nil? (deref p 10 nil)))
       (c/sig-notify-all mon)
       (is (= (deref p 10 nil) mon))
+      (is (< (System/currentTimeMillis) (.get alarm)))
       (finally
-        (future-cancel f)))))
+        (mapv future-cancel [f g])))))
