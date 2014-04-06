@@ -61,14 +61,14 @@
 
 (t/defrecord ^:private ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
-   connection-atom         :- Atom ; {mbchan Boolean}
-   poll-ms                 :- AtomicLong
-   cmd-chan                :- ReadPort
-   log-chan                :- WritePort
-   next-check              :- AtomicLong
-   status                  :- AtomicBoolean
-   exit-future             :- (maybe Future)
-   exit-chan               :- (maybe (protocol ReadPort))]
+   connection-atom        :- Atom ; {mbchan Boolean}
+   poll-ms                :- AtomicLong
+   cmd-chan               :- ReadPort
+   log-chan               :- WritePort
+   next-check             :- AtomicLong
+   status                 :- AtomicBoolean
+   exit-future            :- (maybe Future)
+   exit-chan              :- (maybe (protocol ReadPort))]
 
   Lifecycle
 
@@ -118,13 +118,12 @@
 
 (s/defn ->ConnectionWatcher :- ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
-   connection-atom        :- Atom
    poll-ms                :- Int
    cmd-chan               :- ReadPort
    log-chan               :- WritePort]
   (strict-map->ConnectionWatcher
     {:mbchan->IMAPCredential mbchan->IMAPCredential
-     :connection-atom connection-atom
+     :connection-atom (atom {})
      :poll-ms (AtomicLong. poll-ms)
      :cmd-chan cmd-chan
      :log-chan log-chan

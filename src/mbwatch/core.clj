@@ -82,7 +82,6 @@
                         (:output-chan notification-service))
       notification-service
       (->ConnectionWatcher (-> config :mbsyncrc :mbchan->IMAPCredential)
-                           (atom {"self" false}) ; FIXME: Move to config
                            (* 30 1000) ; FIXME: Move to config
                            conn-chan
                            log-chan)
