@@ -1,18 +1,25 @@
 (ns mbwatch.core
   "
-     ────── Command ─────────┐
+       ──── Command ─────────┐
                              │
-                             ▼                      ─┐
-                      ┌──────────────┐               │
-                      │ MbsyncMaster │               │
-                      └──────┬───────┘               │
+                             │
+                             ▼                     ──┐
+                   ┌───────────────────┐             │
+                   │ ConnectionWatcher │             │
+                   └─────────┬─────────┘             │
                              │                       │
-                 ┌───────────┴──────────┐            ├── Loggable ──┐
+                             │                       │
+                             ▼                       │
+                      ┌──────────────┐               │
+                      │ MbsyncMaster │               ├─── Loggable ─┐
+                      └──────┬───────┘               │              │
+                             │                       │              │
+                 ┌───────────┴──────────┐            │              │
                  ▼                      ▼            │              │
           ┌──────────────┐       ┌──────────────┐    │              │
           │ MbsyncWorker │   …   │ MbsyncWorker │    │              │
           └──────────────┘       └──────────────┘    │              │
-                                                    ─┘              │
+                                                   ──┘              │
                                                                     │
                                                                     │
              ┌───────────────────────────────┐                      │
@@ -25,7 +32,7 @@
                      │ LoggingService │
                      └────────────────┘
   "
-  (:require [clojure.core.async :refer [chan mult tap]]
+  (:require [clojure.core.async :refer [chan pipe]]
             [clojure.core.async.impl.protocols :refer [ReadPort]]
             [com.stuartsierra.component :refer [Lifecycle start-system
                                                 stop-system]]
@@ -49,8 +56,8 @@
 (t/defrecord Application
   [logging-service      :- LoggingService
    notification-service :- NewMessageNotificationService
-   connection-watcher   :- ConnectionWatcher
-   mbsync-master        :- MbsyncMaster]
+   mbsync-master        :- MbsyncMaster
+   connection-watcher   :- ConnectionWatcher]
 
   Lifecycle
 
@@ -64,27 +71,27 @@
 (s/defn ->Application :- Application
   [config   :- Config
    cmd-chan :- ReadPort]
-  (let [logger (->ConsoleLogger System/out (get-default-colors) MILLIS-TIMESTAMP-FORMAT)
-        ;; Broadcast commands to all top-level channels
-        broadcast (mult cmd-chan)
-        mbsync-chan (tap broadcast (chan CHAN-SIZE))
-        conn-chan (tap broadcast (chan CHAN-SIZE))
-        log-chan (tap broadcast (chan CHAN-SIZE))
+  (let [;; Create deep pipes for Commands and Loggables
+        cmd-chan (pipe cmd-chan (chan CHAN-SIZE))
+        log-chan (chan CHAN-SIZE)
         ;; Create middleware components
         notification-service (->NewMessageNotificationService
                                (-> config :mbwatchrc :notify-command)
                                (atom {"self" #{"INBOX"}}) ; FIXME: Move to config
                                log-chan)
-        log-chan (:input-chan notification-service)]
+        log-chan (:input-chan notification-service)
+        connection-watcher (->ConnectionWatcher
+                             (-> config :mbsyncrc :mbchan->IMAPCredential)
+                             (* 30 1000) ; FIXME: Move to config
+                             cmd-chan
+                             log-chan)
+        cmd-chan (:output-chan connection-watcher)]
     (Application.
       (->LoggingService DEBUG
-                        logger
+                        (->ConsoleLogger System/out (get-default-colors) MILLIS-TIMESTAMP-FORMAT)
                         (:output-chan notification-service))
       notification-service
-      (->ConnectionWatcher (-> config :mbsyncrc :mbchan->IMAPCredential)
-                           (* 30 1000) ; FIXME: Move to config
-                           conn-chan
-                           log-chan)
       (->MbsyncMaster (:mbsyncrc config)
-                      mbsync-chan
-                      log-chan))))
+                      cmd-chan
+                      log-chan)
+      connection-watcher)))
