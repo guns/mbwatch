@@ -10,7 +10,7 @@
             [mbwatch.network :refer [reachable?]]
             [mbwatch.types :as t :refer [Word]]
             [schema.core :as s :refer [Int maybe protocol]])
-  (:import (clojure.lang Atom)
+  (:import (clojure.lang Atom IFn)
            (java.util.concurrent Future)
            (java.util.concurrent.atomic AtomicBoolean AtomicLong)))
 
@@ -26,7 +26,7 @@
     (let [msg (str "Channel " mbchan " → " (if status "reachable" "unreachable"))]
       (->LogItem this msg))))
 
-(s/defn update-connections :- {String Boolean}
+(s/defn ^:private update-conn-map :- {String Boolean}
   "Update connection-map by checking connections in parallel. mbchans not
    present in mbchan->IMAPCredential are removed."
   [connection-map         :- {String Boolean}
@@ -38,6 +38,14 @@
                  [mbchan (reachable? (:host imap) (:port imap) timeout)])))
        (remove nil?)
        (into {})))
+
+(s/defn ^:private log-conn-changes-fn :- IFn
+  [log-chan]
+  (fn [_ _ old-map new-map]
+    (doseq [[mbchan conn] new-map
+            :let [old-conn (old-map mbchan)]]
+      (when-not (= old-conn conn)
+        (log! log-chan (ConnectionEvent. mbchan conn))))))
 
 (t/defrecord ^:private ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
@@ -55,22 +63,18 @@
   (start [this]
     (log! log-chan this)
     (add-watch connection-atom ::log-conn-changes
-               (fn [_ _ o n]
-                 (doseq [[mbchan conn] n
-                         :let [oconn (o mbchan)]]
-                   (when-not (= oconn conn)
-                     (log! log-chan (ConnectionEvent. mbchan conn))))))
+               (log-conn-changes-fn log-chan))
     (assoc this
            :exit-future
            (future-catch-print
-             (let [update #(update-connections % mbchan->IMAPCredential 2000)] ; FIXME: Move to config
-               (loop []
-                 (when (.get status)
-                   (swap! connection-atom update)
-                   (let [poll (.get poll-ms)]
-                     (.set next-check (+ (System/currentTimeMillis) poll))
-                     (sig-wait status poll)
-                     (recur))))))
+             (loop []
+               (when (.get status)
+                 (swap! connection-atom
+                        #(update-conn-map % mbchan->IMAPCredential 2000)) ; FIXME: Move to config
+                 (let [poll (.get poll-ms)]
+                   (.set next-check (+ (System/currentTimeMillis) poll))
+                   (sig-wait status poll)
+                   (recur)))))
            :exit-chan
            (thread-loop []
              (when (.get status)
