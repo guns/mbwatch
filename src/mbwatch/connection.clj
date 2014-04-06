@@ -1,4 +1,12 @@
 (ns mbwatch.connection
+  "
+                        ┌───────────────────┐
+        ─── Command ──▶ │ ConnectionWatcher ├─── Command ──▶
+                        └─────────┬─────────┘
+                                  │
+                                  │
+                                  └─── Loggable ──▶
+  "
   (:require [clojure.core.async :refer [<!! close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]

@@ -4,7 +4,7 @@
    synchronized.
 
                       ┌───────────────────────────────┐
-     ─── Loggable ──▶ │ NewMessageNotificationService │ ─── Loggable ──▶
+     ─── Loggable ──▶ │ NewMessageNotificationService ├──── Loggable ──▶
                       └───────────────────────────────┘
   "
   (:require [clojure.core.async :refer [<!! chan close! put!]]
