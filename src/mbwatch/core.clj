@@ -46,7 +46,7 @@
            (mbwatch.mbsync MbsyncMaster)
            (mbwatch.notification NewMessageNotificationService)))
 
-(t/defrecord ^:private Application
+(t/defrecord Application
   [logging-service      :- LoggingService
    notification-service :- NewMessageNotificationService
    connection-watcher   :- ConnectionWatcher

@@ -12,7 +12,7 @@
   {:notify-command "notify-send \"$(cat)\""
    :imap-socket-timeout "10000"})
 
-(t/defrecord ^:private Mbwatchrc
+(t/defrecord Mbwatchrc
   [notify-command      :- String
    imap-socket-timeout :- Int])
 

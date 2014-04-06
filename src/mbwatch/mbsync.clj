@@ -59,7 +59,7 @@
 
 (declare sync-boxes!)
 
-(t/defrecord ^:private MbsyncWorker
+(t/defrecord MbsyncWorker
   [rc        :- String
    maildir   :- Maildirstore
    mbchan    :- String
@@ -130,7 +130,7 @@
 
 (declare process-command)
 
-(t/defrecord ^:private MbsyncMaster
+(t/defrecord MbsyncMaster
   [mbsyncrc  :- Mbsyncrc
    cmd-chan  :- ReadPort
    log-chan  :- WritePort

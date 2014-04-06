@@ -56,7 +56,7 @@
    :path    FilteredLine
    :flatten (maybe FilteredLine)})
 
-(t/defrecord ^:private Mbsyncrc
+(t/defrecord Mbsyncrc
   [text                   :- String
    sections               :- Sections
    mbchans                :- #{Word}

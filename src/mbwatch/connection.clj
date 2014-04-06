@@ -15,7 +15,7 @@
            (java.util.concurrent.atomic AtomicBoolean AtomicLong)
            (org.joda.time DateTime)))
 
-(t/defrecord ^:private ConnectionEvent
+(t/defrecord ConnectionEvent
   [mbchan    :- String
    status    :- (maybe Boolean)
    timestamp :- DateTime]
@@ -59,7 +59,7 @@
             (put! log-chan (ConnectionEvent. mbchan conn dt)))
           (put! log-chan (ConnectionEvent. mbchan nil dt)))))))
 
-(t/defrecord ^:private ConnectionWatcher
+(t/defrecord ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
    connection-atom        :- Atom ; {mbchan Boolean}
    poll-ms                :- AtomicLong

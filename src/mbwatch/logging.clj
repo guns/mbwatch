@@ -35,7 +35,7 @@
   (log-level [this] "Returns this object's logging level")
   (log-item [this] "Returns a new LogItem object"))
 
-(t/defrecord ^:private LogItem
+(t/defrecord LogItem
   [level     :- Int
    timestamp :- DateTime
    message   :- String]
@@ -76,7 +76,7 @@
 (defprotocol IItemLogger
   (log [this ^LogItem log-item]))
 
-(t/defrecord ^:private LoggingService
+(t/defrecord LoggingService
   [level     :- Int
    logger    :- IItemLogger
    log-chan  :- ReadPort

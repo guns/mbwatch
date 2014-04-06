@@ -35,7 +35,7 @@
   "TODO: Make configurable?"
   8)
 
-(t/defrecord ^:private NewMessageNotification
+(t/defrecord NewMessageNotification
   [mbchan->mbox->messages :- {String {String [MimeMessage]}}
    timestamp              :- DateTime]
 
@@ -130,7 +130,7 @@
     "Returns a new version of the sync-requests map, adding or removing self
      from it as necessary."))
 
-(t/defrecord ^:private NewMessageNotificationService
+(t/defrecord NewMessageNotificationService
   [notify-command :- String
    notify-map-ref :- IDeref
    input-chan     :- ReadPort

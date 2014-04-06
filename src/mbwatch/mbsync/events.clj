@@ -15,7 +15,7 @@
     (str mbchan \: (string/join \, mboxes))
     (str mbchan)))
 
-(t/defrecord MbsyncEventStart
+(t/defrecord ^:public MbsyncEventStart
   [level  :- Int
    id     :- Int
    mbchan :- String
@@ -30,7 +30,7 @@
     (let [msg (format "Starting `mbsync %s`" (join-mbargs mbchan mboxes))]
       (LogItem. level start msg))))
 
-(t/defrecord MbsyncEventStop
+(t/defrecord ^:public MbsyncEventStop
   [level   :- Int
    id      :- Int
    mbchan  :- String
@@ -63,7 +63,7 @@
                   (str buf)))]
       (LogItem. level stop msg))))
 
-(t/defrecord MbsyncUnknownChannelError
+(t/defrecord ^:public MbsyncUnknownChannelError
   [id        :- Int
    mbchan    :- String
    timestamp :- DateTime]

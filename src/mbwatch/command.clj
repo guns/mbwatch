@@ -19,7 +19,7 @@
         :check-conn ; Re-check connections
         ))
 
-(t/defrecord ^:private Command
+(t/defrecord Command
   [opcode    :- Opcode
    payload   :- Any
    id        :- Long
