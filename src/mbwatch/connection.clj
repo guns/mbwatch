@@ -1,5 +1,18 @@
 (ns mbwatch.connection
-  "
+  "A ConnectionWatcher is a Command middleware that partitions, pools, and
+   releases :sync commands based on the network availability of IMAP servers.
+
+   Each time a :sync command is received, a TCP connection is attempted to
+   each mbchan's IMAP server. If all mbchans are available, the command is
+   conveyed unaltered.
+
+   If some of the mbchans are unavailable, the payload is partitioned by
+   server availability, and a new :sync command with only the reachable
+   servers is created and conveyed (if any).
+
+   The unreachable :sync entries are merged into a pool of pending syncs which
+   are released as each respective server becomes available.
+
                         ┌───────────────────┐
         ─── Command ──▶ │ ConnectionWatcher ├─── Command ──▶
                         └─────────┬─────────┘
@@ -7,18 +20,21 @@
                                   │
                                   └─── Loggable ──▶
   "
-  (:require [clojure.core.async :refer [<!! close! put!]]
+  (:require [clojure.core.async :refer [<!! >!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
+            [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
-            [mbwatch.command]
-            [mbwatch.concurrent :refer [future-catch-print sig-notify-all
+            [mbwatch.command :refer [->Command]]
+            [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
+                                        sig-notify-all
                                         sig-wait-and-set-forward thread-loop]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable NOTICE
                                      WARNING log!]]
+            [mbwatch.mbsync.events :refer [join-mbargs]]
             [mbwatch.network :refer [reachable?]]
-            [mbwatch.types :as t :refer [VOID Word]]
-            [schema.core :as s :refer [Int maybe protocol]]
+            [mbwatch.types :as t :refer [Word]]
+            [schema.core :as s :refer [Int defschema maybe protocol]]
             [schema.utils :refer [class-schema]])
   (:import (clojure.lang Atom IFn)
            (java.util.concurrent Future)
@@ -46,38 +62,84 @@
                                        nil   " ∅ unregistered"))]
       (->LogItem this msg))))
 
-(s/defn ^:private map-connections :- {String Boolean}
-  "Return a connection map by checking connections in parallel. mbchans not
-   present in mbchan->IMAPCredential are removed."
-  [mbchans                :- [String]
+(t/defrecord ReleasePendingSyncsEvent
+  [mbchan->mboxes :- {String [String]}
+   timestamp      :- DateTime]
+
+  Loggable
+
+  (log-level [_] INFO)
+
+  (log-item [this]
+    (let [msg (->> mbchan->mboxes
+                   (mapv (partial apply join-mbargs))
+                   (string/join \space)
+                   (str "Releasing pending syncs: "))]
+      (->LogItem this msg))))
+
+(defschema ^:private ConnectionMap
+  {String {:status Boolean
+           :pending-syncs (maybe #{String})}})
+
+(s/defn ^:private update-connections :- ConnectionMap
+  "Update the :status entries connection-map by checking connections in
+   parallel. When an mbchan goes from true -> false, its :pending-syncs value
+   is reset to nil.
+
+   mbchans not present in mbchan->IMAPCredential are ignored."
+  [connection-map         :- ConnectionMap
    mbchan->IMAPCredential :- {Word IMAPCredential}
    timeout                :- Int]
-  (->> mbchans
-       (pmap (fn [mbchan]
-               (when-let [imap (mbchan->IMAPCredential mbchan)]
-                 [mbchan (reachable? (:host imap) (:port imap) timeout)])))
-       (remove nil?)
+  (->> connection-map
+       (pmap (fn [[mbchan m]]
+               (if-let [imap (mbchan->IMAPCredential mbchan)]
+                 [mbchan (assoc m :status (reachable? (:host imap) (:port imap) timeout))]
+                 [mbchan m])))
        (into {})))
 
-(s/defn ^:private log-conn-changes-fn :- IFn
-  [log-chan]
+(s/defn ^:private watch-conn-changes-fn :- IFn
+  "Log changes in connection statuses and release pending syncs. Pending syncs
+   are not flushed from the reference when released; they are expected to be
+   reset to nil when an mbchan status lapses back to false."
+  [log-chan    :- WritePort
+   output-chan :- WritePort]
   (fn [_ _ old-map new-map]
-    ;; Statuses were swapped in atomically, so don't mislead the user
+    ;; Statuses are swapped in atomically, so don't mislead the user
     (let [dt (DateTime.)]
-      (doseq [mbchan (distinct (mapcat keys [old-map new-map]))]
-        (if-some [conn (new-map mbchan)]
-          (when-not (= (old-map mbchan) conn)
-            (put! log-chan (ConnectionEvent. mbchan conn dt)))
-          (put! log-chan (ConnectionEvent. mbchan nil dt)))))))
+      (-> (reduce
+            (fn [m mbchan]
+              (let [nconn (new-map mbchan)]
+                (cond
+                  ;; mbchan has been dissociated
+                  (nil? nconn) (do (put! log-chan (ConnectionEvent. mbchan nil dt)) m)
+                  ;; status has not changed
+                  (= (:status (old-map mbchan)) (:status nconn)) m
+                  :else
+                  (do
+                    ;; log status change
+                    (put! log-chan (ConnectionEvent. mbchan (:status nconn) dt))
+                    ;; status changed from nil|false -> true; assoc pending syncs
+                    (if (and (:status nconn) (:pending-syncs nconn))
+                      (assoc m mbchan (vec (:pending-syncs nconn)))
+                      m)))))
+            {} (distinct (mapcat keys [old-map new-map])))
+          (as-> ps
+            (when (seq ps)
+              (let [ev (ReleasePendingSyncsEvent. ps (DateTime.))
+                    cmd (->Command :sync ps)]
+                (put! log-chan ev)
+                (put! log-chan cmd)
+                ;; Commands must pass through
+                (>!! output-chan cmd))))))))
 
-(declare update-conn-and-wait!)
 (declare process-command)
 
 (t/defrecord ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
-   connection-atom        :- Atom ; {mbchan Boolean}
+   connections            :- Atom ; ConnectionMap
    poll-ms                :- AtomicLong
-   cmd-chan               :- ReadPort
+   input-chan             :- ReadPort
+   output-chan            :- WritePort
    log-chan               :- WritePort
    next-check             :- AtomicLong
    status                 :- AtomicBoolean
@@ -88,20 +150,23 @@
 
   (start [this]
     (log! log-chan this)
-    (add-watch connection-atom ::log-conn-changes
-               (log-conn-changes-fn log-chan))
+    (add-watch connections ::watch-conn-changes
+               (watch-conn-changes-fn log-chan output-chan))
     (assoc this
            :exit-future
            (future-catch-print
              (loop []
                (when (.get status)
-                 (update-conn-and-wait! this)
+                 (sig-wait-and-set-forward status next-check poll-ms)
+                 (swap! connections #(update-connections % mbchan->IMAPCredential 2000)) ; FIXME: Move to config
                  (recur))))
            :exit-chan
            (thread-loop []
              (when (.get status)
-               (when-some [cmd (<!! cmd-chan)]
-                 (process-command this cmd)
+               (when-some [cmd (<!! input-chan)]
+                 (when-let [cmd' (process-command this cmd)]
+                   ;; Commands must pass through
+                   (>!! output-chan cmd'))
                  (recur))))))
 
   (stop [this]
@@ -109,8 +174,8 @@
     (.set status false)
     (log! log-chan this)
     (sig-notify-all status)
-    (close! cmd-chan)
-    (remove-watch connection-atom ::log-conn-changes)
+    (close! input-chan)
+    (remove-watch connections ::watch-conn-changes)
     @exit-future
     (<!! exit-chan)
     (dissoc this :exit-chan :exit-future))
@@ -124,32 +189,33 @@
                       "↓ Stopping ConnectionWatcher"
                       "↑ Starting ConnectionWatcher"))))
 
-(s/defn ^:private update-conn-and-wait! :- VOID
-  [connection-watcher :- (class-schema ConnectionWatcher)]
-  (let [{:keys [connection-atom mbchan->IMAPCredential
-                next-check poll-ms status]} connection-watcher]
-    (sig-wait-and-set-forward status next-check poll-ms)
-    (swap! connection-atom
-           #(map-connections (keys %) mbchan->IMAPCredential 2000)) ; FIXME: Move to config
-    ))
+(s/defn ^:private partition-syncs :- (maybe Command)
+  [connection-watcher :- (class-schema ConnectionWatcher)
+   mbchan->mboxes :- {String [String]}]
+  ;; XXX
+  )
 
-(s/defn ^:private process-command :- VOID
+(s/defn ^:private process-command :- (maybe Command)
   [connection-watcher :- (class-schema ConnectionWatcher)
    command            :- Command]
   (case (:opcode command)
-    :check-conn (sig-notify-all (:status connection-watcher))
-    nil))
+    :check-conn (do (sig-notify-all (:status connection-watcher))
+                    (put! (:log-chan connection-watcher) command)
+                    nil)
+    :sync (partition-syncs connection-watcher (:payload command))
+    command))
 
 (s/defn ->ConnectionWatcher :- ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
    poll-ms                :- Int
-   cmd-chan               :- ReadPort
+   input-chan             :- ReadPort
    log-chan               :- WritePort]
   (strict-map->ConnectionWatcher
     {:mbchan->IMAPCredential mbchan->IMAPCredential
-     :connection-atom (atom {})
+     :connections (atom {})
      :poll-ms (AtomicLong. poll-ms)
-     :cmd-chan cmd-chan
+     :input-chan input-chan
+     :output-chan (chan CHAN-SIZE)
      :log-chan log-chan
      :next-check (AtomicLong. 0)
      :status (AtomicBoolean. true)
