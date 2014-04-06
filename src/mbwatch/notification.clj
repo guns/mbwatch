@@ -9,7 +9,7 @@
   "
   (:require [clojure.core.async :refer [<!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
-            [clojure.set :as set]
+            [clojure.set :refer [intersection]]
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command]
@@ -77,7 +77,7 @@
       (let [nboxes (notify-map mbchan)
             bs (if (empty? mboxes)
                  nboxes ; [] means full sync
-                 (set/intersection (set mboxes) nboxes))
+                 (intersection (set mboxes) nboxes))
             timestamp (to-ms start)]
         (reduce
           (fn [m b]
