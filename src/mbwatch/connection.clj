@@ -46,13 +46,13 @@
                                        nil   " ∅ unregistered"))]
       (->LogItem this msg))))
 
-(s/defn ^:private update-conn-map :- {String Boolean}
-  "Update connection-map by checking connections in parallel. mbchans not
+(s/defn ^:private map-connections :- {String Boolean}
+  "Return a connection map by checking connections in parallel. mbchans not
    present in mbchan->IMAPCredential are removed."
-  [connection-map         :- {String Boolean}
+  [mbchans                :- [String]
    mbchan->IMAPCredential :- {Word IMAPCredential}
    timeout                :- Int]
-  (->> (keys connection-map)
+  (->> mbchans
        (pmap (fn [mbchan]
                (when-let [imap (mbchan->IMAPCredential mbchan)]
                  [mbchan (reachable? (:host imap) (:port imap) timeout)])))
@@ -131,7 +131,8 @@
                 ^AtomicLong poll-ms
                 ^AtomicLong next-check
                 status]} connection-watcher]
-    (swap! connection-atom #(update-conn-map % mbchan->IMAPCredential 2000)) ; FIXME: Move to config
+    (swap! connection-atom
+           #(map-connections (keys %) mbchan->IMAPCredential 2000)) ; FIXME: Move to config
     (let [poll (.get poll-ms)]
       (.set next-check (+ (System/currentTimeMillis) poll))
       (sig-wait status poll))))
