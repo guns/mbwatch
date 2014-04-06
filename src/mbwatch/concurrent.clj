@@ -1,5 +1,6 @@
 (ns mbwatch.concurrent
   (:require [clojure.core.async :refer [>!! alts!! chan thread]]
+            [mbwatch.types :refer [VOID]]
             [mbwatch.util :refer [catch-print]]
             [schema.core :as s]))
 
@@ -33,23 +34,19 @@
                (range n))
        (first (~alts!! ~chans :priority true)))))
 
-(s/defn sig-wait :- Object
+(s/defn sig-wait :- VOID
   ([monitor :- Object]
-   (locking monitor (.wait monitor))
-   monitor)
+   (locking monitor (.wait monitor)))
   ([monitor :- Object
     timeout :- long]
    (when (pos? timeout)
      (locking monitor
-       (.wait monitor timeout)))
-   monitor))
+       (.wait monitor timeout)))))
 
-(s/defn sig-notify :- Object
+(s/defn sig-notify :- VOID
   [monitor :- Object]
-  (locking monitor (.notify monitor))
-  monitor)
+  (locking monitor (.notify monitor)))
 
-(s/defn sig-notify-all :- Object
+(s/defn sig-notify-all :- VOID
   [monitor :- Object]
-  (locking monitor (.notifyAll monitor))
-  monitor)
+  (locking monitor (.notifyAll monitor)))

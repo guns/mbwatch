@@ -14,7 +14,7 @@
 (deftest test-concurrency-helpers
   (let [mon (Object.)
         p (promise)
-        f (future (->> mon c/sig-wait (deliver p)))]
+        f (future (c/sig-wait mon) (deliver p mon))]
     (try
       (is (nil? (deref p 10 nil)))
       (c/sig-notify-all mon)
