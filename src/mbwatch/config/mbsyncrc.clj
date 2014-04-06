@@ -16,6 +16,9 @@
 (def ^:private ^:const DEFAULT-MBSYNC-INBOX
   (str (System/getProperty "user.home") \/ "Maildir"))
 
+(def ^:private ^:const imap-port 143)
+(def ^:private ^:const imaps-port 993)
+
 (defschema ^:private Entry
   (pair LowerCaseWord "name"
         FilteredLine "value"))
@@ -116,7 +119,7 @@
           (imap "pass") (assoc :pass (v "pass"))
           (imap "passcmd") (assoc :pass (chomp (:out (sh "sh" "-c" (v "passcmd"))))))
         (update-in [:user] #(or % (System/getProperty "user.name")))
-        (update-in [:port] #(or % (if (= (imap "useimaps") "no") 143 993))))))
+        (update-in [:port] #(or % (if (= (imap "useimaps") "no") imap-port imaps-port))))))
 
 (s/defn ^:private map-credentials :- {Word IMAPCredential}
   "Extract all credentials from IMAPStore sections.
