@@ -164,7 +164,7 @@
            (thread-loop []
              (when (.get status)
                (when-some [cmd (<!! input-chan)]
-                 (when-let [cmd' (process-command this cmd)]
+                 (when-some [cmd' (process-command this cmd)]
                    ;; Commands must pass through
                    (>!! output-chan cmd'))
                  (recur))))))
@@ -202,6 +202,7 @@
     :check-conn (do (sig-notify-all (:status connection-watcher))
                     (put! (:log-chan connection-watcher) command)
                     nil)
+    ;; This is not the final consumer of :sync, so don't log it
     :sync (partition-syncs connection-watcher (:payload command))
     command))
 

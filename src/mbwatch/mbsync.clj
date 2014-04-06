@@ -219,12 +219,14 @@
    cmd           :- (maybe Command)]
   (if cmd
     (case (:opcode cmd)
-      :sync (dispatch-syncs workers
-                            (:id cmd)
-                            (:payload cmd)
-                            mbsync-master)
+      :sync (do (put! (:log-chan mbsync-master) cmd)
+                (dispatch-syncs workers
+                                (:id cmd)
+                                (:payload cmd)
+                                mbsync-master))
       :term (do (doseq [w (vals workers)]
                   (sig-notify-all (:status w)))
+                (put! (:log-chan mbsync-master) cmd)
                 workers)
       workers)
     (dorun (pmap comp/stop (vals workers)))))
