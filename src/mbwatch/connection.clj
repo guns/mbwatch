@@ -36,8 +36,7 @@
             [mbwatch.mbsync.events :refer [join-mbargs]]
             [mbwatch.network :refer [reachable?]]
             [mbwatch.types :as t :refer [StringList Word]]
-            [schema.core :as s :refer [Int defschema enum maybe pair]]
-            [schema.utils :refer [class-schema]])
+            [schema.core :as s :refer [Int defschema enum maybe pair]])
   (:import (clojure.lang Atom IFn)
            (java.util.concurrent.atomic AtomicBoolean AtomicLong)
            (mbwatch.command Command)
@@ -236,7 +235,7 @@
 
    This function always updates the connection map with new connection
    statuses."
-  [connection-watcher :- (class-schema ConnectionWatcher)
+  [connection-watcher :- ConnectionWatcher
    sync-command       :- Command]
   (let [{:keys [mbchan->IMAPCredential]} connection-watcher
         sync-req (:payload sync-command)
@@ -265,7 +264,7 @@
       :else (assoc sync-command :payload sync-req'))))
 
 (s/defn ^:private process-command :- (maybe Command)
-  [connection-watcher :- (class-schema ConnectionWatcher)
+  [connection-watcher :- ConnectionWatcher
    command            :- Command]
   (case (:opcode command)
     :check-conn (do (sig-notify-all (:status connection-watcher))
