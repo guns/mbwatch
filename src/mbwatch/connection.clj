@@ -178,10 +178,9 @@
                     ;; Commands must pass through
                     (>!! cmd-chan-out cmd'))
                   (recur))))]
-      (assoc this :exit-fn (fn []
-                             (remove-watch connections ::watch-conn-changes)
-                             @f
-                             (<!! c)))))
+      (assoc this :exit-fn #(do (remove-watch connections ::watch-conn-changes)
+                                @f
+                                (<!! c)))))
 
   (stop [this]
     ;; Exit ASAP
