@@ -2,7 +2,7 @@
   (:require [clojure.string :as string]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [->LogItem ERR Loggable WARNING]]
-            [mbwatch.types :as t]
+            [mbwatch.types :as t :refer [StringList]]
             [mbwatch.util :refer [human-duration]]
             [schema.core :as s :refer [Int maybe]])
   (:import (mbwatch.logging LogItem)
