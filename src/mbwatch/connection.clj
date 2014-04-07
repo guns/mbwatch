@@ -22,6 +22,7 @@
   "
   (:require [clojure.core.async :refer [<!! >!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
+            [clojure.set :refer [intersection]]
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command :refer [->Command]]
@@ -34,7 +35,7 @@
             [mbwatch.mbsync.events :refer [join-mbargs]]
             [mbwatch.network :refer [reachable?]]
             [mbwatch.types :as t :refer [Word]]
-            [schema.core :as s :refer [Int defschema maybe protocol]]
+            [schema.core :as s :refer [Int defschema eq maybe protocol]]
             [schema.utils :refer [class-schema]])
   (:import (clojure.lang Atom IFn)
            (java.util.concurrent Future)
@@ -92,9 +93,15 @@
    timeout                :- Int]
   (->> connection-map
        (pmap (fn [[mbchan m]]
-               (if-let [imap (mbchan->IMAPCredential mbchan)]
-                 [mbchan (assoc m :status (reachable? (:host imap) (:port imap) timeout))]
-                 [mbchan m])))
+               (let [imap (mbchan->IMAPCredential mbchan)]
+                 (if (nil? imap)
+                   ;; Upstream is not an IMAP server
+                   [mbchan m]
+                   (let [status (reachable? (:host imap) (:port imap) timeout)]
+                     ;; true -> false
+                     (if (and (true? (:status m)) (false? status))
+                       [mbchan (assoc m :status status :pending-syncs nil)]
+                       [mbchan (assoc m :status status)]))))))
        (into {})))
 
 (s/defn ^:private watch-conn-changes-fn :- IFn
@@ -119,18 +126,15 @@
                     ;; log status change
                     (put! log-chan (ConnectionEvent. mbchan (:status nconn) dt))
                     ;; status changed from nil|false -> true; assoc pending syncs
-                    (if (and (:status nconn) (:pending-syncs nconn))
+                    (if (and (true? (:status nconn)) (:pending-syncs nconn))
                       (assoc m mbchan (vec (:pending-syncs nconn)))
                       m)))))
             {} (distinct (mapcat keys [old-map new-map])))
           (as-> ps
             (when (seq ps)
-              (let [ev (ReleasePendingSyncsEvent. ps (DateTime.))
-                    cmd (->Command :sync ps)]
-                (put! log-chan ev)
-                (put! log-chan cmd)
-                ;; Commands must pass through
-                (>!! output-chan cmd))))))))
+              (put! log-chan (ReleasePendingSyncsEvent. ps (DateTime.)))
+              ;; Commands must pass through
+              (>!! output-chan (->Command :sync ps))))))))
 
 (declare process-command)
 
@@ -189,11 +193,57 @@
                       "↓ Stopping ConnectionWatcher"
                       "↑ Starting ConnectionWatcher"))))
 
+(s/defn ^:private merge-pending-syncs :- ConnectionMap
+  "Add sync-req to conn-map as :pending-syncs entries.
+
+   An mbox argument of [] resets the :pending-sync value to [] with
+   the :all-mboxes? metadata flag set. Correspondingly, additions to a
+   :pending-sync value that has :all-mboxes? is ignored since a full mbchan
+   sync will be issued once the server is reachable."
+  [conn-map :- ConnectionMap
+   sync-req :- {String [String]}]
+  (reduce-kv
+    (fn [m mbchan mboxes]
+      (update-in m [mbchan :pending-syncs]
+                 #(cond
+                    (:all-mboxes? (meta %)) %
+                    (seq mboxes) (into (or % #{}) mboxes)
+                    :else (with-meta #{} {:all-mboxes? true}))))
+    conn-map sync-req))
+
 (s/defn ^:private partition-syncs :- (maybe Command)
+  "Take a :sync Command and check its mbchan IMAP servers. If all servers are
+   reachable, then return the Command as is.
+
+   If all servers are _unreachable_, the sync requests are merged into the
+   :pending-syncs entries of the connections map and nil is returned.
+
+   If only some servers are unreachable, a new :sync Command with only
+   available servers is returned, while the rest are merged as above.
+
+   This function always updates the connection map with new connection
+   statuses."
   [connection-watcher :- (class-schema ConnectionWatcher)
-   mbchan->mboxes :- {String [String]}]
-  ;; XXX
-  )
+   command            :- Command]
+  (let [{:keys [mbchan->IMAPCredential]} connection-watcher
+        sync-req (:payload command)
+        mbchans-with-imap (intersection (set (keys sync-req))
+                                        (set (keys mbchan->IMAPCredential)))
+        command-map (zipmap mbchans-with-imap
+                            (repeat {:status false :pending-syncs nil}))
+        ;; Most of the work needs to be done in the transaction; note that
+        ;; while the TCP scans are IO, they do not change any program state.
+        conn (swap! (:connections connection-watcher)
+                    #(let [conn (-> (merge command-map %) ; Detect new mbchans
+                                    (update-connections mbchan->IMAPCredential 2000)) ; FIXME: Config
+                           pending (filter (comp false? :status conn) mbchans-with-imap)]
+                       (merge-pending-syncs conn (select-keys sync-req pending))))
+        {pending true
+         ok false} (group-by (comp false? :status conn) (keys sync-req))]
+    (cond
+      (empty? pending) command
+      (empty? ok) nil
+      :else (assoc command :payload (select-keys sync-req ok)))))
 
 (s/defn ^:private process-command :- (maybe Command)
   [connection-watcher :- (class-schema ConnectionWatcher)
@@ -203,7 +253,7 @@
                     (put! (:log-chan connection-watcher) command)
                     nil)
     ;; This is not the final consumer of :sync, so don't log it
-    :sync (partition-syncs connection-watcher (:payload command))
+    :sync (partition-syncs connection-watcher command)
     command))
 
 (s/defn ->ConnectionWatcher :- ConnectionWatcher
