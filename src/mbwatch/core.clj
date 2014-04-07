@@ -82,7 +82,7 @@
         log-chan (:input-chan notification-service)
         connection-watcher (->ConnectionWatcher
                              (-> config :mbsyncrc :mbchan->IMAPCredential)
-                             (* 30 1000) ; FIXME: Move to config
+                             (* 60 1000) ; FIXME: Move to config
                              cmd-chan
                              log-chan)
         cmd-chan (:output-chan connection-watcher)]

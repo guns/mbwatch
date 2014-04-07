@@ -36,7 +36,7 @@
                                            strict-map->MbsyncEventStart
                                            strict-map->MbsyncEventStop]]
             [mbwatch.process :as process]
-            [mbwatch.types :as t :refer [VOID]]
+            [mbwatch.types :as t :refer [StringList VOID]]
             [mbwatch.util :refer [shell-escape]]
             [schema.core :as s :refer [Int maybe protocol]])
   (:import (java.io StringWriter)

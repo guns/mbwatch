@@ -262,7 +262,7 @@
         sync-req' (-> conn meta ::sync-req)]
     (cond
       (empty? sync-req') nil
-      (= sync-req sync-req') sync-req
+      (= sync-req sync-req') sync-command
       :else (assoc sync-command :payload sync-req'))))
 
 (s/defn ^:private process-command :- (maybe Command)
