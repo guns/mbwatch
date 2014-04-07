@@ -206,9 +206,9 @@
   Command
 
   (process-event [this sync-requests _]
-    (if (= (:opcode this) :sync)
-      (let [{:keys [id payload]} this]
-        (assoc sync-requests id {:countdown (count payload) :events []}))
+    (case (:opcode this)
+      :sync (let [{:keys [id payload]} this]
+              (assoc sync-requests id {:countdown (count payload) :events []}))
       sync-requests))
 
   MbsyncEventStop
