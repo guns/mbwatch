@@ -12,6 +12,7 @@
                  [com.stuartsierra/component "0.2.1"]
                  [joda-time/joda-time "2.3"]
                  [clojure-ini "0.0.2"]]
-  :profiles {:dev {:jvm-opts ["-Djavax.net.ssl.trustStore=test-resources/gmail.ks"]
+  :profiles {:dev {:jvm-opts ["-Djavax.net.ssl.trustStore=test-resources/gmail.ks"
+                              "-XX:+CMSClassUnloadingEnabled"]
                    :source-paths ["dev"]
                    :resource-paths ["test-resources"]}})
