@@ -14,6 +14,14 @@
   [& body]
   `(future (catch-print ~@body)))
 
+(defmacro future-loop
+  {:requires [#'catch-print]}
+  [bindings & body]
+  `(future
+     (catch-print
+       (loop ~bindings
+         ~@body))))
+
 (defmacro thread-loop
   {:requires [#'thread #'catch-print]}
   [bindings & body]

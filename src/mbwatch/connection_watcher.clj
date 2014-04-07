@@ -27,8 +27,7 @@
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command :refer [->Command]]
-            [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
-                                        sig-notify-all
+            [mbwatch.concurrent :refer [CHAN-SIZE future-loop sig-notify-all
                                         sig-wait-and-set-forward thread-loop]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable NOTICE
@@ -149,12 +148,12 @@
 
 (t/defrecord ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
-   connections            :- Atom ; ConnectionMap
-   poll-ms                :- AtomicLong
    cmd-chan-in            :- ReadPort
    cmd-chan-out           :- WritePort
    log-chan               :- WritePort
-   next-check             :- AtomicLong
+   connections            :- Atom ; ConnectionMap
+   period                 :- AtomicLong
+   alarm                  :- AtomicLong
    status                 :- AtomicBoolean
    exit-fn                :- (maybe IFn)]
 
@@ -164,13 +163,12 @@
     (log! log-chan this)
     (add-watch connections ::watch-conn-changes
                (watch-conn-changes-fn log-chan cmd-chan-out))
-    (let [f (future-catch-print
-              (loop []
+    (let [f (future-loop []
+              (when (.get status)
+                (sig-wait-and-set-forward status alarm period)
                 (when (.get status)
-                  (sig-wait-and-set-forward status next-check poll-ms)
-                  (when (.get status)
-                    (swap! connections #(update-connections % mbchan->IMAPCredential 2000)) ; FIXME: Move to config
-                    (recur)))))
+                  (swap! connections #(update-connections % mbchan->IMAPCredential 2000)) ; FIXME: Move to config
+                  (recur))))
           c (thread-loop []
               (when (.get status)
                 (when-some [cmd (<!! cmd-chan-in)]
@@ -274,16 +272,16 @@
 
 (s/defn ->ConnectionWatcher :- ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
-   poll-ms                :- Int
+   period                 :- Int
    cmd-chan-in            :- ReadPort
    log-chan               :- WritePort]
   (strict-map->ConnectionWatcher
     {:mbchan->IMAPCredential mbchan->IMAPCredential
-     :connections (atom {})
-     :poll-ms (AtomicLong. poll-ms)
      :cmd-chan-in cmd-chan-in
      :cmd-chan-out (chan CHAN-SIZE)
      :log-chan log-chan
-     :next-check (AtomicLong. 0)
+     :connections (atom {})
+     :period (AtomicLong. period)
+     :alarm (AtomicLong. 0)
      :status (AtomicBoolean. true)
      :exit-fn nil}))
