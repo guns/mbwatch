@@ -63,8 +63,9 @@
                                        nil   " ∅ unregistered"))]
       (->LogItem this msg))))
 
-(t/defrecord ReleasePendingSyncsEvent
-  [mbchan->mboxes :- {String StringList}
+(t/defrecord PendingSyncsEvent
+  [action         :- (enum :merge :release)
+   mbchan->mboxes :- {String StringList}
    timestamp      :- DateTime]
 
   Loggable
@@ -72,11 +73,18 @@
   (log-level [_] INFO)
 
   (log-item [this]
-    (let [msg (->> mbchan->mboxes
-                   (mapv (partial apply join-mbargs))
-                   (string/join \space)
-                   (str "Releasing pending syncs: "))]
-      (->LogItem this msg))))
+    (let [msg (if (= action :merge)
+                "Delaying syncs: "
+                "Releasing pending syncs: ")
+          mbargs (->> mbchan->mboxes
+                      (mapv (partial apply join-mbargs))
+                      (string/join \space))]
+      (->LogItem this (str msg mbargs)))))
+
+(s/defn ^:private ->PendingSyncsEvent :- PendingSyncsEvent
+  [action         :- (enum :merge :release)
+   mbchan->mboxes :- {String StringList}]
+  (PendingSyncsEvent. action mbchan->mboxes (DateTime.)))
 
 (defschema ^:private ConnectionMap
   {String {:status Boolean
@@ -132,7 +140,7 @@
             {} (distinct (mapcat keys [old-map new-map])))
           (as-> ps
             (when (seq ps)
-              (put! log-chan (ReleasePendingSyncsEvent. ps (DateTime.)))
+              (put! log-chan (->PendingSyncsEvent :release ps))
               ;; Commands must pass through
               (>!! output-chan (->Command :sync ps))))))))
 
