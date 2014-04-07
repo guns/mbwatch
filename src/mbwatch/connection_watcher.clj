@@ -1,4 +1,4 @@
-(ns mbwatch.connection
+(ns mbwatch.connection-watcher
   "A ConnectionWatcher is a Command middleware that partitions, pools, and
    releases :sync commands based on the network availability of IMAP servers.
    It also periodically polls known servers on a fixed schedule.

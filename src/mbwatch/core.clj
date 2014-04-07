@@ -38,7 +38,7 @@
                                                 stop-system]]
             [mbwatch.concurrent :refer [CHAN-SIZE]]
             [mbwatch.config]
-            [mbwatch.connection :refer [->ConnectionWatcher]]
+            [mbwatch.connection-watcher :refer [->ConnectionWatcher]]
             [mbwatch.console-logger :refer [->ConsoleLogger
                                             MILLIS-TIMESTAMP-FORMAT
                                             get-default-colors]]
@@ -48,7 +48,7 @@
             [mbwatch.types :as t]
             [schema.core :as s])
   (:import (mbwatch.config Config)
-           (mbwatch.connection ConnectionWatcher)
+           (mbwatch.connection_watcher ConnectionWatcher)
            (mbwatch.logging LoggingService)
            (mbwatch.mbsync MbsyncMaster)
            (mbwatch.notification NewMessageNotificationService)))
