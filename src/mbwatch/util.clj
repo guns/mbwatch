@@ -81,3 +81,11 @@
      ~@body
      (catch Throwable e#
        (.println System/err e#))))
+
+(defn deep-merge
+  "Recursively merges maps. If values are not maps, the last value wins.
+   https://groups.google.com/forum/?fromgroups#!topic/clojure/UdFLYjLvNRs"
+  [& values]
+  (if (every? map? values)
+    (apply merge-with deep-merge values)
+    (last values)))
