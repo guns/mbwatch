@@ -35,7 +35,8 @@
             [mbwatch.mbsync.events :refer [join-mbargs]]
             [mbwatch.network :refer [reachable?]]
             [mbwatch.types :as t :refer [StringList Word]]
-            [schema.core :as s :refer [Int defschema eq maybe protocol]]
+            [schema.core :as s :refer [Int defschema enum maybe pair
+                                       protocol]]
             [schema.utils :refer [class-schema]])
   (:import (clojure.lang Atom IFn)
            (java.util.concurrent Future)
@@ -200,23 +201,29 @@
                       "↓ Stopping ConnectionWatcher"
                       "↑ Starting ConnectionWatcher"))))
 
-(s/defn ^:private merge-pending-syncs :- ConnectionMap
-  "Add sync-req to conn-map as :pending-syncs entries.
+(s/defn ^:private merge-pending-syncs :- (pair ConnectionMap "conn-map"
+                                               {String StringList} "sync-req")
+  "Merge sync-req into conn-map as :pending-syncs entries if the :status of
+   the mbchan is false. Returns the new conn-map and the sync-req with merged
+   entries removed.
 
-   An mbox argument of [] resets the :pending-sync value to [] with
+   An mbox argument of [] resets the :pending-syncs value to #{} with
    the :all-mboxes? metadata flag set. Correspondingly, additions to a
-   :pending-sync value that has :all-mboxes? is ignored since a full mbchan
+   :pending-syncs value that has :all-mboxes? is ignored since a full mbchan
    sync will be issued once the server is reachable."
   [conn-map :- ConnectionMap
    sync-req :- {String StringList}]
   (reduce-kv
-    (fn [m mbchan mboxes]
-      (update-in m [mbchan :pending-syncs]
-                 #(cond
-                    (:all-mboxes? (meta %)) %
-                    (seq mboxes) (into (or % #{}) mboxes)
-                    :else (with-meta #{} {:all-mboxes? true}))))
-    conn-map sync-req))
+    (fn [[conn-map sync-req] mbchan mboxes]
+      (if (false? (:status (conn-map mbchan)))
+        [(update-in conn-map [mbchan :pending-syncs]
+                    #(cond
+                       (:all-mboxes? (meta %)) %
+                       (seq mboxes) (into (or % #{}) mboxes)
+                       :else (with-meta #{} {:all-mboxes? true})))
+         (dissoc sync-req mbchan)]
+        [conn-map sync-req]))
+    [conn-map sync-req] sync-req))
 
 (s/defn ^:private partition-syncs :- (maybe Command)
   "Take a :sync Command and check its mbchan IMAP servers. If all servers are
@@ -225,32 +232,38 @@
    If all servers are _unreachable_, the sync requests are merged into the
    :pending-syncs entries of the connections map and nil is returned.
 
-   If only some servers are unreachable, a new :sync Command with only
+   If only some servers are unreachable, a new payload for the :sync with only
    available servers is returned, while the rest are merged as above.
 
    This function always updates the connection map with new connection
    statuses."
   [connection-watcher :- (class-schema ConnectionWatcher)
-   command            :- Command]
+   sync-command       :- Command]
   (let [{:keys [mbchan->IMAPCredential]} connection-watcher
-        sync-req (:payload command)
+        sync-req (:payload sync-command)
         mbchans-with-imap (intersection (set (keys sync-req))
                                         (set (keys mbchan->IMAPCredential)))
-        command-map (zipmap mbchans-with-imap
-                            (repeat {:status false :pending-syncs nil}))
+        ;; This is merged under the existing conn-map to introduce new mbchans
+        new-map (zipmap mbchans-with-imap
+                        (repeat {:status true :pending-syncs nil}))
         ;; Most of the work needs to be done in the transaction; note that
-        ;; while the TCP scans are IO, they do not change any program state.
+        ;; while the TCP scans do IO, they do not change any program state.
         conn (swap! (:connections connection-watcher)
-                    #(let [conn (-> (merge command-map %) ; Detect new mbchans
-                                    (update-connections mbchan->IMAPCredential 2000)) ; FIXME: Config
-                           pending (filter (comp false? :status conn) mbchans-with-imap)]
-                       (merge-pending-syncs conn (select-keys sync-req pending))))
-        {pending true
-         ok false} (group-by (comp false? :status conn) (keys sync-req))]
+                    ;; Merge pending syncs before checking connections to
+                    ;; avoid releasing a sync and then doing the same sync
+                    #(let [[conn sync] (-> (merge new-map %)
+                                           (merge-pending-syncs sync-req))
+                           [conn sync] (-> conn
+                                           (update-connections mbchan->IMAPCredential 2000) ; FIXME: config
+                                           (merge-pending-syncs sync))]
+                       ;; This is an abuse of metadata, but it's better than
+                       ;; dealing with synchronization issues…
+                       (with-meta conn {::sync-req sync})))
+        sync-req' (-> conn meta ::sync-req)]
     (cond
-      (empty? pending) command
-      (empty? ok) nil
-      :else (assoc command :payload (select-keys sync-req ok)))))
+      (empty? sync-req') nil
+      (= sync-req sync-req') sync-req
+      :else (assoc sync-command :payload sync-req'))))
 
 (s/defn ^:private process-command :- (maybe Command)
   [connection-watcher :- (class-schema ConnectionWatcher)
