@@ -79,17 +79,17 @@
                                (-> config :mbwatchrc :notify-command)
                                (atom {"self" #{"INBOX"}}) ; FIXME: Move to config
                                log-chan)
-        log-chan (:input-chan notification-service)
+        log-chan (:log-chan-in notification-service)
         connection-watcher (->ConnectionWatcher
                              (-> config :mbsyncrc :mbchan->IMAPCredential)
                              (* 60 1000) ; FIXME: Move to config
                              cmd-chan
                              log-chan)
-        cmd-chan (:output-chan connection-watcher)]
+        cmd-chan (:cmd-chan-out connection-watcher)]
     (Application.
       (->LoggingService DEBUG
                         (->ConsoleLogger System/out (get-default-colors) MILLIS-TIMESTAMP-FORMAT)
-                        (:output-chan notification-service))
+                        (:log-chan-out notification-service))
       notification-service
       (->MbsyncMaster (:mbsyncrc config)
                       cmd-chan

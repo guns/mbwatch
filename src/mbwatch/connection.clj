@@ -112,8 +112,8 @@
   "Log changes in connection statuses and release pending syncs. Pending syncs
    are not flushed from the reference when released; they are expected to be
    reset to nil when an mbchan status lapses back to false."
-  [log-chan    :- WritePort
-   output-chan :- WritePort]
+  [log-chan     :- WritePort
+   cmd-chan-out :- WritePort]
   (fn [_ _ old-conn-map new-conn-map]
     ;; Statuses are swapped in atomically, so don't mislead the user
     (-> (reduce
@@ -145,7 +145,7 @@
           (when (seq ps)
             (log! log-chan (PendingSyncsEvent. :release ps nil))
             ;; Commands must pass through
-            (>!! output-chan (->Command :sync ps)))))))
+            (>!! cmd-chan-out (->Command :sync ps)))))))
 
 (declare process-command)
 
@@ -153,8 +153,8 @@
   [mbchan->IMAPCredential :- {Word IMAPCredential}
    connections            :- Atom ; ConnectionMap
    poll-ms                :- AtomicLong
-   input-chan             :- ReadPort
-   output-chan            :- WritePort
+   cmd-chan-in            :- ReadPort
+   cmd-chan-out           :- WritePort
    log-chan               :- WritePort
    next-check             :- AtomicLong
    status                 :- AtomicBoolean
@@ -166,7 +166,7 @@
   (start [this]
     (log! log-chan this)
     (add-watch connections ::watch-conn-changes
-               (watch-conn-changes-fn log-chan output-chan))
+               (watch-conn-changes-fn log-chan cmd-chan-out))
     (assoc this
            :exit-future
            (future-catch-print
@@ -178,10 +178,10 @@
            :exit-chan
            (thread-loop []
              (when (.get status)
-               (when-some [cmd (<!! input-chan)]
+               (when-some [cmd (<!! cmd-chan-in)]
                  (when-some [cmd' (process-command this cmd)]
                    ;; Commands must pass through
-                   (>!! output-chan cmd'))
+                   (>!! cmd-chan-out cmd'))
                  (recur))))))
 
   (stop [this]
@@ -189,7 +189,7 @@
     (.set status false)
     (log! log-chan this)
     (sig-notify-all status)
-    (close! input-chan)
+    (close! cmd-chan-in)
     (remove-watch connections ::watch-conn-changes)
     @exit-future
     (<!! exit-chan)
@@ -282,14 +282,14 @@
 (s/defn ->ConnectionWatcher :- ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
    poll-ms                :- Int
-   input-chan             :- ReadPort
+   cmd-chan-in            :- ReadPort
    log-chan               :- WritePort]
   (strict-map->ConnectionWatcher
     {:mbchan->IMAPCredential mbchan->IMAPCredential
      :connections (atom {})
      :poll-ms (AtomicLong. poll-ms)
-     :input-chan input-chan
-     :output-chan (chan CHAN-SIZE)
+     :cmd-chan-in cmd-chan-in
+     :cmd-chan-out (chan CHAN-SIZE)
      :log-chan log-chan
      :next-check (AtomicLong. 0)
      :status (AtomicBoolean. true)

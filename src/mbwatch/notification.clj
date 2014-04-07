@@ -133,28 +133,28 @@
 (t/defrecord NewMessageNotificationService
   [notify-command :- String
    notify-map-ref :- IDeref
-   input-chan     :- ReadPort
-   output-chan    :- WritePort
+   log-chan-in    :- ReadPort
+   log-chan-out   :- WritePort
    status         :- AtomicBoolean
    exit-chan      :- (maybe (protocol ReadPort))]
 
   Lifecycle
 
   (start [this]
-    (log! output-chan this)
+    (log! log-chan-out this)
     (assoc this :exit-chan
            (thread-loop [sync-requests {}]
              (when (.get status)
-               (when-some [obj (<!! input-chan)]
+               (when-some [obj (<!! log-chan-in)]
                  ;; Pass through ASAP
-                 (put! output-chan obj)
+                 (put! log-chan-out obj)
                  (recur (process-event obj sync-requests this)))))))
 
   (stop [this]
     ;; Exit ASAP
     (.set status false)
-    (log! output-chan this)
-    (close! input-chan)
+    (log! log-chan-out this)
+    (close! log-chan-in)
     (<!! exit-chan)
     (dissoc this :exit-chan))
 
@@ -170,12 +170,12 @@
 (s/defn ->NewMessageNotificationService :- NewMessageNotificationService
   [notify-command :- String
    notify-map-ref :- IDeref
-   input-chan     :- ReadPort]
+   log-chan-in    :- ReadPort]
   (strict-map->NewMessageNotificationService
     {:notify-command notify-command
      :notify-map-ref notify-map-ref
-     :input-chan input-chan
-     :output-chan (chan CHAN-SIZE)
+     :log-chan-in log-chan-in
+     :log-chan-out (chan CHAN-SIZE)
      :status (AtomicBoolean. true)
      :exit-chan nil}))
 
@@ -195,7 +195,7 @@
                 (when-let [note (->NewMessageNotification
                                   (deref (:notify-map-ref notify-service))
                                   events)]
-                  (put! (:output-chan notify-service) note)
+                  (put! (:log-chan-out notify-service) note)
                   (notify! (:notify-command notify-service) note)))
               (dissoc sync-requests id))
           (assoc sync-requests id {:countdown countdown :events events})))
