@@ -1,6 +1,7 @@
 (ns mbwatch.connection
   "A ConnectionWatcher is a Command middleware that partitions, pools, and
    releases :sync commands based on the network availability of IMAP servers.
+   It also periodically polls known servers on a fixed schedule.
 
    Each time a :sync command is received, a TCP connection is attempted to
    each mbchan's IMAP server. If all mbchans are available, the command is
@@ -124,8 +125,7 @@
               ;; Report altered pending syncs
               (when (and new-pending-syncs
                          (not= old-pending-syncs new-pending-syncs))
-                (put! log-chan (PendingSyncsEvent.
-                                 :merge {mbchan new-pending-syncs} nil)))
+                (log! log-chan (PendingSyncsEvent. :merge {mbchan new-pending-syncs} nil)))
               (cond
                 ;; mbchan has been dissociated
                 (nil? new-mbchan-map)
@@ -135,8 +135,7 @@
                 :else
                 (do
                   ;; log status change
-                  (log! log-chan (ConnectionEvent.
-                                   mbchan (:status new-mbchan-map) nil))
+                  (log! log-chan (ConnectionEvent. mbchan (:status new-mbchan-map) nil))
                   ;; status changed from nil|false -> true
                   (if (and (true? (:status new-mbchan-map)) new-pending-syncs)
                     (assoc ps mbchan new-pending-syncs)
