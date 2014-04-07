@@ -101,15 +101,14 @@
    timeout                :- Int]
   (->> connection-map
        (pmap (fn [[mbchan m]]
-               (let [imap (mbchan->IMAPCredential mbchan)]
-                 (if (nil? imap)
-                   ;; Upstream is not an IMAP server
-                   [mbchan m]
-                   (let [status (reachable? (:host imap) (:port imap) timeout)]
-                     ;; true -> false
-                     (if (and (true? (:status m)) (false? status))
-                       [mbchan (assoc m :status status :pending-syncs nil)]
-                       [mbchan (assoc m :status status)]))))))
+               (if-some [imap (mbchan->IMAPCredential mbchan)]
+                 (let [status (reachable? (:host imap) (:port imap) timeout)]
+                   ;; true -> false
+                   (if (and (true? (:status m)) (false? status))
+                     [mbchan (assoc m :status status :pending-syncs nil)]
+                     [mbchan (assoc m :status status)]))
+                 ;; Upstream is not an IMAP server
+                 [mbchan m])))
        (into {})))
 
 (s/defn ^:private watch-conn-changes-fn :- IFn
