@@ -142,7 +142,7 @@
         (as-> ps
           (when (seq ps)
             (put! log-chan (PendingSyncsEvent. :release ps (DateTime.)))
-            ;; Commands must pass through
+            ;; Commands must be conveyed
             (>!! cmd-chan-out (->Command :sync ps)))))))
 
 (declare process-command)
@@ -175,7 +175,7 @@
               (when (.get status)
                 (when-some [cmd (<!! cmd-chan-in)]
                   (when-some [cmd' (process-command this cmd)]
-                    ;; Commands must pass through
+                    ;; Commands must be conveyed
                     (>!! cmd-chan-out cmd'))
                   (recur))))]
       (assoc this :exit-fn
@@ -268,10 +268,7 @@
   [connection-watcher :- ConnectionWatcher
    command            :- Command]
   (case (:opcode command)
-    :check-conn (do (sig-notify-all (:status connection-watcher))
-                    (put! (:log-chan connection-watcher) command)
-                    nil)
-    ;; This is not the final consumer of :sync, so don't log it
+    :check-conn (do (sig-notify-all (:status connection-watcher)) command)
     :sync (partition-syncs connection-watcher command)
     command))
 

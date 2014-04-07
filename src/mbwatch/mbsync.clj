@@ -145,6 +145,9 @@
     (let [c (thread-loop [workers {}]
               (let [cmd (when (.get status)
                           (<!! cmd-chan))]
+                ;; We are terminal consumer of commands, so log them
+                (when cmd
+                  (put! log-chan cmd))
                 (when-let [workers (process-command this workers cmd)]
                   (recur workers))))]
       (assoc this :exit-fn
@@ -220,14 +223,12 @@
    cmd           :- (maybe Command)]
   (if cmd
     (case (:opcode cmd)
-      :sync (do (put! (:log-chan mbsync-master) cmd)
-                (dispatch-syncs workers
-                                (:id cmd)
-                                (:payload cmd)
-                                mbsync-master))
+      :sync (dispatch-syncs workers
+                            (:id cmd)
+                            (:payload cmd)
+                            mbsync-master)
       :term (do (doseq [w (vals workers)]
                   (sig-notify-all (:status w)))
-                (put! (:log-chan mbsync-master) cmd)
                 workers)
       workers)
     (dorun (pmap comp/stop (vals workers)))))
