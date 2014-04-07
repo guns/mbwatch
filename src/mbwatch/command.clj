@@ -14,12 +14,14 @@
   (AtomicLong. 0))
 
 (defschema ^:private Opcode
-  (enum :sync          ; Synchronize mailboxes
-        :sync/term     ; Terminate any running mbsync processes
-        :conn/check    ; Re-check connections
-        :notify/add    ; Add {mbchan [mbox]} to notify-map
-        :notify/remove ; Remove {mbchan [mbox]} from notify-map
-        :notify/set    ; Set notify-map to {mbchan [mbox]}
+  (enum :sync              ; Synchronize mailboxes
+        :sync/term         ; Terminate any running mbsync processes
+        :conn/check        ; Re-check connections
+        :notify/add        ; Add {mbchan [mbox]} to notify-map
+        :notify/remove     ; Remove {mbchan [mbox]} from notify-map
+        :notify/set        ; Set notify-map to {mbchan [mbox]}
+        :timer/set-period  ; Set cyclic timer's period interval
+        :timer/set-request ; Set cyclic timer's sync request
         ))
 
 (t/defrecord Command
