@@ -206,7 +206,7 @@
   (let [[f & args] expr]
     `(let [old-map# (deref (:notify-map-atom ~notify-service))
            new-map# (~f (:notify-map-atom ~notify-service) ~@args (:payload ~command))]
-       (when (not= old-map# new-map#)
+       (when-not (= old-map# new-map#)
          (put! (:log-chan-out ~notify-service) (NotifyMapChangeEvent. new-map# (DateTime.)))))))
 
 (s/defn ^:private process-command :- SyncRequestMap
