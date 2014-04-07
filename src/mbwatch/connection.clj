@@ -82,11 +82,6 @@
                       (string/join \space))]
       (->LogItem this (str msg mbargs)))))
 
-(s/defn ^:private ->PendingSyncsEvent :- PendingSyncsEvent
-  [action         :- (enum :merge :release)
-   mbchan->mboxes :- {String StringList}]
-  (PendingSyncsEvent. action mbchan->mboxes (DateTime.)))
-
 (defschema ^:private ConnectionMap
   {String {:status Boolean
            :pending-syncs (maybe #{String})}})
@@ -118,31 +113,40 @@
    reset to nil when an mbchan status lapses back to false."
   [log-chan    :- WritePort
    output-chan :- WritePort]
-  (fn [_ _ old-map new-map]
+  (fn [_ _ old-conn-map new-conn-map]
     ;; Statuses are swapped in atomically, so don't mislead the user
-    (let [dt (DateTime.)]
-      (-> (reduce
-            (fn [m mbchan]
-              (let [nconn (new-map mbchan)]
-                (cond
-                  ;; mbchan has been dissociated
-                  (nil? nconn) (do (put! log-chan (ConnectionEvent. mbchan nil dt)) m)
-                  ;; status has not changed
-                  (= (:status (old-map mbchan)) (:status nconn)) m
-                  :else
-                  (do
-                    ;; log status change
-                    (put! log-chan (ConnectionEvent. mbchan (:status nconn) dt))
-                    ;; status changed from nil|false -> true; assoc pending syncs
-                    (if (and (true? (:status nconn)) (:pending-syncs nconn))
-                      (assoc m mbchan (vec (:pending-syncs nconn)))
-                      m)))))
-            {} (distinct (mapcat keys [old-map new-map])))
-          (as-> ps
-            (when (seq ps)
-              (put! log-chan (->PendingSyncsEvent :release ps))
-              ;; Commands must pass through
-              (>!! output-chan (->Command :sync ps))))))))
+    (-> (reduce
+          (fn [ps mbchan]
+            (let [new-mbchan-map (new-conn-map mbchan)
+                  old-mbchan-map (old-conn-map mbchan)
+                  old-pending-syncs (:pending-syncs old-mbchan-map)
+                  new-pending-syncs (:pending-syncs new-mbchan-map)]
+              ;; Report altered pending syncs
+              (when (and new-pending-syncs
+                         (not= old-pending-syncs new-pending-syncs))
+                (put! log-chan (PendingSyncsEvent.
+                                 :merge {mbchan new-pending-syncs} nil)))
+              (cond
+                ;; mbchan has been dissociated
+                (nil? new-mbchan-map)
+                (do (log! log-chan (ConnectionEvent. mbchan nil nil)) ps)
+                ;; status has not changed
+                (= (:status old-mbchan-map) (:status new-mbchan-map)) ps
+                :else
+                (do
+                  ;; log status change
+                  (log! log-chan (ConnectionEvent.
+                                   mbchan (:status new-mbchan-map) nil))
+                  ;; status changed from nil|false -> true
+                  (if (and (true? (:status new-mbchan-map)) new-pending-syncs)
+                    (assoc ps mbchan new-pending-syncs)
+                    ps)))))
+          {} (distinct (mapcat keys [old-conn-map new-conn-map])))
+        (as-> ps
+          (when (seq ps)
+            (log! log-chan (PendingSyncsEvent. :release ps nil))
+            ;; Commands must pass through
+            (>!! output-chan (->Command :sync ps)))))))
 
 (declare process-command)
 
