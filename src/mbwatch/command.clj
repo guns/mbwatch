@@ -17,9 +17,9 @@
   (enum :sync          ; Synchronize mailboxes
         :term          ; Terminate any running mbsync processes
         :check-conn    ; Re-check connections
-        :notify-add    ; Add {mbchan [mbox]} to notify-map
-        :notify-remove ; Remove {mbchan [mbox]} to notify-map
-        :notify-reset  ; Reset notify-map to {mbchan [mbox]}
+        :notify/add    ; Add {mbchan [mbox]} to notify-map
+        :notify/remove ; Remove {mbchan [mbox]} from notify-map
+        :notify/set    ; Set notify-map to {mbchan [mbox]}
         ))
 
 (t/defrecord Command

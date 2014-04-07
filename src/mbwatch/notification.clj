@@ -208,10 +208,10 @@
   (case (:opcode command)
     :sync (let [{:keys [id payload]} command]
             (assoc sync-requests id {:countdown (count payload) :events []}))
-    :notify-add (do (with-handler-context notify-service command
+    :notify/add (do (with-handler-context notify-service command
                       (swap! (partial merge-with union)))
                     sync-requests)
-    :notify-remove (do (with-handler-context notify-service command
+    :notify/remove (do (with-handler-context notify-service command
                          (swap! (fn [notify-map payload]
                                   (reduce-kv
                                     (fn [nmap mbchan mboxes]
@@ -221,9 +221,9 @@
                                           (dissoc nmap mbchan))))
                                     notify-map payload))))
                        sync-requests)
-    :notify-reset (do (with-handler-context notify-service command
-                        (reset!))
-                      sync-requests)
+    :notify/set (do (with-handler-context notify-service command
+                      (reset!))
+                    sync-requests)
     sync-requests))
 
 (s/defn ^:private process-stop-event :- SyncRequestMap
