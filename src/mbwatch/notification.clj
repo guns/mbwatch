@@ -1,15 +1,24 @@
 (ns mbwatch.notification
-  "NewMessageNotificationService is a Loggable middleware that tracks :sync
-   Commands and spawns a notification when all requested mbchans have been
-   synchronized.
+  "NewMessageNotificationService is a Loggable and Command middleware that
+   tracks :sync Commands and spawns a notification when all requested mbchans
+   have been synchronized.
 
+   The set of mboxes to notify on can be changed via :notify-* Commands.
+
+
+     ─── Command ─────────────────────┐
+                                      │
+                                      ▼
                       ┌───────────────────────────────┐
      ─── Loggable ──▶ │ NewMessageNotificationService ├──── Loggable ──▶
-                      └───────────────────────────────┘
+                      └───────────────┬───────────────┘
+                                      │
+                                      │
+                                      └───────────────────── Command ──▶
   "
-  (:require [clojure.core.async :refer [<!! chan close! put!]]
+  (:require [clojure.core.async :refer [<!! >!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
-            [clojure.set :refer [intersection]]
+            [clojure.set :refer [difference intersection union]]
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command]
@@ -18,16 +27,17 @@
             [mbwatch.config :refer [mdir-path]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable log!]]
             [mbwatch.maildir :refer [new-messages senders]]
-            [mbwatch.mbsync.events]
+            [mbwatch.mbsync.events :refer [join-mbargs]]
             [mbwatch.process :as process]
             [mbwatch.types :as t :refer [VOID]]
             [mbwatch.util :refer [to-ms]]
             [schema.core :as s :refer [Int defschema maybe]])
-  (:import (clojure.lang IDeref)
+  (:import (clojure.lang Atom IFn)
            (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
            (javax.mail.internet MimeMessage)
            (mbwatch.command Command)
+           (mbwatch.logging LogItem)
            (mbwatch.mbsync.events MbsyncEventStop MbsyncUnknownChannelError)
            (org.joda.time DateTime)))
 
@@ -130,31 +140,59 @@
     "Returns a new version of the sync-requests map, adding or removing self
      from it as necessary."))
 
+(declare process-command)
+
+(s/defn log-notify-map-changes-fn :- IFn
+  [log-chan :- WritePort]
+  (fn [_ _ old-map new-map]
+    (when (not= old-map new-map)
+      (let [msg (->> new-map
+                     (mapv (partial apply join-mbargs))
+                     (string/join \space))
+            msg (if (seq msg)
+                  (str "Now notifying on: " msg)
+                  "Notifications disabled.")]
+        (log! log-chan (LogItem. INFO (DateTime.) msg))))))
+
 (t/defrecord NewMessageNotificationService
-  [notify-command :- String
-   notify-map-ref :- IDeref
-   log-chan-in    :- ReadPort
-   log-chan-out   :- WritePort
-   status         :- AtomicBoolean
-   exit-fn        :- (maybe IFn)]
+  [notify-command  :- String
+   notify-map-atom :- Atom
+   cmd-chan-in     :- ReadPort
+   cmd-chan-out    :- WritePort
+   log-chan-in     :- ReadPort
+   log-chan-out    :- WritePort
+   status          :- AtomicBoolean
+   exit-fn         :- (maybe IFn)]
 
   Lifecycle
 
   (start [this]
     (log! log-chan-out this)
-    (let [c (thread-loop [sync-requests {}]
+    (add-watch notify-map-atom ::log-notify-map-changes
+               (log-notify-map-changes-fn log-chan-out))
+    (let [l (thread-loop [sync-requests {}]
               (when (.get status)
                 (when-some [obj (<!! log-chan-in)]
                   ;; Pass through ASAP
                   (put! log-chan-out obj)
-                  (recur (process-event obj sync-requests this)))))]
-      (assoc this :exit-fn #(<!! c))))
+                  (recur (process-event obj sync-requests this)))))
+          c (thread-loop []
+              (when (.get status)
+                (when-some [cmd (<!! cmd-chan-in)]
+                  (when-some [cmd (process-command this cmd)]
+                    ;; Commands must be conveyed
+                    (>!! cmd-chan-out cmd))
+                  (recur))))]
+      (assoc this :exit-fn
+             #(do (.set status false)  ; Halt processing ASAP
+                  (close! log-chan-in) ; Unblock log consumer
+                  (close! cmd-chan-in) ; Unblock cmd consumer
+                  (remove-watch notify-map-atom ::log-notify-map-changes)
+                  (<!! l)
+                  (<!! c)))))
 
   (stop [this]
-    ;; Exit ASAP
-    (.set status false)
     (log! log-chan-out this)
-    (close! log-chan-in)
     (exit-fn)
     (dissoc this :exit-fn))
 
@@ -168,16 +206,44 @@
                       "↑ Starting NewMessageNotificationService"))))
 
 (s/defn ->NewMessageNotificationService :- NewMessageNotificationService
-  [notify-command :- String
-   notify-map-ref :- IDeref
-   log-chan-in    :- ReadPort]
+  [notify-command  :- String
+   notify-map-atom :- Atom
+   cmd-chan-in     :- ReadPort
+   log-chan-in     :- ReadPort]
   (strict-map->NewMessageNotificationService
     {:notify-command notify-command
-     :notify-map-ref notify-map-ref
+     :notify-map-atom notify-map-atom
+     :cmd-chan-in cmd-chan-in
+     :cmd-chan-out (chan CHAN-SIZE)
      :log-chan-in log-chan-in
      :log-chan-out (chan CHAN-SIZE)
      :status (AtomicBoolean. true)
      :exit-fn nil}))
+
+(defmacro ^:private with-handler-context [notify-service command expr]
+  (let [[f & args] expr]
+    `(do (~f (:notify-map-atom ~notify-service) ~@args (:payload ~command))
+         (~put! (:log-chan-out ~notify-service) ~command)
+         nil)))
+
+(s/defn ^:private process-command :- (maybe Command)
+  [notify-service :- NewMessageNotificationService
+   command        :- Command]
+  (case (:opcode command)
+    :notify-add (with-handler-context notify-service command
+                  (swap! (partial merge-with union)))
+    :notify-remove (with-handler-context notify-service command
+                     (swap! (fn [notify-map payload]
+                              (reduce-kv
+                                (fn [nmap mbchan mboxes]
+                                  (let [bs (difference (nmap mbchan) mboxes)]
+                                    (if (seq bs)
+                                      (assoc nmap mbchan bs)
+                                      (dissoc nmap mbchan))))
+                                notify-map payload))))
+    :notify-reset (with-handler-context notify-service command
+                    (reset!))
+    command))
 
 (s/defn ^:private process-stop-event :- SyncRequestMap
   [obj            :- Object
@@ -193,7 +259,7 @@
         (if (zero? countdown)
           (do (future-catch-print
                 (when-let [note (->NewMessageNotification
-                                  (deref (:notify-map-ref notify-service))
+                                  (deref (:notify-map-atom notify-service))
                                   events)]
                   (put! (:log-chan-out notify-service) note)
                   (notify! (:notify-command notify-service) note)))

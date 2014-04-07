@@ -78,7 +78,9 @@
         notification-service (->NewMessageNotificationService
                                (-> config :mbwatchrc :notify-command)
                                (atom {"self" #{"INBOX"}}) ; FIXME: Move to config
+                               cmd-chan
                                log-chan)
+        cmd-chan (:cmd-chan-out notification-service)
         log-chan (:log-chan-in notification-service)
         connection-watcher (->ConnectionWatcher
                              (-> config :mbsyncrc :mbchan->IMAPCredential)
