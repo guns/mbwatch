@@ -88,7 +88,7 @@
         log-chan-1 (:log-chan-out notification-service)
         ;; Top level cmd consumer
         cyclic-timer (->CyclicTimer
-                       {"self" ["INBOX" "clojure"]} ; FIXME: Move to config
+                       {} ; FIXME: Move to config
                        (chan CHAN-SIZE)
                        log-chan-0
                        (* 15 60 1000)) ; FIXME: Move to config
