@@ -38,8 +38,9 @@
             [mbwatch.process :as process]
             [mbwatch.types :as t :refer [StringList VOID]]
             [mbwatch.util :refer [shell-escape]]
-            [schema.core :as s :refer [Int maybe protocol]])
-  (:import (java.io StringWriter)
+            [schema.core :as s :refer [Int maybe]])
+  (:import (clojure.lang IFn)
+           (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.command Command)
            (mbwatch.config.mbsyncrc Mbsyncrc)
@@ -66,19 +67,19 @@
    req-chan  :- ReadPort
    log-chan  :- WritePort
    status    :- AtomicBoolean
-   exit-chan :- (maybe (protocol ReadPort))]
+   exit-fn   :- (maybe IFn)]
 
   Lifecycle
 
   (start [this]
     (log! log-chan this)
-    (assoc this :exit-chan
-           (thread-loop []
-             (when (.get status)
-               (when-some [req (<!! req-chan)]
-                 (let [[id boxes] req]
-                   (sync-boxes! this id boxes))
-                 (recur))))))
+    (let [c (thread-loop []
+              (when (.get status)
+                (when-some [req (<!! req-chan)]
+                  (let [[id boxes] req]
+                    (sync-boxes! this id boxes))
+                  (recur))))]
+      (assoc this :exit-fn #(<!! c))))
 
   (stop [this]
     ;; Exit ASAP
@@ -86,8 +87,8 @@
     (log! log-chan this)
     (sig-notify-all status)
     (close! req-chan)
-    (<!! exit-chan)
-    (dissoc this :exit-chan))
+    (exit-fn)
+    (dissoc this :exit-fn))
 
   Loggable
 
@@ -95,7 +96,7 @@
 
   (log-item [this]
     (->LogItem this (format "%s MbsyncWorker for channel `%s`"
-                            (if exit-chan "↓ Stopping" "↑ Starting")
+                            (if exit-fn "↓ Stopping" "↑ Starting")
                             mbchan))))
 
 (s/defn ^:private sync-boxes! :- VOID
@@ -135,33 +136,33 @@
    cmd-chan  :- ReadPort
    log-chan  :- WritePort
    status    :- AtomicBoolean
-   exit-chan :- (maybe (protocol ReadPort))]
+   exit-fn   :- (maybe IFn)]
 
   Lifecycle
 
   (start [this]
     (log! log-chan this)
-    (assoc this :exit-chan
-           (thread-loop [workers {}]
-             (let [cmd (when (.get status)
-                         (<!! cmd-chan))]
-               (when-let [workers (process-command this workers cmd)]
-                 (recur workers))))))
+    (let [c (thread-loop [workers {}]
+              (let [cmd (when (.get status)
+                          (<!! cmd-chan))]
+                (when-let [workers (process-command this workers cmd)]
+                  (recur workers))))]
+      (assoc this :exit-fn #(<!! c))))
 
   (stop [this]
     ;; Exit ASAP
     (.set status false)
     (log! log-chan this)
     (close! cmd-chan)
-    (<!! exit-chan)
-    (dissoc this :exit-chan))
+    (exit-fn)
+    (dissoc this :exit-fn))
 
   Loggable
 
   (log-level [_] DEBUG)
 
   (log-item [this]
-    (->LogItem this (if exit-chan
+    (->LogItem this (if exit-fn
                       "↓ Stopping MbsyncMaster"
                       "↑ Starting MbsyncMaster"))))
 
@@ -174,7 +175,7 @@
      :cmd-chan cmd-chan
      :log-chan log-chan
      :status (AtomicBoolean. true)
-     :exit-chan nil}))
+     :exit-fn nil}))
 
 (s/defn ^:private ->MbsyncWorker :- MbsyncWorker
   [mbchan        :- String
@@ -187,7 +188,7 @@
        :req-chan (chan CHAN-SIZE)
        :log-chan log-chan
        :status (AtomicBoolean. true)
-       :exit-chan nil})))
+       :exit-fn nil})))
 
 (s/defn ^:private dispatch-syncs :- {String MbsyncWorker}
   "Dispatch sync jobs to MbsyncWorker instances. Creates a new mbchan worker

@@ -36,11 +36,9 @@
             [mbwatch.mbsync.events :refer [join-mbargs]]
             [mbwatch.network :refer [reachable?]]
             [mbwatch.types :as t :refer [StringList Word]]
-            [schema.core :as s :refer [Int defschema enum maybe pair
-                                       protocol]]
+            [schema.core :as s :refer [Int defschema enum maybe pair]]
             [schema.utils :refer [class-schema]])
   (:import (clojure.lang Atom IFn)
-           (java.util.concurrent Future)
            (java.util.concurrent.atomic AtomicBoolean AtomicLong)
            (mbwatch.command Command)
            (org.joda.time DateTime)))
@@ -159,8 +157,7 @@
    log-chan               :- WritePort
    next-check             :- AtomicLong
    status                 :- AtomicBoolean
-   exit-future            :- (maybe Future)
-   exit-chan              :- (maybe (protocol ReadPort))]
+   exit-fn                :- (maybe IFn)]
 
   Lifecycle
 
@@ -168,22 +165,23 @@
     (log! log-chan this)
     (add-watch connections ::watch-conn-changes
                (watch-conn-changes-fn log-chan cmd-chan-out))
-    (assoc this
-           :exit-future
-           (future-catch-print
-             (loop []
-               (when (.get status)
-                 (sig-wait-and-set-forward status next-check poll-ms)
-                 (swap! connections #(update-connections % mbchan->IMAPCredential 2000)) ; FIXME: Move to config
-                 (recur))))
-           :exit-chan
-           (thread-loop []
-             (when (.get status)
-               (when-some [cmd (<!! cmd-chan-in)]
-                 (when-some [cmd' (process-command this cmd)]
-                   ;; Commands must pass through
-                   (>!! cmd-chan-out cmd'))
-                 (recur))))))
+    (let [f (future-catch-print
+              (loop []
+                (when (.get status)
+                  (sig-wait-and-set-forward status next-check poll-ms)
+                  (swap! connections #(update-connections % mbchan->IMAPCredential 2000)) ; FIXME: Move to config
+                  (recur))))
+          c (thread-loop []
+              (when (.get status)
+                (when-some [cmd (<!! cmd-chan-in)]
+                  (when-some [cmd' (process-command this cmd)]
+                    ;; Commands must pass through
+                    (>!! cmd-chan-out cmd'))
+                  (recur))))]
+      (assoc this :exit-fn (fn []
+                             (remove-watch connections ::watch-conn-changes)
+                             @f
+                             (<!! c)))))
 
   (stop [this]
     ;; Exit ASAP
@@ -191,17 +189,15 @@
     (log! log-chan this)
     (sig-notify-all status)
     (close! cmd-chan-in)
-    (remove-watch connections ::watch-conn-changes)
-    @exit-future
-    (<!! exit-chan)
-    (dissoc this :exit-chan :exit-future))
+    (exit-fn)
+    (dissoc this :exit-fn))
 
   Loggable
 
   (log-level [_] DEBUG)
 
   (log-item [this]
-    (->LogItem this (if exit-chan
+    (->LogItem this (if exit-fn
                       "↓ Stopping ConnectionWatcher"
                       "↑ Starting ConnectionWatcher"))))
 
@@ -294,5 +290,4 @@
      :log-chan log-chan
      :next-check (AtomicLong. 0)
      :status (AtomicBoolean. true)
-     :exit-future nil
-     :exit-chan nil}))
+     :exit-fn nil}))

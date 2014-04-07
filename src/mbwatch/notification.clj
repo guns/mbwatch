@@ -22,7 +22,7 @@
             [mbwatch.process :as process]
             [mbwatch.types :as t :refer [VOID]]
             [mbwatch.util :refer [to-ms]]
-            [schema.core :as s :refer [Int defschema maybe protocol]])
+            [schema.core :as s :refer [Int defschema maybe]])
   (:import (clojure.lang IDeref)
            (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
@@ -136,34 +136,34 @@
    log-chan-in    :- ReadPort
    log-chan-out   :- WritePort
    status         :- AtomicBoolean
-   exit-chan      :- (maybe (protocol ReadPort))]
+   exit-fn        :- (maybe IFn)]
 
   Lifecycle
 
   (start [this]
     (log! log-chan-out this)
-    (assoc this :exit-chan
-           (thread-loop [sync-requests {}]
-             (when (.get status)
-               (when-some [obj (<!! log-chan-in)]
-                 ;; Pass through ASAP
-                 (put! log-chan-out obj)
-                 (recur (process-event obj sync-requests this)))))))
+    (let [c (thread-loop [sync-requests {}]
+              (when (.get status)
+                (when-some [obj (<!! log-chan-in)]
+                  ;; Pass through ASAP
+                  (put! log-chan-out obj)
+                  (recur (process-event obj sync-requests this)))))]
+      (assoc this :exit-fn #(<!! c))))
 
   (stop [this]
     ;; Exit ASAP
     (.set status false)
     (log! log-chan-out this)
     (close! log-chan-in)
-    (<!! exit-chan)
-    (dissoc this :exit-chan))
+    (exit-fn)
+    (dissoc this :exit-fn))
 
   Loggable
 
   (log-level [_] DEBUG)
 
   (log-item [this]
-    (->LogItem this (if exit-chan
+    (->LogItem this (if exit-fn
                       "↓ Stopping NewMessageNotificationService"
                       "↑ Starting NewMessageNotificationService"))))
 
@@ -177,7 +177,7 @@
      :log-chan-in log-chan-in
      :log-chan-out (chan CHAN-SIZE)
      :status (AtomicBoolean. true)
-     :exit-chan nil}))
+     :exit-fn nil}))
 
 (s/defn ^:private process-stop-event :- SyncRequestMap
   [obj            :- Object

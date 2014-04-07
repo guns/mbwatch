@@ -14,8 +14,8 @@
             [mbwatch.concurrent :refer [thread-loop]]
             [mbwatch.types :as t]
             [mbwatch.util :refer [class-name]]
-            [schema.core :as s :refer [Any Int maybe protocol]])
-  (:import (clojure.lang Associative)
+            [schema.core :as s :refer [Any Int maybe]])
+  (:import (clojure.lang Associative IFn)
            (org.joda.time DateTime)))
 
 ;; From linux/kern_levels.h
@@ -80,25 +80,25 @@
   [level     :- Int
    logger    :- IItemLogger
    log-chan  :- ReadPort
-   exit-chan :- (maybe (protocol ReadPort))]
+   exit-fn   :- (maybe IFn)]
 
   Lifecycle
 
   (start [this]
     (log! log-chan this)
-    (assoc this :exit-chan
-           (thread-loop []
-             (when-some [obj (<!! log-chan)]
-               (when (<= (log-level obj) level)
-                 (log logger (log-item obj)))
-               (recur)))))
+    (let [c (thread-loop []
+              (when-some [obj (<!! log-chan)]
+                (when (<= (log-level obj) level)
+                  (log logger (log-item obj)))
+                (recur)))]
+      (assoc this :exit-fn #(<!! c))))
 
   (stop [this]
     ;; Exit gracefully
     (log! log-chan this)
     (close! log-chan)
-    (<!! exit-chan)
-    (dissoc this :exit-chan))
+    (exit-fn)
+    (dissoc this :exit-fn))
 
   Loggable
 
@@ -106,7 +106,7 @@
 
   (log-item [this]
     (->LogItem this (format "%s LoggingService [%s %s]"
-                            (if exit-chan "↓ Stopping" "↑ Starting")
+                            (if exit-fn "↓ Stopping" "↑ Starting")
                             (get LOG-LEVELS level)
                             (class-name logger)))))
 
@@ -118,4 +118,4 @@
     {:level level
      :logger logger
      :log-chan log-chan
-     :exit-chan nil}))
+     :exit-fn nil}))
