@@ -190,12 +190,12 @@
                       "↑ Starting NewMessageNotificationService"))))
 
 (s/defn ->NewMessageNotificationService :- NewMessageNotificationService
-  [notify-command  :- String
-   notify-map-atom :- Atom
-   log-chan-in     :- ReadPort]
+  [notify-command :- String
+   notify-map     :- NotifyMap
+   log-chan-in    :- ReadPort]
   (strict-map->NewMessageNotificationService
     {:notify-command notify-command
-     :notify-map-atom notify-map-atom
+     :notify-map-atom (atom notify-map)
      :log-chan-in log-chan-in
      :log-chan-out (chan CHAN-SIZE)
      :status (AtomicBoolean. true)

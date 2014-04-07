@@ -77,7 +77,7 @@
         ;; Create middleware components
         notification-service (->NewMessageNotificationService
                                (-> config :mbwatchrc :notify-command)
-                               (atom {"self" #{"INBOX"}}) ; FIXME: Move to config
+                               {"self" #{"INBOX"}} ; FIXME: Move to config
                                log-chan)
         log-chan (:log-chan-in notification-service)
         connection-watcher (->ConnectionWatcher
