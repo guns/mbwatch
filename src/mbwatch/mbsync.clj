@@ -79,14 +79,14 @@
                   (let [[id boxes] req]
                     (sync-boxes! this id boxes))
                   (recur))))]
-      (assoc this :exit-fn #(<!! c))))
+      (assoc this :exit-fn
+             #(do (.set status false)     ; Halt processing ASAP
+                  (sig-notify-all status) ; Terminate syncs
+                  (close! req-chan)       ; Unblock consumer
+                  (<!! c)))))
 
   (stop [this]
-    ;; Exit ASAP
-    (.set status false)
     (log! log-chan this)
-    (sig-notify-all status)
-    (close! req-chan)
     (exit-fn)
     (dissoc this :exit-fn))
 
@@ -147,13 +147,13 @@
                           (<!! cmd-chan))]
                 (when-let [workers (process-command this workers cmd)]
                   (recur workers))))]
-      (assoc this :exit-fn #(<!! c))))
+      (assoc this :exit-fn
+             #(do (.set status false) ; Halt processing ASAP
+                  (close! cmd-chan)   ; Unblock consumer
+                  (<!! c)))))
 
   (stop [this]
-    ;; Exit ASAP
-    (.set status false)
     (log! log-chan this)
-    (close! cmd-chan)
     (exit-fn)
     (dissoc this :exit-fn))
 

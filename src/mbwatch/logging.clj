@@ -91,12 +91,12 @@
                 (when (<= (log-level obj) level)
                   (log logger (log-item obj)))
                 (recur)))]
-      (assoc this :exit-fn #(<!! c))))
+      (assoc this :exit-fn
+             #(do (close! log-chan) ; Unblock consumer
+                  (<!! c)))))
 
   (stop [this]
-    ;; Exit gracefully
     (log! log-chan this)
-    (close! log-chan)
     (exit-fn)
     (dissoc this :exit-fn))
 

@@ -168,8 +168,9 @@
               (loop []
                 (when (.get status)
                   (sig-wait-and-set-forward status next-check poll-ms)
-                  (swap! connections #(update-connections % mbchan->IMAPCredential 2000)) ; FIXME: Move to config
-                  (recur))))
+                  (when (.get status)
+                    (swap! connections #(update-connections % mbchan->IMAPCredential 2000)) ; FIXME: Move to config
+                    (recur)))))
           c (thread-loop []
               (when (.get status)
                 (when-some [cmd (<!! cmd-chan-in)]
@@ -177,16 +178,16 @@
                     ;; Commands must pass through
                     (>!! cmd-chan-out cmd'))
                   (recur))))]
-      (assoc this :exit-fn #(do (remove-watch connections ::watch-conn-changes)
-                                @f
-                                (<!! c)))))
+      (assoc this :exit-fn
+             #(do (.set status false)     ; Halt processing ASAP
+                  (sig-notify-all status) ; Trigger timer
+                  (close! cmd-chan-in)    ; Unblock consumer
+                  (remove-watch connections ::watch-conn-changes)
+                  @f
+                  (<!! c)))))
 
   (stop [this]
-    ;; Exit ASAP
-    (.set status false)
     (log! log-chan this)
-    (sig-notify-all status)
-    (close! cmd-chan-in)
     (exit-fn)
     (dissoc this :exit-fn))
 
