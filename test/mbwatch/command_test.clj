@@ -5,6 +5,6 @@
 
 (deftest test-Command
   ;; Schema validation
-  (c/->Command :term)
+  (c/->Command :sync/term)
   (c/->Command :sync {"foo" ["bar"]})
   (is (thrown? Exception (c/->Command :UNKNOWN))))

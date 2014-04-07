@@ -267,7 +267,7 @@
   [connection-watcher :- ConnectionWatcher
    command            :- Command]
   (case (:opcode command)
-    :check-conn (do (sig-notify-all (:status connection-watcher)) command)
+    :conn/check (do (sig-notify-all (:status connection-watcher)) command)
     :sync (partition-syncs connection-watcher command)
     command))
 
