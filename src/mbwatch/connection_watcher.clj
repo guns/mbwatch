@@ -177,7 +177,7 @@
                     (>!! cmd-chan-out cmd'))
                   (recur))))]
       (assoc this :exit-fn
-             #(do (.set status false)     ; Halt processing ASAP
+             #(do (.set status false)     ; Stop after current iteration
                   (sig-notify-all status) ; Trigger timer
                   (close! cmd-chan-in)    ; Unblock consumer
                   (remove-watch connections ::watch-conn-changes)

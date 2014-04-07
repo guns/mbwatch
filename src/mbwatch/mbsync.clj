@@ -80,7 +80,7 @@
                     (sync-boxes! this id boxes))
                   (recur))))]
       (assoc this :exit-fn
-             #(do (.set status false)     ; Halt processing ASAP
+             #(do (.set status false)     ; Stop after current iteration
                   (sig-notify-all status) ; Terminate syncs
                   (close! req-chan)       ; Unblock consumer
                   (<!! c)))))
@@ -151,7 +151,7 @@
                 (when-let [workers (process-command this workers cmd)]
                   (recur workers))))]
       (assoc this :exit-fn
-             #(do (.set status false) ; Halt processing ASAP
+             #(do (.set status false) ; Stop after current iteration
                   (close! cmd-chan)   ; Unblock consumer
                   (<!! c)))))
 

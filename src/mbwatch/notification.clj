@@ -166,7 +166,7 @@
                   (put! log-chan-out obj)
                   (recur (process-event obj sync-requests this)))))]
       (assoc this :exit-fn
-             #(do (.set status false)  ; Halt processing ASAP
+             #(do (.set status false)  ; Stop after current iteration
                   (close! log-chan-in) ; Unblock consumer
                   (remove-watch notify-map-atom ::log-notify-map-changes)
                   (<!! c)))))
