@@ -30,7 +30,6 @@
            (java.util.concurrent.atomic AtomicBoolean)
            (javax.mail.internet MimeMessage)
            (mbwatch.command Command)
-           (mbwatch.logging LogItem)
            (mbwatch.mbsync.events MbsyncEventStop MbsyncUnknownChannelError)
            (org.joda.time DateTime)))
 
@@ -56,6 +55,26 @@
                (StringBuilder. "NewMessageNotification:") (sort mbchan->mbox->messages))]
       (->LogItem this (str sb)))))
 
+(defschema NotifyMap
+  {String #{String}})
+
+(t/defrecord NotifyMapChangeEvent
+  [notify-map :- NotifyMap
+   timestamp  :- DateTime]
+
+  Loggable
+
+  (log-level [_] INFO)
+
+  (log-item [this]
+    (let [msg (->> notify-map
+                   (mapv (partial apply join-mbargs))
+                   (string/join \space))
+          msg (if (seq msg)
+                (str "Now notifying on: " msg)
+                "Notifications disabled.")]
+      (->LogItem this msg))))
+
 (s/defn ^:private format-msg :- (maybe String)
   [messages :- [MimeMessage]]
   (let [n (count messages)
@@ -73,7 +92,7 @@
               (string/join \newline ss)))))
 
 (s/defn ^:private sync-event->new-messages-by-box :- (maybe {String [MimeMessage]})
-  [notify-map :- {String #{String}}
+  [notify-map :- NotifyMap
    event      :- MbsyncEventStop]
   (let [{:keys [mbchan mboxes maildir start]} event]
     (when (and maildir (contains? notify-map mbchan))
@@ -90,7 +109,7 @@
           {} (sort bs))))))
 
 (s/defn ^:private ->NewMessageNotification :- (maybe NewMessageNotification)
-  [notify-map :- {String #{String}}
+  [notify-map :- NotifyMap
    events     :- [MbsyncEventStop]]
   (let [m (reduce
             (fn [m ev]
@@ -133,21 +152,9 @@
     "Returns a new version of the sync-requests map, adding or removing self
      from it as necessary."))
 
-(s/defn log-notify-map-changes-fn :- IFn
-  [log-chan :- WritePort]
-  (fn [_ _ old-map new-map]
-    (when (not= old-map new-map)
-      (let [msg (->> new-map
-                     (mapv (partial apply join-mbargs))
-                     (string/join \space))
-            msg (if (seq msg)
-                  (str "Now notifying on: " msg)
-                  "Notifications disabled.")]
-        (log! log-chan (LogItem. INFO (DateTime.) msg))))))
-
 (t/defrecord NewMessageNotificationService
   [notify-command  :- String
-   notify-map-atom :- Atom
+   notify-map-atom :- Atom ; NotifyMap
    log-chan-in     :- ReadPort
    log-chan-out    :- WritePort
    status          :- AtomicBoolean
@@ -157,8 +164,6 @@
 
   (start [this]
     (log! log-chan-out this)
-    (add-watch notify-map-atom ::log-notify-map-changes
-               (log-notify-map-changes-fn log-chan-out))
     (let [c (thread-loop [sync-requests {}]
               (when (.get status)
                 (when-some [obj (<!! log-chan-in)]
@@ -168,7 +173,6 @@
       (assoc this :exit-fn
              #(do (.set status false)  ; Stop after current iteration
                   (close! log-chan-in) ; Unblock consumer
-                  (remove-watch notify-map-atom ::log-notify-map-changes)
                   (<!! c)))))
 
   (stop [this]
@@ -198,8 +202,12 @@
      :exit-fn nil}))
 
 (defmacro ^:private with-handler-context [notify-service command expr]
+  {:requires [DateTime NotifyMapChangeEvent]}
   (let [[f & args] expr]
-    `(~f (:notify-map-atom ~notify-service) ~@args (:payload ~command))))
+    `(let [old-map# (deref (:notify-map-atom ~notify-service))
+           new-map# (~f (:notify-map-atom ~notify-service) ~@args (:payload ~command))]
+       (when (not= old-map# new-map#)
+         (put! (:log-chan-out ~notify-service) (NotifyMapChangeEvent. new-map# (DateTime.)))))))
 
 (s/defn ^:private process-command :- SyncRequestMap
   [command        :- Command

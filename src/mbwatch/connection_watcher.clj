@@ -161,6 +161,7 @@
 
   (start [this]
     (log! log-chan this)
+    ;; Changes to this atom can happen from multiple threads
     (add-watch connections ::watch-conn-changes
                (watch-conn-changes-fn log-chan cmd-chan-out))
     (let [f (future-loop []
