@@ -32,8 +32,8 @@
                      │ LoggingService │
                      └────────────────┘
   "
-  (:require [clojure.core.async :refer [chan pipe]]
-            [clojure.core.async.impl.protocols :refer [ReadPort]]
+  (:require [clojure.core.async :refer [chan]]
+            [clojure.core.async.impl.protocols :refer [WritePort]]
             [com.stuartsierra.component :refer [Lifecycle start-system
                                                 stop-system]]
             [mbwatch.concurrent :refer [CHAN-SIZE]]
@@ -54,7 +54,8 @@
            (mbwatch.notification NewMessageNotificationService)))
 
 (t/defrecord Application
-  [logging-service      :- LoggingService
+  [cmd-chan             :- WritePort
+   logging-service      :- LoggingService
    notification-service :- NewMessageNotificationService
    mbsync-master        :- MbsyncMaster
    connection-watcher   :- ConnectionWatcher]
@@ -65,14 +66,13 @@
   ;; we do generally want the LogItem consumers to start before the producers
   ;; and stop after them. Here we depend on the implicit parameter-ordering of
   ;; (keys a-record) to start and stop the components in FILO order.
-  (start [this] (start-system this))
-  (stop [this] (stop-system this)))
+  (start [this] (start-system this (rest (keys this))))
+  (stop [this] (stop-system this (rest (keys this)))))
 
 (s/defn ->Application :- Application
-  [config   :- Config
-   cmd-chan :- ReadPort]
+  [config :- Config]
   (let [;; Create deep pipes for Commands and Loggables
-        cmd-chan (pipe cmd-chan (chan CHAN-SIZE))
+        public-cmd-chan (chan CHAN-SIZE)
         log-chan (chan CHAN-SIZE)
         ;; Create middleware components
         notification-service (->NewMessageNotificationService
@@ -83,10 +83,11 @@
         connection-watcher (->ConnectionWatcher
                              (-> config :mbsyncrc :mbchan->IMAPCredential)
                              (* 60 1000) ; FIXME: Move to config
-                             cmd-chan
+                             public-cmd-chan
                              log-chan)
         cmd-chan (:cmd-chan-out connection-watcher)]
     (Application.
+      public-cmd-chan
       (->LoggingService DEBUG
                         (->ConsoleLogger System/out (get-default-colors) MILLIS-TIMESTAMP-FORMAT)
                         (:log-chan-out notification-service))
