@@ -52,7 +52,7 @@
               (pos? m) (conj (format "%s minute%s" m (if (= m 1) "" \s)))
               (pos? s) (conj (format "%s second%s" s (if (= s 1) "" \s))))]
      (case (count xs)
-       0 "zero seconds"
+       0 "0 seconds"
        1 (first xs)
        2 (apply format "%s and %s" xs)
        3 (apply format "%s, %s, and %s" xs))))
