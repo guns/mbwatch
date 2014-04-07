@@ -1,6 +1,6 @@
 (ns mbwatch.types
   (:require [clojure.core :as cc]
-            [schema.core :as s :refer [both defschema eq pred]])
+            [schema.core :as s :refer [both defschema either eq pred]])
   (:refer-clojure :exclude [defrecord]))
 
 (defmacro defrecord
@@ -39,3 +39,6 @@
 
 (defschema PortNumber
   (pred #(and (integer? %) (< 0 % 0x1000))))
+
+(defschema StringList
+  (either [String] #{String}))

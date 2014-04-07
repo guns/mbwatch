@@ -34,7 +34,7 @@
                                      WARNING log!]]
             [mbwatch.mbsync.events :refer [join-mbargs]]
             [mbwatch.network :refer [reachable?]]
-            [mbwatch.types :as t :refer [Word]]
+            [mbwatch.types :as t :refer [StringList Word]]
             [schema.core :as s :refer [Int defschema eq maybe protocol]]
             [schema.utils :refer [class-schema]])
   (:import (clojure.lang Atom IFn)
@@ -64,7 +64,7 @@
       (->LogItem this msg))))
 
 (t/defrecord ReleasePendingSyncsEvent
-  [mbchan->mboxes :- {String [String]}
+  [mbchan->mboxes :- {String StringList}
    timestamp      :- DateTime]
 
   Loggable
@@ -201,7 +201,7 @@
    :pending-sync value that has :all-mboxes? is ignored since a full mbchan
    sync will be issued once the server is reachable."
   [conn-map :- ConnectionMap
-   sync-req :- {String [String]}]
+   sync-req :- {String StringList}]
   (reduce-kv
     (fn [m mbchan mboxes]
       (update-in m [mbchan :pending-syncs]

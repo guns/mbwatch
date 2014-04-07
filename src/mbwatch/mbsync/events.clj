@@ -10,7 +10,7 @@
 
 (s/defn join-mbargs :- String
   [mbchan :- String
-   mboxes :- [String]]
+   mboxes :- StringList]
   (if (seq mboxes)
     (str mbchan \: (string/join \, mboxes))
     (str mbchan)))
@@ -19,7 +19,7 @@
   [level  :- Int
    id     :- Int
    mbchan :- String
-   mboxes :- [String]
+   mboxes :- StringList
    start  :- DateTime]
 
   Loggable
@@ -34,7 +34,7 @@
   [level   :- Int
    id      :- Int
    mbchan  :- String
-   mboxes  :- [String]
+   mboxes  :- StringList
    start   :- DateTime
    stop    :- DateTime
    status  :- Int

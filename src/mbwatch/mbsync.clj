@@ -52,7 +52,7 @@
    to avoid temporary files."
   [rc     :- String
    mbchan :- String
-   mboxes :- [String]]
+   mboxes :- StringList]
   (process/spawn
     "bash" "-c" (str "exec mbsync -c <(cat) " (shell-escape (join-mbargs mbchan mboxes)))
     :in rc))
@@ -101,7 +101,7 @@
 (s/defn ^:private sync-boxes! :- VOID
   [mbsync-worker :- MbsyncWorker
    id            :- Int
-   mboxes        :- [String]]
+   mboxes        :- StringList]
   (let [{:keys [rc maildir mbchan log-chan status]} mbsync-worker
         ev (strict-map->MbsyncEventStart
              {:level INFO
@@ -194,7 +194,7 @@
    if it does not exist."
   [workers       :- {String MbsyncWorker}
    id            :- Int
-   sync-req      :- {String [String]}
+   sync-req      :- {String StringList}
    mbsync-master :- MbsyncMaster]
   (let [mbchans (-> mbsync-master :mbsyncrc :mbchans)]
     (reduce-kv
