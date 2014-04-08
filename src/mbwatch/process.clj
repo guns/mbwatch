@@ -1,6 +1,6 @@
 (ns mbwatch.process
   (:require [clojure.java.io :as io]
-            [mbwatch.concurrent :refer [first-alt sig-wait]]
+            [mbwatch.concurrent :refer [sig-wait]]
             [mbwatch.types :refer [VOID]]
             [schema.core :as s :refer [either enum]])
   (:import (java.io File IOException OutputStream Writer)))
@@ -20,18 +20,24 @@
 
 (s/defn interruptible-wait :- Boolean
   "Run process while waiting on lock. If a notification is received, the
-   process is terminated early and false is returned."
-  ([lock proc]
-   (interruptible-wait lock proc true))
-  ([lock      :- Object
-    proc      :- Process
-    graceful? :- Boolean]
-   (let [wait (future (sig-wait lock) false)]
-     (if (first-alt (.waitFor proc) (deref wait))
-       graceful?
-       (do (future-cancel wait)
-           (.destroy proc)
-           (recur lock proc false))))))
+   process is sent a termination signal and false is returned."
+  [lock      :- Object
+   proc      :- Process]
+  (let [graceful? (promise)
+        ;; Loop so that the user can send multiple termination signals to a
+        ;; recalcitrant process.
+        sword (future
+                (loop []
+                  (sig-wait lock)
+                  (deliver graceful? false)
+                  (.destroy proc)
+                  (recur)))]
+    (try
+      (.waitFor proc)
+      (deliver graceful? true)
+      @graceful?
+      (finally
+        (future-cancel sword)))))
 
 (s/defn dump! :- VOID
   "Dump a process's stdout or stderr into writer."

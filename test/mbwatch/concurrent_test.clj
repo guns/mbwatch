@@ -4,12 +4,6 @@
             [schema.test :refer [deftest]])
   (:import (java.util.concurrent.atomic AtomicLong)))
 
-(deftest test-first-alt
-  (is (= :first
-         (c/first-alt (do (Thread/sleep 20) :second)
-                      (do (Thread/sleep 10) :first))
-         (c/first-alt :first :second :third))))
-
 (deftest test-wait-and-notify
   (let [lock (Object.)
         p (promise)
