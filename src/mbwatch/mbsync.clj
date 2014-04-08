@@ -211,7 +211,7 @@
             (put! (get-in ws [ch :req-chan]) [id bs])
             ws)
           (do
-            (put! (:log-chan mbsync-master) (MbsyncUnknownChannelError. id ch))
+            (log! (:log-chan mbsync-master) (MbsyncUnknownChannelError. id ch))
             ws)))
       workers sync-req)))
 

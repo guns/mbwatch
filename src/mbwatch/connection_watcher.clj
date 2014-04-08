@@ -63,8 +63,7 @@
 
 (defloggable PendingSyncsEvent INFO
   [action         :- (enum :merge :release)
-   mbchan->mboxes :- {String StringList}
-   timestamp      :- DateTime]
+   mbchan->mboxes :- {String StringList}]
   (->> mbchan->mboxes
        join-sync-request
        (str (if (= action :merge)
@@ -118,7 +117,7 @@
                 ;; Report altered pending syncs
                 (when (and new-pending-syncs
                            (not= old-pending-syncs new-pending-syncs))
-                  (put! log-chan (PendingSyncsEvent. :merge {mbchan new-pending-syncs} dt)))
+                  (log! log-chan (PendingSyncsEvent. :merge {mbchan new-pending-syncs})))
                 (cond
                   ;; mbchan has been dissociated
                   (nil? new-mbchan-map)
@@ -136,7 +135,7 @@
             {} (distinct (mapcat keys [old-conn-map new-conn-map]))))
         (as-> ps
           (when (seq ps)
-            (put! log-chan (PendingSyncsEvent. :release ps (DateTime.)))
+            (log! log-chan (PendingSyncsEvent. :release ps))
             ;; Commands must be conveyed
             (>!! cmd-chan-out (->Command :sync ps)))))))
 
@@ -271,7 +270,7 @@
                            new-period ^long (:payload command)]
                        (when (update-period-and-alarm! new-period period alarm)
                          (sig-notify-all status)
-                         (put! log-chan (ConnectionWatcherPreferenceEvent. new-period)))
+                         (log! log-chan (ConnectionWatcherPreferenceEvent. new-period)))
                        command)
     :sync (partition-syncs connection-watcher command)
     command))

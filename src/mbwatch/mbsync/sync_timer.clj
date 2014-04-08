@@ -114,11 +114,11 @@
                             new-period ^long (:payload command)]
                         (when (update-period-and-alarm! new-period period alarm)
                           (sig-notify-all status)
-                          (put! log-chan (SyncTimerPreferenceEvent. new-period nil))))
+                          (log! log-chan (SyncTimerPreferenceEvent. new-period nil))))
     :timer/set-request (let [{:keys [sync-request-atom log-chan]} sync-timer
                              old-req @sync-request-atom
                              new-req (reset! sync-request-atom (:payload command))]
                          (when-not (= old-req new-req)
-                           (put! log-chan (SyncTimerPreferenceEvent. nil new-req))))
+                           (log! log-chan (SyncTimerPreferenceEvent. nil new-req))))
     nil)
   nil)

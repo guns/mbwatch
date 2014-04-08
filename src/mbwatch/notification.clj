@@ -53,8 +53,7 @@
   {String #{String}})
 
 (defloggable NotifyMapChangeEvent INFO
-  [notify-map :- NotifyMap
-   timestamp  :- DateTime]
+  [notify-map :- NotifyMap]
   (let [msg (join-sync-request notify-map)]
     (if (seq msg)
       (str "Now notifying on: " msg)
@@ -191,7 +190,7 @@
     `(let [old-map# (deref (:notify-map-atom ~notify-service))
            new-map# (~f (:notify-map-atom ~notify-service) ~@args (:payload ~command))]
        (when-not (= old-map# new-map#)
-         (put! (:log-chan-out ~notify-service) (new ~NotifyMapChangeEvent new-map# (new ~DateTime)))))))
+         (log! (:log-chan-out ~notify-service) (new ~NotifyMapChangeEvent new-map#))))))
 
 (s/defn ^:private process-command :- SyncRequestMap
   [command        :- Command
@@ -234,7 +233,7 @@
                 (when-let [note (->NewMessageNotification
                                   (deref (:notify-map-atom notify-service))
                                   events)]
-                  (put! (:log-chan-out notify-service) note)
+                  (log! (:log-chan-out notify-service) note)
                   (notify! (:notify-command notify-service) note)))
               (dissoc sync-requests id))
           (assoc sync-requests id {:countdown countdown :events events})))
