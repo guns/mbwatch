@@ -44,34 +44,33 @@
        (first (~alts!! ~chans :priority true)))))
 
 (s/defn sig-wait :- VOID
-  ([monitor :- Object]
-   (locking monitor (.wait monitor)))
-  ([monitor :- Object
+  ([lock :- Object]
+   (locking lock (.wait lock)))
+  ([lock    :- Object
     timeout :- long]
    (when (pos? timeout)
-     (locking monitor
-       (.wait monitor timeout)))))
+     (locking lock (.wait lock timeout)))))
 
 (s/defn sig-notify :- VOID
-  [monitor :- Object]
-  (locking monitor (.notify monitor)))
+  [lock :- Object]
+  (locking lock (.notify lock)))
 
 (s/defn sig-notify-all :- VOID
-  [monitor :- Object]
-  (locking monitor (.notifyAll monitor)))
+  [lock :- Object]
+  (locking lock (.notifyAll lock)))
 
 (s/defn sig-wait-and-set-forward :- VOID
-  "Wait for signals on monitor or wake up at alarm time, then reset the alarm
+  "Wait for signals on lock or wake up at alarm time, then reset the alarm
    `period` milliseconds forward. If the value of `alarm` has changed in the
-   meantime, wait on monitor again until the new alarm time.
+   meantime, wait on lock again until the new alarm time.
 
    This is intended to implement a periodic timer that can be interrupted and
    reset on signal."
-  [monitor :- Object
-   period  :- AtomicLong
-   alarm   :- AtomicLong]
+  [lock   :- Object
+   period :- AtomicLong
+   alarm  :- AtomicLong]
   (loop [alarm-ms (.get alarm)]
-    (sig-wait monitor (- alarm-ms (System/currentTimeMillis)))
+    (sig-wait lock (- alarm-ms (System/currentTimeMillis)))
     (let [alarm-ms' (.get alarm)]
       (when-not (= alarm-ms alarm-ms')
         (recur alarm-ms'))))
