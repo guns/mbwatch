@@ -10,17 +10,26 @@
                       (do (Thread/sleep 10) :first))
          (c/first-alt :first :second :third))))
 
-(deftest test-concurrency-helpers
-  (let [mon (Object.)
+(deftest test-wait-and-notify
+  (let [obj (Object.)
         p (promise)
-        alarm (AtomicLong.)
-        interval (AtomicLong. 5000)
-        f (future (c/sig-wait mon) (deliver p mon))
-        g (future (c/sig-wait-and-set-forward mon alarm interval))]
+        f (future (c/sig-wait obj) (deliver p obj))]
     (try
       (is (nil? (deref p 10 nil)))
-      (c/sig-notify-all mon)
-      (is (= (deref p 10 nil) mon))
-      (is (< (System/currentTimeMillis) (.get alarm)))
+      (c/sig-notify-all obj)
+      (is (= obj (deref p 10 nil)))
       (finally
-        (mapv future-cancel [f g])))))
+        (future-cancel f)))))
+
+(deftest test-alarms
+  (let [obj (Object.)
+        t (System/currentTimeMillis)
+        period (AtomicLong. 2000)
+        alarm (AtomicLong. (+ t (.get period)))
+        f (future (c/sig-wait-and-set-forward obj period alarm))]
+    (Thread/sleep 10) ; Give the future thread a chance to start
+    (c/reset-period-and-alarm 200 period alarm)
+    (c/sig-notify-all obj)
+    @f
+    (is (< (- (System/currentTimeMillis) t) 300))
+    (is (< 0 (- (.get alarm) (System/currentTimeMillis)) (inc (.get period))))))

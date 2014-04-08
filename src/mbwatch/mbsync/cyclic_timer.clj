@@ -41,7 +41,7 @@
     (log! log-chan this)
     (let [f (future-loop []
               (when (.get status)
-                (sig-wait-and-set-forward status alarm period)
+                (sig-wait-and-set-forward status period alarm)
                 (when (.get status)
                   (>!! cmd-chan-out (->Command :sync @sync-request-atom))
                   (recur))))

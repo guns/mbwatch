@@ -168,7 +168,7 @@
                (watch-conn-changes-fn log-chan cmd-chan-out))
     (let [f (future-loop []
               (when (.get status)
-                (sig-wait-and-set-forward status alarm period)
+                (sig-wait-and-set-forward status period alarm)
                 (when (.get status)
                   (swap! connections #(update-connections % mbchan->IMAPCredential 2000)) ; FIXME: Move to config
                   (recur))))

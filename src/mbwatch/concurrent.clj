@@ -2,7 +2,7 @@
   (:require [clojure.core.async :refer [>!! alts!! chan thread]]
             [mbwatch.types :refer [VOID]]
             [mbwatch.util :refer [catch-print]]
-            [schema.core :as s])
+            [schema.core :as s :refer [Int]])
   (:import (java.util.concurrent.atomic AtomicLong)))
 
 (def ^:const CHAN-SIZE
@@ -61,11 +61,27 @@
   (locking monitor (.notifyAll monitor)))
 
 (s/defn sig-wait-and-set-forward :- VOID
-  "Wait for signals on monitor or wake up at alarm time, then reset the
-   alarm `interval` milliseconds forward. This allows a periodic timer to be
-   interrupted and reset on signal."
-  [monitor  :- Object
-   alarm    :- AtomicLong
-   interval :- AtomicLong]
-  (sig-wait monitor (- (.get alarm) (System/currentTimeMillis)))
-  (.set alarm (+ (System/currentTimeMillis) (.get interval))))
+  "Wait for signals on monitor or wake up at alarm time, then reset the alarm
+   `period` milliseconds forward. If the value of `alarm` has changed in the
+   meantime, wait on monitor again until the new alarm time.
+
+   This is intended to implement a periodic timer that can be interrupted and
+   reset on signal."
+  [monitor :- Object
+   period  :- AtomicLong
+   alarm   :- AtomicLong]
+  (loop [alarm-ms (.get alarm)]
+    (sig-wait monitor (- alarm-ms (System/currentTimeMillis)))
+    (let [alarm-ms' (.get alarm)]
+      (when-not (= alarm-ms alarm-ms')
+        (recur alarm-ms'))))
+  (.set alarm (+ (System/currentTimeMillis) (.get period))))
+
+(s/defn reset-period-and-alarm :- VOID
+  "Set the period to new-period-ms and reset the alarm accordingly."
+  [new-period-ms :- Int
+   period        :- AtomicLong
+   alarm         :- AtomicLong]
+  (let [prev-alarm (.get alarm)]
+    (.set alarm (+ new-period-ms (- prev-alarm (.get period))))
+    (.set period new-period-ms)))
