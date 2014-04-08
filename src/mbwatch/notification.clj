@@ -202,12 +202,11 @@
      :exit-fn nil}))
 
 (defmacro ^:private with-handler-context [notify-service command expr]
-  {:requires [DateTime NotifyMapChangeEvent]}
   (let [[f & args] expr]
     `(let [old-map# (deref (:notify-map-atom ~notify-service))
            new-map# (~f (:notify-map-atom ~notify-service) ~@args (:payload ~command))]
        (when-not (= old-map# new-map#)
-         (put! (:log-chan-out ~notify-service) (NotifyMapChangeEvent. new-map# (DateTime.)))))))
+         (put! (:log-chan-out ~notify-service) (new ~NotifyMapChangeEvent new-map# (new ~DateTime)))))))
 
 (s/defn ^:private process-command :- SyncRequestMap
   [command        :- Command
