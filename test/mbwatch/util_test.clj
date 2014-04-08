@@ -45,9 +45,3 @@
 
 (deftest test-catch-print
   (is (nil? (u/catch-print (assert false)))))
-
-(deftest test-deep-merge
-  (is (= {:a {:b {:c {:d :e}} :d :e}}
-         (u/deep-merge {:a {:b :c :d :e}}
-                       {:a {:b {:c :d}}}
-                       {:a {:b {:c {:d :e}}}}))))
