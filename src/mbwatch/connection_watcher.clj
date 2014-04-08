@@ -35,6 +35,7 @@
             [mbwatch.mbsync.events :refer [join-mbargs]]
             [mbwatch.network :refer [reachable?]]
             [mbwatch.types :as t :refer [StringList Word]]
+            [mbwatch.util :refer [human-duration]]
             [schema.core :as s :refer [Int defschema enum maybe pair]])
   (:import (clojure.lang Atom IFn)
            (java.util.concurrent.atomic AtomicBoolean AtomicLong)
@@ -195,9 +196,9 @@
   (log-level [_] DEBUG)
 
   (log-item [this]
-    (->LogItem this (if exit-fn
-                      "↓ Stopping ConnectionWatcher"
-                      "↑ Starting ConnectionWatcher"))))
+    (->LogItem this (format "%s ConnectionWatcher [period: %s]"
+                            (if exit-fn "↓ Stopping" "↑ Starting")
+                            (human-duration (quot (.get period) 1000))))))
 
 (s/defn ^:private merge-pending-syncs :- (pair ConnectionMap "conn-map"
                                                {String StringList} "sync-req")

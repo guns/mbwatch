@@ -69,9 +69,9 @@
   (log-level [_] DEBUG)
 
   (log-item [this]
-    (->LogItem this (if exit-fn
-                      "↓ Stopping CyclicTimer"
-                      "↑ Starting CyclicTimer"))))
+    (->LogItem this (format "%s CyclicTimer [period: %s]"
+                            (if exit-fn "↓ Stopping" "↑ Starting")
+                            (human-duration (quot (.get period) 1000))))))
 
 (s/defn ->CyclicTimer :- CyclicTimer
   [sync-request :- {String StringList}
