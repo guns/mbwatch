@@ -14,6 +14,12 @@
   (is (= "bar:a baz:b,c foo"
          (u/join-sync-request {"foo" [] "bar" ["a"] "baz" ["c" "b"]}))))
 
+(deftest test-schema-params
+  (is (= '[foo bar baz]
+         (u/schema-params '[foo :- Int bar :- String baz :- #{Symbol}])
+         (u/schema-params '[foo :- Int bar baz :- #{Symbol}])
+         (u/schema-params '[foo bar baz]))))
+
 (deftest test-chomp
   (is (= ""    (u/chomp "") (u/chomp "" "")))
   (is (= "foo" (u/chomp "foo\r\n")))

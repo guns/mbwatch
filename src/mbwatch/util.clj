@@ -2,7 +2,8 @@
   (:require [clojure.string :as string]
             [mbwatch.types :refer [StringList]]
             [schema.core :as s :refer [Int]])
-  (:import (java.net URLEncoder)
+  (:import (clojure.lang Symbol)
+           (java.net URLEncoder)
            (org.joda.time DateTime Instant ReadableInstant Seconds)))
 
 (s/defn join-mbargs :- String
@@ -18,6 +19,16 @@
        sort
        (mapv (fn [[mbchan mboxes]] (join-mbargs mbchan (sort mboxes))))
        (string/join \space)))
+
+(s/defn schema-params :- [Symbol]
+  "Remove `:- Type` information from a parameter list."
+  [params :- [Object]]
+  (loop [v [] params params]
+    (if-some [p (first params)]
+      (if (= (second params) :-)
+        (recur (conj v p) (drop 3 params))
+        (recur (conj v p) (rest params)))
+      v)))
 
 (s/defn chomp :- String
   "Like Ruby's String#chomp, remove trailing newlines or a constant suffix."
