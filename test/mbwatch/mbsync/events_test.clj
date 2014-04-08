@@ -6,11 +6,6 @@
   (:import (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
-(deftest test-join-mbargs
-  (is (= "foo" (e/join-mbargs "foo" [])))
-  (is (= "foo:bar" (e/join-mbargs "foo" ["bar"])))
-  (is (= "foo:bar,baz" (e/join-mbargs "foo" ["bar" "baz"]))))
-
 (deftest test-events
   (let [dt (DateTime.)
         start (e/strict-map->MbsyncEventStart

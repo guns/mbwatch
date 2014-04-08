@@ -5,6 +5,15 @@
             [schema.test :refer [deftest]])
   (:import (org.joda.time DateTime)))
 
+(deftest test-join-mbargs
+  (is (= "foo" (u/join-mbargs "foo" [])))
+  (is (= "foo:bar" (u/join-mbargs "foo" ["bar"])))
+  (is (= "foo:bar,baz" (u/join-mbargs "foo" ["bar" "baz"]))))
+
+(deftest test-join-sync-request
+  (is (= "bar:a baz:b,c foo"
+         (u/join-sync-request {"foo" [] "bar" ["a"] "baz" ["c" "b"]}))))
+
 (deftest test-chomp
   (is (= ""    (u/chomp "") (u/chomp "" "")))
   (is (= "foo" (u/chomp "foo\r\n")))
@@ -25,7 +34,7 @@
            (u/shell-escape s)))))
 
 (deftest test-human-duration
-  (is (= "zero seconds" (u/human-duration 0)))
+  (is (= "0 seconds" (u/human-duration 0)))
   (is (= "1 second" (u/human-duration 1)))
   (is (= "59 seconds" (u/human-duration 59)))
   (is (= "5 hours, 1 minute, and 35 seconds"

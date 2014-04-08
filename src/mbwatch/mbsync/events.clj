@@ -1,19 +1,11 @@
 (ns mbwatch.mbsync.events
-  (:require [clojure.string :as string]
-            [mbwatch.config.mbsyncrc :refer [Maildirstore]]
+  (:require [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [->LogItem ERR Loggable WARNING]]
             [mbwatch.types :as t :refer [StringList]]
-            [mbwatch.util :refer [human-duration]]
-            [schema.core :as s :refer [Int maybe]])
+            [mbwatch.util :refer [human-duration join-mbargs]]
+            [schema.core :refer [Int maybe]])
   (:import (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
-
-(s/defn join-mbargs :- String
-  [mbchan :- String
-   mboxes :- StringList]
-  (if (seq mboxes)
-    (str mbchan \: (string/join \, mboxes))
-    (str mbchan)))
 
 (t/defrecord ^:public MbsyncEventStart
   [level  :- Int

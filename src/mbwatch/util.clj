@@ -1,8 +1,23 @@
 (ns mbwatch.util
   (:require [clojure.string :as string]
+            [mbwatch.types :refer [StringList]]
             [schema.core :as s :refer [Int]])
   (:import (java.net URLEncoder)
            (org.joda.time DateTime Instant ReadableInstant Seconds)))
+
+(s/defn join-mbargs :- String
+  [mbchan :- String
+   mboxes :- StringList]
+  (if (seq mboxes)
+    (str mbchan \: (string/join \, mboxes))
+    (str mbchan)))
+
+(s/defn join-sync-request :- String
+  [sync-request :- {String StringList}]
+  (->> sync-request
+       sort
+       (mapv (fn [[mbchan mboxes]] (join-mbargs mbchan (sort mboxes))))
+       (string/join \space)))
 
 (s/defn chomp :- String
   "Like Ruby's String#chomp, remove trailing newlines or a constant suffix."
