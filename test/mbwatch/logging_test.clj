@@ -2,14 +2,14 @@
   (:require [clojure.core.async :refer [<!! >!! chan]]
             [clojure.test :refer [is]]
             [com.stuartsierra.component :as comp]
-            [mbwatch.logging :as l :refer [->LoggingService]]
+            [mbwatch.logging :as l]
             [schema.test :refer [deftest]])
   (:import (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
-(deftest test-log!
+(deftest test-log-with-timestamp!
   (let [ch (chan)]
-    (l/log! ch {})
+    (l/log-with-timestamp! ch {})
     (is (instance? DateTime (:timestamp (<!! ch))))))
 
 (deftest test-Loggable->LogItem
@@ -25,7 +25,7 @@
   (let [sink (atom [])
         ch (chan)
         service (comp/start
-                  (->LoggingService
+                  (l/->LoggingService
                     l/NOTICE
                     (reify l/IItemLogger
                       (log [_ item] (swap! sink conj (:message item))))

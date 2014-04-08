@@ -19,7 +19,7 @@
                                         thread-loop]]
             [mbwatch.config :refer [mdir-path]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable
-                                     defloggable log!]]
+                                     defloggable log-with-timestamp!]]
             [mbwatch.maildir :refer [new-messages senders]]
             [mbwatch.mbsync.events]
             [mbwatch.process :as process]
@@ -31,8 +31,7 @@
            (java.util.concurrent.atomic AtomicBoolean)
            (javax.mail.internet MimeMessage)
            (mbwatch.command Command)
-           (mbwatch.mbsync.events MbsyncEventStop MbsyncUnknownChannelError)
-           (org.joda.time DateTime)))
+           (mbwatch.mbsync.events MbsyncEventStop MbsyncUnknownChannelError)))
 
 (def ^:private ^:const MAX-SENDERS-SHOWN
   "TODO: Make configurable?"
@@ -92,7 +91,7 @@
                 (seq msgs) (assoc b msgs))))
           {} (sort bs))))))
 
-(s/defn ^:private ->NewMessageNotification :- (maybe NewMessageNotification)
+(s/defn ^:private find-new-messages :- (maybe NewMessageNotification)
   [notify-map :- NotifyMap
    events     :- [MbsyncEventStop]]
   (let [m (reduce
@@ -102,7 +101,7 @@
                   (seq bs->msgs) (assoc (:mbchan ev) bs->msgs))))
             {} events)]
     (when (seq m)
-      (NewMessageNotification. m))))
+      (->NewMessageNotification m))))
 
 (s/defn ^:private notify! :- VOID
   [notify-command :- String
@@ -147,7 +146,7 @@
   Lifecycle
 
   (start [this]
-    (log! log-chan-out this)
+    (log-with-timestamp! log-chan-out this)
     (let [c (thread-loop [sync-requests {}]
               (when (.get status)
                 (when-some [obj (<!! log-chan-in)]
@@ -160,7 +159,7 @@
                   (<!! c)))))
 
   (stop [this]
-    (log! log-chan-out this)
+    (log-with-timestamp! log-chan-out this)
     (exit-fn)
     (dissoc this :exit-fn))
 
@@ -185,12 +184,14 @@
      :status (AtomicBoolean. true)
      :exit-fn nil}))
 
-(defmacro ^:private with-handler-context [notify-service command expr]
+(defmacro ^:private with-handler-context
+  {:requires [->NotifyMapChangeEvent]}
+  [notify-service command expr]
   (let [[f & args] expr]
     `(let [old-map# (deref (:notify-map-atom ~notify-service))
            new-map# (~f (:notify-map-atom ~notify-service) ~@args (:payload ~command))]
        (when-not (= old-map# new-map#)
-         (log! (:log-chan-out ~notify-service) (new ~NotifyMapChangeEvent new-map#))))))
+         (put! (:log-chan-out ~notify-service) (->NotifyMapChangeEvent new-map#))))))
 
 (s/defn ^:private process-command :- SyncRequestMap
   [command        :- Command
@@ -230,10 +231,10 @@
                      conj-event? (conj event))]
         (if (zero? countdown)
           (do (future-catch-print
-                (when-let [note (->NewMessageNotification
+                (when-let [note (find-new-messages
                                   (deref (:notify-map-atom notify-service))
                                   events)]
-                  (log! (:log-chan-out notify-service) note)
+                  (put! (:log-chan-out notify-service) note)
                   (notify! (:notify-command notify-service) note)))
               (dissoc sync-requests id))
           (assoc sync-requests id {:countdown countdown :events events})))

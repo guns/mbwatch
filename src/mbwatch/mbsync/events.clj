@@ -55,7 +55,7 @@
                   (str buf)))]
       (LogItem. level stop msg))))
 
-(defloggable MbsyncUnknownChannelError WARNING
+(defloggable ^:public MbsyncUnknownChannelError WARNING
   [id     :- Int
    mbchan :- String]
   (format "Unknown channel: `%s`" mbchan))

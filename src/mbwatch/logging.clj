@@ -13,7 +13,7 @@
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.concurrent :refer [thread-loop]]
             [mbwatch.types :as t]
-            [mbwatch.util :refer [class-name]]
+            [mbwatch.util :refer [class-name schema-params]]
             [schema.core :as s :refer [Any Int maybe]])
   (:import (clojure.lang Associative IFn)
            (org.joda.time DateTime)))
@@ -47,13 +47,17 @@
 
 (s/defn ^:private assoc-timestamp :- {:timestamp DateTime Any Any}
   [map :- Associative]
+  {:pre [(nil? (:timestamp map))]}
   (assoc map :timestamp (DateTime.)))
 
 (s/defn ^:private get-timestamp :- DateTime
   [obj :- Any]
+  {:pre [(do (when (nil? (:timestamp obj))
+               (.println System/err (str "No timestamp for " obj)))
+             true)]}
   (or (:timestamp obj) (DateTime.)))
 
-(s/defn log! :- (maybe Boolean)
+(s/defn log-with-timestamp! :- (maybe Boolean)
   "Assoc :timestamp into map and put! onto chan."
   [chan :- WritePort
    map  :- Associative]
@@ -67,17 +71,30 @@
   (LogItem. (log-level loggable) (get-timestamp loggable) message))
 
 (defmacro defloggable
-  "Defines a simple Loggable implementation. The body is spliced into the
-   log-level implementation and should return a LogItem message."
-  {:requires [#'t/defrecord Loggable ->LogItem]}
+  "Defines a simple Loggable implementation with a constructor with implicit
+   timestamp creation. The body is spliced into the log-level implementation
+   and should return a LogItem message."
+  {:requires [#'t/defrecord Loggable #'s/defn]}
   [name level fields & body]
-  `(t/defrecord ~name
-     ~fields
+  (assert (not (contains? (meta name) :private))
+          "defloggable vars are private by default")
+  (let [ctor-name (with-meta (symbol (str "->" name))
+                             {:private (not (:public (meta name)))})
+        ctor-params (schema-params fields)]
+    `(do
+       (t/defrecord ~name
+         [~'timestamp :- DateTime
+          ~@fields]
 
-     Loggable
+         Loggable
 
-     (~'log-level [_#] ~level)
-     (~'log-item [this#] (->LogItem this# (do ~@body)))))
+         (~'log-level [_#] ~level)
+         (~'log-item [this#] (new ~LogItem ~level ~'timestamp (do ~@body))))
+
+       (s/defn ~ctor-name :- ~name
+         "Constructor for a defloggable event."
+         ~fields
+         (new ~name (new ~DateTime) ~@ctor-params)))))
 
 (extend-protocol Loggable
   ;; Fallback implementation
@@ -98,7 +115,7 @@
   Lifecycle
 
   (start [this]
-    (log! log-chan this)
+    (log-with-timestamp! log-chan this)
     (let [c (thread-loop []
               (when-some [obj (<!! log-chan)]
                 (when (<= (log-level obj) level)
@@ -109,7 +126,7 @@
                   (<!! c)))))
 
   (stop [this]
-    (log! log-chan this)
+    (log-with-timestamp! log-chan this)
     (exit-fn)
     (dissoc this :exit-fn))
 

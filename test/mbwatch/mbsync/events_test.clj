@@ -4,7 +4,6 @@
             [mbwatch.mbsync.events :as e]
             [schema.test :refer [deftest]])
   (:import (mbwatch.logging LogItem)
-           (mbwatch.mbsync.events MbsyncUnknownChannelError)
            (org.joda.time DateTime)))
 
 (deftest test-events
@@ -25,7 +24,7 @@
                 :status 1
                 :error "ERROR"
                 :maildir {:inbox "inbox/" :path "path/"}})
-        unknown (MbsyncUnknownChannelError. 0 "FOO")]
+        unknown (e/->MbsyncUnknownChannelError 0 "FOO")]
     (is (= [DEBUG ERR WARNING]
            (map log-level [start stop unknown])))
     (is (= (log-item start)

@@ -31,7 +31,7 @@
                                         update-period-and-alarm!]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable NOTICE
-                                     WARNING defloggable log!]]
+                                     WARNING defloggable log-with-timestamp!]]
             [mbwatch.network :refer [reachable?]]
             [mbwatch.types :as t :refer [StringList Word]]
             [mbwatch.util :refer [human-duration join-sync-request]]
@@ -117,7 +117,7 @@
                 ;; Report altered pending syncs
                 (when (and new-pending-syncs
                            (not= old-pending-syncs new-pending-syncs))
-                  (log! log-chan (PendingSyncsEvent. :merge {mbchan new-pending-syncs})))
+                  (put! log-chan (->PendingSyncsEvent :merge {mbchan new-pending-syncs})))
                 (cond
                   ;; mbchan has been dissociated
                   (nil? new-mbchan-map)
@@ -135,7 +135,7 @@
             {} (distinct (mapcat keys [old-conn-map new-conn-map]))))
         (as-> ps
           (when (seq ps)
-            (log! log-chan (PendingSyncsEvent. :release ps))
+            (put! log-chan (->PendingSyncsEvent :release ps))
             ;; Commands must be conveyed
             (>!! cmd-chan-out (->Command :sync ps)))))))
 
@@ -155,7 +155,7 @@
   Lifecycle
 
   (start [this]
-    (log! log-chan this)
+    (log-with-timestamp! log-chan this)
     ;; Changes to this atom can happen from multiple threads
     (add-watch connections ::watch-conn-changes
                (watch-conn-changes-fn log-chan cmd-chan-out))
@@ -181,7 +181,7 @@
                   (<!! c)))))
 
   (stop [this]
-    (log! log-chan this)
+    (log-with-timestamp! log-chan this)
     (exit-fn)
     (dissoc this :exit-fn))
 
@@ -270,7 +270,7 @@
                            new-period ^long (:payload command)]
                        (when (update-period-and-alarm! new-period period alarm)
                          (sig-notify-all status)
-                         (log! log-chan (ConnectionWatcherPreferenceEvent. new-period)))
+                         (put! log-chan (->ConnectionWatcherPreferenceEvent new-period)))
                        command)
     :sync (partition-syncs connection-watcher command)
     command))

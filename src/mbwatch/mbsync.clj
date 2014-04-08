@@ -31,8 +31,9 @@
             [mbwatch.concurrent :refer [CHAN-SIZE sig-notify-all thread-loop]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [->LogItem DEBUG ERR INFO Loggable NOTICE
-                                     WARNING log!]]
-            [mbwatch.mbsync.events :refer [strict-map->MbsyncEventStart
+                                     WARNING log-with-timestamp!]]
+            [mbwatch.mbsync.events :refer [->MbsyncUnknownChannelError
+                                           strict-map->MbsyncEventStart
                                            strict-map->MbsyncEventStop]]
             [mbwatch.process :as process]
             [mbwatch.types :as t :refer [StringList VOID]]
@@ -43,7 +44,6 @@
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.command Command)
            (mbwatch.config.mbsyncrc Mbsyncrc)
-           (mbwatch.mbsync.events MbsyncUnknownChannelError)
            (org.joda.time DateTime)))
 
 (s/defn ^:private spawn-sync :- Process
@@ -71,7 +71,7 @@
   Lifecycle
 
   (start [this]
-    (log! log-chan this)
+    (log-with-timestamp! log-chan this)
     (let [c (thread-loop []
               (when (.get status)
                 (when-some [req (<!! req-chan)]
@@ -85,7 +85,7 @@
                   (<!! c)))))
 
   (stop [this]
-    (log! log-chan this)
+    (log-with-timestamp! log-chan this)
     (exit-fn)
     (dissoc this :exit-fn))
 
@@ -140,7 +140,7 @@
   Lifecycle
 
   (start [this]
-    (log! log-chan this)
+    (log-with-timestamp! log-chan this)
     (let [c (thread-loop [workers {}]
               (let [cmd (when (.get status)
                           (<!! cmd-chan))]
@@ -155,7 +155,7 @@
                   (<!! c)))))
 
   (stop [this]
-    (log! log-chan this)
+    (log-with-timestamp! log-chan this)
     (exit-fn)
     (dissoc this :exit-fn))
 
@@ -211,7 +211,7 @@
             (put! (get-in ws [ch :req-chan]) [id bs])
             ws)
           (do
-            (log! (:log-chan mbsync-master) (MbsyncUnknownChannelError. id ch))
+            (put! (:log-chan mbsync-master) (->MbsyncUnknownChannelError id ch))
             ws)))
       workers sync-req)))
 
