@@ -16,12 +16,13 @@
 (defschema ^:private Opcode
   (enum :sync              ; Synchronize mailboxes
         :sync/term         ; Terminate any running mbsync processes
-        :conn/check        ; Re-check connections
+        :conn/trigger      ; Re-check connections
+        :conn/set-period   ; Set connection watcher's period
         :notify/add        ; Add {mbchan [mbox]} to notify-map
         :notify/remove     ; Remove {mbchan [mbox]} from notify-map
         :notify/set        ; Set notify-map to {mbchan [mbox]}
         :timer/trigger     ; Trigger the timer's monitor
-        :timer/set-period  ; Set cyclic timer's period interval
+        :timer/set-period  ; Set cyclic timer's period
         :timer/set-request ; Set cyclic timer's sync request
         ))
 

@@ -95,9 +95,9 @@
     :timer/trigger (sig-notify-all (:status cyclic-timer))
     :timer/set-period (let [{:keys [^AtomicLong period log-chan]} cyclic-timer
                             old-period (.get period)
-                            new-period ^Long (:payload command)]
+                            new-period ^long (:payload command)]
                         (when-not (= old-period new-period)
-                          (let [msg (str "Timer period set to "
+                          (let [msg (str "Next timer period set to "
                                          (human-duration (quot new-period 1000)))]
                             (.set period new-period)
                             (put! log-chan (LogItem. INFO (DateTime.) msg)))))

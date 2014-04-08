@@ -268,7 +268,11 @@
   [connection-watcher :- ConnectionWatcher
    command            :- Command]
   (case (:opcode command)
-    :conn/check (do (sig-notify-all (:status connection-watcher)) command)
+    :conn/trigger (do (sig-notify-all (:status connection-watcher))
+                      command)
+    :conn/set-period (let [{:keys [^AtomicLong period]} connection-watcher]
+                       (.set period ^long (:payload command))
+                       command)
     :sync (partition-syncs connection-watcher command)
     command))
 
