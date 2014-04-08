@@ -45,6 +45,21 @@
   (log-level [_] level)
   (log-item [this] this))
 
+(defmacro defloggable
+  "Defines a simple Loggable implementation. The body is spliced into the
+   log-level implementation and should return a LogItem message."
+  {:requires [#'t/defrecord Loggable]}
+  [name level fields & body]
+  `(t/defrecord ~name
+     ~fields
+
+     Loggable
+
+     (~'log-level [_#] ~level)
+
+     (~'log-item [_#]
+       (new ~LogItem ~level (new ~DateTime) (do ~@body)))))
+
 (s/defn ^:private assoc-timestamp :- {:timestamp DateTime Any Any}
   [map :- Associative]
   (assoc map :timestamp (DateTime.)))
