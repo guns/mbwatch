@@ -40,6 +40,7 @@
   (:import (clojure.lang Atom IFn)
            (java.util.concurrent.atomic AtomicBoolean AtomicLong)
            (mbwatch.command Command)
+           (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
 (t/defrecord ConnectionEvent
@@ -270,8 +271,14 @@
   (case (:opcode command)
     :conn/trigger (do (sig-notify-all (:status connection-watcher))
                       command)
-    :conn/set-period (let [{:keys [^AtomicLong period]} connection-watcher]
-                       (.set period ^long (:payload command))
+    :conn/set-period (let [{:keys [^AtomicLong period log-chan]} connection-watcher
+                           old-period (.get period)
+                           new-period ^long (:payload command)]
+                       (when-not (= old-period new-period)
+                         (let [msg (str "Next connection check period set to "
+                                        (human-duration (quot new-period 1000)))]
+                           (.set period new-period)
+                           (put! log-chan (LogItem. INFO (DateTime.) msg))))
                        command)
     :sync (partition-syncs connection-watcher command)
     command))
