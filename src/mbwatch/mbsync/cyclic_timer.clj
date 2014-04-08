@@ -44,7 +44,9 @@
               (when (.get status)
                 (sig-wait-and-set-forward status period alarm)
                 (when (.get status)
-                  (>!! cmd-chan-out (->Command :sync @sync-request-atom))
+                  (let [sync-req @sync-request-atom]
+                    (when (seq sync-req)
+                      (>!! cmd-chan-out (->Command :sync sync-req))))
                   (recur))))
           c (thread-loop []
               (when (.get status)
