@@ -20,6 +20,7 @@
         :notify/add        ; Add {mbchan [mbox]} to notify-map
         :notify/remove     ; Remove {mbchan [mbox]} from notify-map
         :notify/set        ; Set notify-map to {mbchan [mbox]}
+        :timer/trigger     ; Trigger the timer's monitor
         :timer/set-period  ; Set cyclic timer's period interval
         :timer/set-request ; Set cyclic timer's sync request
         ))

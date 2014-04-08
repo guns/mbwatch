@@ -92,6 +92,7 @@
   [cyclic-timer :- CyclicTimer
    command      :- Command]
   (case (:opcode command)
+    :timer/trigger (sig-notify-all (:status cyclic-timer))
     :timer/set-period (let [{:keys [^AtomicLong period log-chan]} cyclic-timer
                             old-period (.get period)
                             new-period ^Long (:payload command)]
