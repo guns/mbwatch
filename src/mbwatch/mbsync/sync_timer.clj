@@ -1,11 +1,11 @@
-(ns mbwatch.mbsync.cyclic-timer
-  "A CyclicTimer is a simple Command middleware that periodically produces
-   :sync Commands. The interval and command to be issued can be set by sending
-   commands to the CyclicTimer. The timer can also be triggered on command.
+(ns mbwatch.mbsync.sync-timer
+  "A SyncTimer is a simple Command middleware that periodically produces :sync
+   Commands. The interval and command to be issued can be set by sending
+   commands to the SyncTimer. The timer can also be triggered on command.
 
-                      ┌─────────────┐
-      ─── Command ──▶ │ CyclicTimer ├─── Command ──▶
-                      └─────────────┘
+                      ┌───────────┐
+      ─── Command ──▶ │ SyncTimer ├─── Command ──▶
+                      └───────────┘
   "
   (:require [clojure.core.async :refer [<!! >!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
@@ -14,7 +14,8 @@
             [mbwatch.concurrent :refer [CHAN-SIZE future-loop sig-notify-all
                                         sig-wait-and-set-forward thread-loop
                                         update-period-and-alarm!]]
-            [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable log!]]
+            [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable
+                                     defloggable log!]]
             [mbwatch.types :as t :refer [StringList VOID]]
             [mbwatch.util :refer [human-duration]]
             [schema.core :as s :refer [Int maybe]])
@@ -24,9 +25,19 @@
            (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
+(defloggable SyncTimerPreferenceEvent INFO
+  [period  :- (maybe Int)
+   request :- (maybe {String StringList})]
+  (case (mapv some? [period request])
+    [true false] (str "Sync timer period set to " (human-duration (quot period 1000)))
+    [false true] (str "Sync timer request set to " request)
+    [false false] "Sync timer preferences not changed"
+    [true true] (format "Sync timer: request %s every %s"
+                        (human-duration (quot period 1000)) request)))
+
 (declare process-command)
 
-(t/defrecord CyclicTimer
+(t/defrecord SyncTimer
   [cmd-chan-in       :- ReadPort
    cmd-chan-out      :- WritePort
    log-chan          :- WritePort
@@ -72,16 +83,16 @@
   (log-level [_] DEBUG)
 
   (log-item [this]
-    (->LogItem this (format "%s CyclicTimer [period: %s]"
+    (->LogItem this (format "%s SyncTimer [period: %s]"
                             (if exit-fn "↓ Stopping" "↑ Starting")
                             (human-duration (quot (.get period) 1000))))))
 
-(s/defn ->CyclicTimer :- CyclicTimer
+(s/defn ->SyncTimer :- SyncTimer
   [sync-request :- {String StringList}
    cmd-chan-in  :- ReadPort
    log-chan     :- WritePort
    period       :- Int]
-  (strict-map->CyclicTimer
+  (strict-map->SyncTimer
     {:cmd-chan-in cmd-chan-in
      :cmd-chan-out (chan CHAN-SIZE)
      :log-chan log-chan
@@ -92,20 +103,20 @@
      :exit-fn nil}))
 
 (s/defn ^:private process-command :- VOID
-  [cyclic-timer :- CyclicTimer
-   command      :- Command]
+  [sync-timer :- SyncTimer
+   command    :- Command]
   (case (:opcode command)
-    :timer/trigger (sig-notify-all (:status cyclic-timer))
+    :timer/trigger (sig-notify-all (:status sync-timer))
     :timer/set-period (let [{:keys [^AtomicLong period
                                     ^AtomicLong alarm
-                                    status log-chan]} cyclic-timer
+                                    status log-chan]} sync-timer
                             new-period ^long (:payload command)]
                         (when (update-period-and-alarm! new-period period alarm)
                           (sig-notify-all status)
                           (let [msg (str "Next timer period set to "
                                          (human-duration (quot new-period 1000)))]
                             (put! log-chan (LogItem. INFO (DateTime.) msg)))))
-    :timer/set-request (let [{:keys [sync-request-atom log-chan]} cyclic-timer
+    :timer/set-request (let [{:keys [sync-request-atom log-chan]} sync-timer
                              old-req @sync-request-atom
                              new-req (reset! sync-request-atom (:payload command))]
                          (when-not (= old-req new-req)

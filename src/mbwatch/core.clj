@@ -3,9 +3,9 @@
        ──── Command ─────────┐
                              │ 0
                              ▼                     ──┐
-                      ┌─────────────┐                │
-                      │ CyclicTimer │                │
-                      └──────┬──────┘                │
+                       ┌───────────┐                 │
+                       │ SyncTimer │                 │
+                       └─────┬─────┘                 │
                              │                       │
                              │ 1                     │
                              ▼                       │
@@ -49,7 +49,7 @@
                                             get-default-colors]]
             [mbwatch.logging :refer [->LoggingService DEBUG]]
             [mbwatch.mbsync :refer [->MbsyncMaster]]
-            [mbwatch.mbsync.cyclic-timer :refer [->CyclicTimer]]
+            [mbwatch.mbsync.sync-timer :refer [->SyncTimer]]
             [mbwatch.notification :refer [->NewMessageNotificationService]]
             [mbwatch.types :as t]
             [schema.core :as s])
@@ -57,7 +57,7 @@
            (mbwatch.connection_watcher ConnectionWatcher)
            (mbwatch.logging LoggingService)
            (mbwatch.mbsync MbsyncMaster)
-           (mbwatch.mbsync.cyclic_timer CyclicTimer)
+           (mbwatch.mbsync.sync_timer SyncTimer)
            (mbwatch.notification NewMessageNotificationService)))
 
 (t/defrecord Application
@@ -66,7 +66,7 @@
    notification-service :- NewMessageNotificationService
    mbsync-master        :- MbsyncMaster
    connection-watcher   :- ConnectionWatcher
-   cyclic-timer         :- CyclicTimer]
+   sync-timer           :- SyncTimer]
 
   Lifecycle
 
@@ -87,13 +87,13 @@
         log-chan-0 (:log-chan-in notification-service)
         log-chan-1 (:log-chan-out notification-service)
         ;; Top level cmd consumer
-        cyclic-timer (->CyclicTimer
-                       {} ; FIXME: Move to config
-                       (chan CHAN-SIZE)
-                       log-chan-0
-                       (* 15 60 1000)) ; FIXME: Move to config
-        cmd-chan-0 (:cmd-chan-in cyclic-timer)
-        cmd-chan-1 (:cmd-chan-out cyclic-timer)
+        sync-timer (->SyncTimer
+                     {} ; FIXME: Move to config
+                     (chan CHAN-SIZE)
+                     log-chan-0
+                     (* 15 60 1000)) ; FIXME: Move to config
+        cmd-chan-0 (:cmd-chan-in sync-timer)
+        cmd-chan-1 (:cmd-chan-out sync-timer)
         ;; Middleware
         connection-watcher (->ConnectionWatcher
                              (-> config :mbsyncrc :mbchan->IMAPCredential)
@@ -111,4 +111,4 @@
                       cmd-chan-2
                       log-chan-0)
       connection-watcher
-      cyclic-timer)))
+      sync-timer)))

@@ -22,8 +22,8 @@
         :notify/remove     ; Remove {mbchan [mbox]} from notify-map
         :notify/set        ; Set notify-map to {mbchan [mbox]}
         :timer/trigger     ; Trigger the timer
-        :timer/set-period  ; Set cyclic timer's period
-        :timer/set-request ; Set cyclic timer's sync request
+        :timer/set-period  ; Set sync timer's period
+        :timer/set-request ; Set sync timer's request
         ))
 
 (t/defrecord Command
