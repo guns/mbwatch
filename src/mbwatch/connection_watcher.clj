@@ -28,7 +28,8 @@
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command :refer [->Command]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-loop sig-notify-all
-                                        sig-wait-and-set-forward thread-loop]]
+                                        sig-wait-and-set-forward thread-loop
+                                        update-period-and-alarm!]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable NOTICE
                                      WARNING log!]]
@@ -271,13 +272,14 @@
   (case (:opcode command)
     :conn/trigger (do (sig-notify-all (:status connection-watcher))
                       command)
-    :conn/set-period (let [{:keys [^AtomicLong period log-chan]} connection-watcher
-                           old-period (.get period)
+    :conn/set-period (let [{:keys [^AtomicLong period
+                                   ^AtomicLong alarm
+                                   status log-chan]} connection-watcher
                            new-period ^long (:payload command)]
-                       (when-not (= old-period new-period)
-                         (let [msg (str "Next connection check period set to "
+                       (when (update-period-and-alarm! new-period period alarm)
+                         (sig-notify-all status)
+                         (let [msg (str "Connection check period set to "
                                         (human-duration (quot new-period 1000)))]
-                           (.set period new-period)
                            (put! log-chan (LogItem. INFO (DateTime.) msg))))
                        command)
     :sync (partition-syncs connection-watcher command)

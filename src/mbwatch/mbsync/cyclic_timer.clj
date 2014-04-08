@@ -12,7 +12,8 @@
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command :refer [->Command]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-loop sig-notify-all
-                                        sig-wait-and-set-forward thread-loop]]
+                                        sig-wait-and-set-forward thread-loop
+                                        update-period-and-alarm!]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable log!]]
             [mbwatch.types :as t :refer [StringList VOID]]
             [mbwatch.util :refer [human-duration]]
@@ -93,13 +94,14 @@
    command      :- Command]
   (case (:opcode command)
     :timer/trigger (sig-notify-all (:status cyclic-timer))
-    :timer/set-period (let [{:keys [^AtomicLong period log-chan]} cyclic-timer
-                            old-period (.get period)
+    :timer/set-period (let [{:keys [^AtomicLong period
+                                    ^AtomicLong alarm
+                                    status log-chan]} cyclic-timer
                             new-period ^long (:payload command)]
-                        (when-not (= old-period new-period)
+                        (when (update-period-and-alarm! new-period period alarm)
+                          (sig-notify-all status)
                           (let [msg (str "Next timer period set to "
                                          (human-duration (quot new-period 1000)))]
-                            (.set period new-period)
                             (put! log-chan (LogItem. INFO (DateTime.) msg)))))
     :timer/set-request (let [{:keys [sync-request-atom log-chan]} cyclic-timer
                              old-req @sync-request-atom
