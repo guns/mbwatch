@@ -1,6 +1,6 @@
 (ns mbwatch.mbsync.events
   (:require [mbwatch.config.mbsyncrc :refer [Maildirstore]]
-            [mbwatch.logging :refer [->LogItem ERR Loggable WARNING]]
+            [mbwatch.logging :refer [ERR Loggable WARNING defloggable]]
             [mbwatch.types :as t :refer [StringList]]
             [mbwatch.util :refer [human-duration join-mbargs]]
             [schema.core :refer [Int maybe]])
@@ -55,12 +55,7 @@
                   (str buf)))]
       (LogItem. level stop msg))))
 
-(t/defrecord ^:public MbsyncUnknownChannelError
-  [id        :- Int
-   mbchan    :- String
-   timestamp :- DateTime]
-
-  Loggable
-
-  (log-level [_] WARNING)
-  (log-item [this] (->LogItem this (format "Unknown channel: `%s`" mbchan))))
+(defloggable MbsyncUnknownChannelError WARNING
+  [id     :- Int
+   mbchan :- String]
+  (format "Unknown channel: `%s`" mbchan))

@@ -17,7 +17,7 @@
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable
                                      defloggable log!]]
             [mbwatch.types :as t :refer [StringList VOID]]
-            [mbwatch.util :refer [human-duration]]
+            [mbwatch.util :refer [human-duration join-sync-request]]
             [schema.core :as s :refer [Int maybe]])
   (:import (clojure.lang Atom IFn)
            (java.util.concurrent.atomic AtomicBoolean AtomicLong)
@@ -29,11 +29,12 @@
   [period  :- (maybe Int)
    request :- (maybe {String StringList})]
   (case (mapv some? [period request])
-    [true false] (str "Sync timer period set to " (human-duration (quot period 1000)))
-    [false true] (str "Sync timer request set to " request)
-    [false false] "Sync timer preferences not changed"
-    [true true] (format "Sync timer: request %s every %s"
-                        (human-duration (quot period 1000)) request)))
+    [true false] (str "Sync timer period set to: " (human-duration (quot period 1000)))
+    [false true] (let [req (join-sync-request request)]
+                   (if (seq req)
+                     (str "Sync timer request set to: " req)
+                     "Sync timer disabled."))
+    nil))
 
 (declare process-command)
 
@@ -113,14 +114,11 @@
                             new-period ^long (:payload command)]
                         (when (update-period-and-alarm! new-period period alarm)
                           (sig-notify-all status)
-                          (let [msg (str "Next timer period set to "
-                                         (human-duration (quot new-period 1000)))]
-                            (put! log-chan (LogItem. INFO (DateTime.) msg)))))
+                          (put! log-chan (SyncTimerPreferenceEvent. new-period nil))))
     :timer/set-request (let [{:keys [sync-request-atom log-chan]} sync-timer
                              old-req @sync-request-atom
                              new-req (reset! sync-request-atom (:payload command))]
                          (when-not (= old-req new-req)
-                           (let [msg (str "Timer request set to: " new-req)]
-                             (put! log-chan (LogItem. INFO (DateTime.) msg)))))
+                           (put! log-chan (SyncTimerPreferenceEvent. nil new-req))))
     nil)
   nil)

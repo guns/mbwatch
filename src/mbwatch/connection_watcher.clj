@@ -24,7 +24,6 @@
   (:require [clojure.core.async :refer [<!! >!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [clojure.set :refer [intersection]]
-            [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command :refer [->Command]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-loop sig-notify-all
@@ -32,16 +31,14 @@
                                         update-period-and-alarm!]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable NOTICE
-                                     WARNING log!]]
-            [mbwatch.mbsync.events :refer [join-mbargs]]
+                                     WARNING defloggable log!]]
             [mbwatch.network :refer [reachable?]]
             [mbwatch.types :as t :refer [StringList Word]]
-            [mbwatch.util :refer [human-duration]]
+            [mbwatch.util :refer [human-duration join-sync-request]]
             [schema.core :as s :refer [Int defschema enum maybe pair]])
   (:import (clojure.lang Atom IFn)
            (java.util.concurrent.atomic AtomicBoolean AtomicLong)
            (mbwatch.command Command)
-           (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
 (t/defrecord ConnectionEvent
@@ -64,23 +61,19 @@
                                        nil   " ∅ unregistered"))]
       (->LogItem this msg))))
 
-(t/defrecord PendingSyncsEvent
+(defloggable PendingSyncsEvent INFO
   [action         :- (enum :merge :release)
    mbchan->mboxes :- {String StringList}
    timestamp      :- DateTime]
+  (->> mbchan->mboxes
+       join-sync-request
+       (str (if (= action :merge)
+              "Delaying syncs: "
+              "Releasing pending syncs: "))))
 
-  Loggable
-
-  (log-level [_] INFO)
-
-  (log-item [this]
-    (let [msg (if (= action :merge)
-                "Delaying syncs: "
-                "Releasing pending syncs: ")
-          mbargs (->> mbchan->mboxes
-                      (mapv (partial apply join-mbargs))
-                      (string/join \space))]
-      (->LogItem this (str msg mbargs)))))
+(defloggable ConnectionWatcherPreferenceEvent INFO
+  [period :- Int]
+  (str "Connection polling period set to " (human-duration (quot period 1000))))
 
 (defschema ^:private ConnectionMap
   {String {:status Boolean
@@ -278,9 +271,7 @@
                            new-period ^long (:payload command)]
                        (when (update-period-and-alarm! new-period period alarm)
                          (sig-notify-all status)
-                         (let [msg (str "Connection check period set to "
-                                        (human-duration (quot new-period 1000)))]
-                           (put! log-chan (LogItem. INFO (DateTime.) msg))))
+                         (put! log-chan (ConnectionWatcherPreferenceEvent. new-period)))
                        command)
     :sync (partition-syncs connection-watcher command)
     command))

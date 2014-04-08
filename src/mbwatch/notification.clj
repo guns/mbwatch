@@ -18,12 +18,13 @@
             [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
                                         thread-loop]]
             [mbwatch.config :refer [mdir-path]]
-            [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable log!]]
+            [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable
+                                     defloggable log!]]
             [mbwatch.maildir :refer [new-messages senders]]
-            [mbwatch.mbsync.events :refer [join-mbargs]]
+            [mbwatch.mbsync.events]
             [mbwatch.process :as process]
             [mbwatch.types :as t :refer [VOID]]
-            [mbwatch.util :refer [to-ms]]
+            [mbwatch.util :refer [join-sync-request to-ms]]
             [schema.core :as s :refer [Int defschema either maybe]])
   (:import (clojure.lang Atom IFn)
            (java.io StringWriter)
@@ -37,43 +38,27 @@
   "TODO: Make configurable?"
   8)
 
-(t/defrecord NewMessageNotification
-  [mbchan->mbox->messages :- {String {String [MimeMessage]}}
-   timestamp              :- DateTime]
-
-  Loggable
-
-  (log-level [_] INFO)
-
-  (log-item [this]
-    (let [sb (reduce
-               (fn [s [mbchan mbox->messages]]
-                 (reduce
-                   (fn [^StringBuilder s [mbox messages]]
-                     (.append s (format " [%s/%s %d]" mbchan mbox (count messages))))
-                   s (sort mbox->messages)))
-               (StringBuilder. "NewMessageNotification:") (sort mbchan->mbox->messages))]
-      (->LogItem this (str sb)))))
+(defloggable NewMessageNotification INFO
+  [mbchan->mbox->messages :- {String {String [MimeMessage]}}]
+  (str
+    (reduce
+      (fn [s [mbchan mbox->messages]]
+        (reduce
+          (fn [^StringBuilder s [mbox messages]]
+            (.append s (format " [%s/%s %d]" mbchan mbox (count messages))))
+          s (sort mbox->messages)))
+      (StringBuilder. "NewMessageNotification:") (sort mbchan->mbox->messages))))
 
 (defschema NotifyMap
   {String #{String}})
 
-(t/defrecord NotifyMapChangeEvent
+(defloggable NotifyMapChangeEvent INFO
   [notify-map :- NotifyMap
    timestamp  :- DateTime]
-
-  Loggable
-
-  (log-level [_] INFO)
-
-  (log-item [this]
-    (let [msg (->> notify-map
-                   (mapv (partial apply join-mbargs))
-                   (string/join \space))
-          msg (if (seq msg)
-                (str "Now notifying on: " msg)
-                "Notifications disabled.")]
-      (->LogItem this msg))))
+  (let [msg (join-sync-request notify-map)]
+    (if (seq msg)
+      (str "Now notifying on: " msg)
+      "Notifications disabled.")))
 
 (s/defn ^:private format-msg :- (maybe String)
   [messages :- [MimeMessage]]
@@ -118,7 +103,7 @@
                   (seq bs->msgs) (assoc (:mbchan ev) bs->msgs))))
             {} events)]
     (when (seq m)
-      (NewMessageNotification. m (DateTime.)))))
+      (NewMessageNotification. m))))
 
 (s/defn ^:private notify! :- VOID
   [notify-command :- String

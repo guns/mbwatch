@@ -4,6 +4,7 @@
             [mbwatch.mbsync.events :as e]
             [schema.test :refer [deftest]])
   (:import (mbwatch.logging LogItem)
+           (mbwatch.mbsync.events MbsyncUnknownChannelError)
            (org.joda.time DateTime)))
 
 (deftest test-events
@@ -24,15 +25,12 @@
                 :status 1
                 :error "ERROR"
                 :maildir {:inbox "inbox/" :path "path/"}})
-        unknown (e/strict-map->MbsyncUnknownChannelError
-                  {:id 0
-                   :mbchan "FOO"
-                   :timestamp dt})]
+        unknown (MbsyncUnknownChannelError. 0 "FOO")]
     (is (= [DEBUG ERR WARNING]
            (map log-level [start stop unknown])))
     (is (= (log-item start)
            (LogItem. DEBUG dt "Starting `mbsync test:INBOX`")))
     (is (= (log-item stop)
-           (LogItem. ERR dt "FAILURE: `mbsync test` aborted in zero seconds with status 1.\nERROR")))
-    (is (= (log-item unknown)
-           (LogItem. WARNING dt "Unknown channel: `FOO`")))))
+           (LogItem. ERR dt "FAILURE: `mbsync test` aborted in 0 seconds with status 1.\nERROR")))
+    (is (= (dissoc (log-item unknown) :timestamp)
+           (dissoc (LogItem. WARNING dt "Unknown channel: `FOO`") :timestamp)))))

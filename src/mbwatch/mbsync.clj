@@ -32,12 +32,11 @@
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [->LogItem DEBUG ERR INFO Loggable NOTICE
                                      WARNING log!]]
-            [mbwatch.mbsync.events :refer [join-mbargs
-                                           strict-map->MbsyncEventStart
+            [mbwatch.mbsync.events :refer [strict-map->MbsyncEventStart
                                            strict-map->MbsyncEventStop]]
             [mbwatch.process :as process]
             [mbwatch.types :as t :refer [StringList VOID]]
-            [mbwatch.util :refer [shell-escape]]
+            [mbwatch.util :refer [join-mbargs shell-escape]]
             [schema.core :as s :refer [Int maybe]])
   (:import (clojure.lang IFn)
            (java.io StringWriter)
@@ -212,8 +211,7 @@
             (put! (get-in ws [ch :req-chan]) [id bs])
             ws)
           (do
-            (put! (:log-chan mbsync-master)
-                  (MbsyncUnknownChannelError. id ch (DateTime.)))
+            (put! (:log-chan mbsync-master) (MbsyncUnknownChannelError. id ch))
             ws)))
       workers sync-req)))
 
