@@ -272,6 +272,9 @@
                          (sig-notify-all status)
                          (put! log-chan (->ConnectionWatcherPreferenceEvent new-period)))
                        command)
+    :conn/remove (let [{:keys [connections]} connection-watcher]
+                   (apply swap! connections dissoc (:payload command))
+                   command)
     :sync (partition-syncs connection-watcher command)
     command))
 

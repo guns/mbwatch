@@ -18,6 +18,7 @@
         :sync/term         ; Terminate any running mbsync processes
         :conn/trigger      ; Re-check connections
         :conn/set-period   ; Set connection watcher's period
+        :conn/remove       ; Remove channel from ConnectionMap
         :notify/add        ; Add {mbchan [mbox]} to notify-map
         :notify/remove     ; Remove {mbchan [mbox]} from notify-map
         :notify/set        ; Set notify-map to {mbchan [mbox]}
