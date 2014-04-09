@@ -26,20 +26,23 @@
             [clojure.set :refer [intersection]]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command :refer [->Command]]
-            [mbwatch.concurrent :refer [CHAN-SIZE future-loop sig-notify-all
-                                        sig-wait-and-set-forward thread-loop
-                                        update-period-and-alarm!]]
+            [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
+                                        sig-notify-all sig-wait-alarm
+                                        thread-loop update-period-and-alarm!]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable NOTICE
                                      WARNING defloggable log-with-timestamp!]]
             [mbwatch.network :refer [reachable?]]
-            [mbwatch.types :as t :refer [StringList Word]]
+            [mbwatch.types :as t :refer [StringList VOID Word]]
             [mbwatch.util :refer [human-duration join-sync-request]]
             [schema.core :as s :refer [Int defschema enum maybe pair]])
   (:import (clojure.lang Atom IFn)
            (java.util.concurrent.atomic AtomicBoolean AtomicLong)
            (mbwatch.command Command)
            (org.joda.time DateTime)))
+
+(def ^:private ^:const RETRY-INTERVAL 15000)
+(def ^:private ^:const TIME-JUMP-INTERVAL 60000)
 
 (t/defrecord ConnectionEvent
   [mbchan    :- String
@@ -69,6 +72,14 @@
        (str (if (= action :merge)
               "Delaying syncs: "
               "Releasing pending syncs: "))))
+
+(defloggable TimeJumpEvent WARNING
+  [retry :- Int]
+  (if (pos? retry)
+    (format "Connection retry #%d in %s"
+            retry
+            (human-duration (quot (* retry RETRY-INTERVAL) 1000)))
+    "Time jump! Retrying connections up to 3 times in the next 90 seconds."))
 
 (defloggable ConnectionWatcherPreferenceEvent INFO
   [period :- Int]
@@ -140,6 +151,7 @@
             (>!! cmd-chan-out (->Command :sync ps)))))))
 
 (declare process-command)
+(declare watch-connections!)
 
 (t/defrecord ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
@@ -159,12 +171,8 @@
     ;; Changes to this atom can happen from multiple threads
     (add-watch connections ::watch-conn-changes
                (watch-conn-changes-fn log-chan cmd-chan-out))
-    (let [f (future-loop []
-              (when (.get status)
-                (sig-wait-and-set-forward status period alarm)
-                (when (.get status)
-                  (swap! connections #(update-connections % mbchan->IMAPCredential 2000)) ; FIXME: Move to config
-                  (recur))))
+    (let [f (future-catch-print
+              (watch-connections! this))
           c (thread-loop []
               (when (.get status)
                 (when-some [cmd (<!! cmd-chan-in)]
@@ -194,11 +202,50 @@
                             (if exit-fn "↓ Stopping" "↑ Starting")
                             (human-duration (quot (.get period) 1000))))))
 
+(s/defn ^:private watch-connections! :- VOID
+  "Poll and update connections in the connections atom. Notify `status` to
+   trigger an early connection check, and set it to false to exit.
+
+   If we wakeup a minute past our expected alarm, assume the machine has just
+   woken from sleep. Retry the connection a few times in case the gateway
+   interface comes back up in the next 90 seconds."
+  [connection-watcher :- ConnectionWatcher]
+  (let [{:keys [connections mbchan->IMAPCredential log-chan
+                ^AtomicBoolean status
+                ^AtomicLong period
+                ^AtomicLong alarm]} connection-watcher]
+    (loop [retry 0]
+      (when (.get status)
+        (sig-wait-alarm status alarm)
+        (when (.get status)
+          (let [time-jump? (when (> (- (System/currentTimeMillis) (.get alarm))
+                                    TIME-JUMP-INTERVAL)
+                             (put! log-chan (->TimeJumpEvent 0))
+                             true)
+                ;; Update connections, then check if they are all reachable
+                up? (-> connections
+                        (swap! #(update-connections % mbchan->IMAPCredential 2000)) ; FIXME
+                        (as-> c (every? :status (vals c))))
+                ;; Nested `if`s to ensure all leaves are primitive
+                retry (if (and time-jump? (not up?))
+                        1 ; Start retrying
+                        (if (zero? retry)
+                          0 ; Not retrying
+                          (if (or up? (>= retry 3))
+                            0 ; Stop retrying
+                            (inc retry))))
+                interval (if (pos? retry)
+                           (do (put! log-chan (->TimeJumpEvent retry))
+                               (* retry RETRY-INTERVAL))
+                           (.get period))]
+            (.set alarm (+ (System/currentTimeMillis) interval))
+            (recur retry)))))))
+
 (s/defn ^:private merge-pending-syncs :- (pair ConnectionMap "conn-map"
                                                {String StringList} "sync-req")
   "Merge sync-req into conn-map as :pending-syncs entries if the :status of
-   the mbchan is false. Returns the new conn-map and the sync-req with merged
-   entries removed.
+   the mbchan is false. Returns the new conn-map and the new sync-req with
+   merged entries removed.
 
    An mbox argument of [] resets the :pending-syncs value to #{} with
    the :all-mboxes? metadata flag set. Correspondingly, additions to a
@@ -290,6 +337,6 @@
      :log-chan log-chan
      :connections (atom {})
      :period (AtomicLong. period)
-     :alarm (AtomicLong. 0)
+     :alarm (AtomicLong. (System/currentTimeMillis))
      :status (AtomicBoolean. true)
      :exit-fn nil}))
