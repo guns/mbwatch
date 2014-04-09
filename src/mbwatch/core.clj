@@ -91,13 +91,14 @@
                      {} ; FIXME: Move to config
                      (chan CHAN-SIZE)
                      log-chan-0
-                     (* 15 60 1000)) ; FIXME: Move to config
+                     (-> config :mbwatchrc :sync-timer-period))
         cmd-chan-0 (:cmd-chan-in sync-timer)
         cmd-chan-1 (:cmd-chan-out sync-timer)
         ;; Middleware
         connection-watcher (->ConnectionWatcher
                              (-> config :mbsyncrc :mbchan->IMAPCredential)
-                             (* 5 60 1000) ; FIXME: Move to config
+                             (-> config :mbwatchrc :connection-period)
+                             (-> config :mbwatchrc :connection-timeout)
                              cmd-chan-1
                              log-chan-0)
         cmd-chan-2 (:cmd-chan-out connection-watcher)]

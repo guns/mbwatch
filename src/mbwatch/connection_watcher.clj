@@ -171,6 +171,7 @@
    cmd-chan-out           :- WritePort
    log-chan               :- WritePort
    connections            :- Atom ; ConnectionMap
+   timeout                :- Int
    period                 :- AtomicLong
    alarm                  :- AtomicLong
    status                 :- AtomicBoolean
@@ -222,7 +223,7 @@
    woken from sleep. Retry the connection a few times in case the gateway
    interface comes back up in the next 90 seconds."
   [connection-watcher :- ConnectionWatcher]
-  (let [{:keys [connections mbchan->IMAPCredential log-chan
+  (let [{:keys [connections mbchan->IMAPCredential log-chan timeout
                 ^AtomicBoolean status
                 ^AtomicLong period
                 ^AtomicLong alarm]} connection-watcher]
@@ -236,7 +237,7 @@
                              true)
                 ;; Update connections, then check if they are all reachable
                 up? (-> connections
-                        (swap! #(update-connections % mbchan->IMAPCredential 2000)) ; FIXME
+                        (swap! #(update-connections % mbchan->IMAPCredential timeout))
                         (as-> c (every? :status (vals c))))
                 ;; Nested `if`s to ensure all leaves are primitive
                 retry (if (and time-jump? (not up?))
@@ -287,7 +288,8 @@
    system to avoid external synchronization from within a transaction."
   [conn-map               :- ConnectionMap
    sync-req               :- {String StringList}
-   mbchan->IMAPCredential :- {Word IMAPCredential}]
+   mbchan->IMAPCredential :- {Word IMAPCredential}
+   timeout                :- Int]
   (let [mbchans-with-imap (intersection (set (keys sync-req))
                                         (set (keys mbchan->IMAPCredential)))
         ;; Merge existing conn-map over the sync conn-map to find new entries,
@@ -298,7 +300,7 @@
                                 (merge (select-keys conn-map mbchans-with-imap))
                                 (merge-pending-syncs sync-req))
         [sync-map sync-req] (-> sync-map
-                                (update-connections mbchan->IMAPCredential 2000) ; FIXME: config
+                                (update-connections mbchan->IMAPCredential timeout)
                                 (merge-pending-syncs sync-req))]
     (-> conn-map
         (merge sync-map)
@@ -318,13 +320,13 @@
    statuses."
   [connection-watcher :- ConnectionWatcher
    sync-command       :- Command]
-  (let [{:keys [mbchan->IMAPCredential]} connection-watcher
+  (let [{:keys [mbchan->IMAPCredential timeout]} connection-watcher
         sync-req (:payload sync-command)
         ;; Most of the work needs to be done in the transaction; note that
         ;; while the TCP connects do IO, they do not change program state.
         sync-req' (-> (:connections connection-watcher)
                       (swap! update-connections-for-sync
-                             sync-req mbchan->IMAPCredential)
+                             sync-req mbchan->IMAPCredential timeout)
                       meta
                       ::sync-req)]
     (cond
@@ -355,6 +357,7 @@
 (s/defn ->ConnectionWatcher :- ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
    period                 :- Int
+   timeout                :- Int
    cmd-chan-in            :- ReadPort
    log-chan               :- WritePort]
   (strict-map->ConnectionWatcher
@@ -363,6 +366,7 @@
      :cmd-chan-out (chan CHAN-SIZE)
      :log-chan log-chan
      :connections (atom {})
+     :timeout timeout
      :period (AtomicLong. period)
      :alarm (AtomicLong. (System/currentTimeMillis))
      :status (AtomicBoolean. true)

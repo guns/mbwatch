@@ -6,7 +6,7 @@
   (:import (java.util.concurrent.atomic AtomicLong)))
 
 (def ^:const CHAN-SIZE
-  "TODO: Move to Config?"
+  "4K ought to be enough for anybody."
   0x1000)
 
 (defmacro future-catch-print

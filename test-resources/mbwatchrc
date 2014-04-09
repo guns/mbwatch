@@ -3,6 +3,9 @@
 ;
 
 notify-command = notify - --audio="/home/guns/.sounds/new-message.mp3"
+sync-timer-period = 900000
+connection-period = 300000
+connection-timeout = 2000
 imap-socket-timeout = 5000
 
 ; vim:ft=dosini:
