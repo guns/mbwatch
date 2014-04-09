@@ -26,7 +26,7 @@
 (defloggable SyncTimerPreferenceEvent INFO
   [pref :- (either Int {String StringList})]
   (if (integer? pref)
-    (str "Sync timer period set to: " (human-duration (quot pref 1000)))
+    (str "Sync timer period set to: " (human-duration pref))
     (let [req (join-sync-request pref)]
       (if (seq req)
         (str "Sync timer request set to: " req)
@@ -83,7 +83,7 @@
   (log-item [this]
     (->LogItem this (format "%s SyncTimer [period: %s]"
                             (if exit-fn "↓ Stopping" "↑ Starting")
-                            (human-duration (quot (.get period) 1000))))))
+                            (human-duration (.get period))))))
 
 (s/defn ->SyncTimer :- SyncTimer
   [sync-request :- {String StringList}

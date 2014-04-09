@@ -4,7 +4,7 @@
             [schema.core :as s :refer [Int]])
   (:import (clojure.lang Symbol)
            (java.net URLEncoder)
-           (org.joda.time DateTime Instant ReadableInstant Seconds)))
+           (org.joda.time DateTime Duration Instant ReadableInstant)))
 
 (s/defn join-mbargs :- String
   [mbchan :- String
@@ -69,8 +69,9 @@
         (string/replace #"\n" "'\n'"))))
 
 (s/defn human-duration :- String
-  ([seconds :- Int]
-   (let [h (quot seconds 3600)
+  ([milliseconds :- Int]
+   (let [seconds (Math/round (/ milliseconds 1000.0))
+         h (quot seconds 3600)
          m (quot (rem seconds 3600) 60)
          s (rem seconds 60)
          xs (cond-> []
@@ -84,7 +85,7 @@
        3 (apply format "%s, %s, and %s" xs))))
   ([start :- ReadableInstant
     stop  :- ReadableInstant]
-   (human-duration (.getSeconds (Seconds/secondsBetween start stop)))))
+   (human-duration (.getMillis (Duration. start stop)))))
 
 (s/defn class-name :- String
   [obj :- Object]

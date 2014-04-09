@@ -41,10 +41,10 @@
 
 (deftest test-human-duration
   (is (= "0 seconds" (u/human-duration 0)))
-  (is (= "1 second" (u/human-duration 1)))
-  (is (= "59 seconds" (u/human-duration 59)))
+  (is (= "1 second" (u/human-duration 1000)))
+  (is (= "59 seconds" (u/human-duration 59000)))
   (is (= "5 hours, 1 minute, and 35 seconds"
-         (u/human-duration (+ (* 5 60 60) (* 1 60) 35))))
+         (u/human-duration (+ (* 5 60 60 1000) (* 1 60 1000) (* 35 1000)))))
   (let [dt (DateTime.)]
     (is (= "1 second" (u/human-duration dt (.plus dt 1000))))))
 

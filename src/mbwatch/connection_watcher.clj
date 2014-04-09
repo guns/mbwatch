@@ -76,14 +76,12 @@
 (defloggable TimeJumpEvent WARNING
   [retry :- Int]
   (if (pos? retry)
-    (format "Connection retry #%d in %s"
-            retry
-            (human-duration (quot (* retry RETRY-INTERVAL) 1000)))
+    (format "Connection retry #%d in %s" retry (human-duration (* retry RETRY-INTERVAL)))
     "Time jump! Retrying connections up to 3 times in the next 90 seconds."))
 
 (defloggable ConnectionWatcherPreferenceEvent INFO
   [period :- Int]
-  (str "Connection polling period set to " (human-duration (quot period 1000))))
+  (str "Connection polling period set to " (human-duration period)))
 
 (defschema ^:private ConnectionMap
   {String {:status Boolean
@@ -214,7 +212,7 @@
   (log-item [this]
     (->LogItem this (format "%s ConnectionWatcher [period: %s]"
                             (if exit-fn "↓ Stopping" "↑ Starting")
-                            (human-duration (quot (.get period) 1000))))))
+                            (human-duration (.get period))))))
 
 (s/defn ^:private watch-connections! :- VOID
   "Poll and update connections in the connections atom. Notify `status` to
