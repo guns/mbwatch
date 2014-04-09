@@ -38,7 +38,7 @@
         "single non-comment line with no surrounding whitespace"))
 
 (defschema PortNumber
-  (pred #(and (integer? %) (< 0 % 0x1000))))
+  (pred #(and (integer? %) (< 0 % 0x10000))))
 
 (defschema StringList
   (either [String] #{String}))
