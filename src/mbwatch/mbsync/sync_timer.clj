@@ -12,7 +12,7 @@
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command :refer [->Command]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-loop sig-notify-all
-                                        sig-wait-and-set-forward thread-loop
+                                        sig-wait-alarm thread-loop
                                         update-period-and-alarm!]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable
                                      defloggable log-with-timestamp!]]
@@ -50,7 +50,8 @@
     (log-with-timestamp! log-chan this)
     (let [f (future-loop []
               (when (.get status)
-                (sig-wait-and-set-forward status period alarm)
+                (sig-wait-alarm status alarm)
+                (.set alarm (+ (System/currentTimeMillis) (.get period)))
                 (when (.get status)
                   (let [sync-req @sync-request-atom]
                     (when (seq sync-req)

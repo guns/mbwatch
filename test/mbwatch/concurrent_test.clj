@@ -20,10 +20,9 @@
         t (System/currentTimeMillis)
         period (AtomicLong. 2000)
         alarm (AtomicLong. (+ t (.get period)))
-        f (future (c/sig-wait-and-set-forward lock period alarm))]
+        f (future (c/sig-wait-alarm lock alarm))]
     (Thread/sleep 10) ; Give the future thread a chance to start
     (is (true? (c/update-period-and-alarm! 200 period alarm)))
     (c/sig-notify-all lock)
     @f
-    (is (< (- (System/currentTimeMillis) t) 300))
-    (is (< 0 (- (.get alarm) (System/currentTimeMillis)) (inc (.get period))))))
+    (is (< 150 (- (System/currentTimeMillis) t) 250))))

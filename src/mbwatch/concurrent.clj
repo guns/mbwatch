@@ -46,23 +46,16 @@
   [lock :- Object]
   (locking lock (.notifyAll lock)))
 
-(s/defn sig-wait-and-set-forward :- VOID
-  "Wait for signals on lock or wake up at alarm time, then reset the alarm
-   `period` milliseconds forward. This change is unsynchronized. If the value
-   of `alarm` has changed in the meantime, wait on lock again until the new
-   alarm time.
-
-   This is intended to implement a periodic timer that can be interrupted and
-   reset on signal."
+(s/defn sig-wait-alarm :- VOID
+  "Wait for signals on lock or wake up at alarm time. If the value of `alarm`
+   has changed in the meantime, wait on lock again until the new alarm time."
   [lock   :- Object
-   period :- AtomicLong
    alarm  :- AtomicLong]
-  (loop [alarm-ms (.get alarm)]
-    (sig-wait lock (- alarm-ms (System/currentTimeMillis)))
-    (let [alarm-ms' (.get alarm)]
-      (when-not (= alarm-ms alarm-ms')
-        (recur alarm-ms'))))
-  (.set alarm (+ (System/currentTimeMillis) (.get period))))
+  (loop [alarm-time (.get alarm)]
+    (sig-wait lock (- alarm-time (System/currentTimeMillis)))
+    (let [alarm-time' (.get alarm)]
+      (when-not (= alarm-time alarm-time')
+        (recur alarm-time')))))
 
 (s/defn update-period-and-alarm! :- Boolean
   "Set the period to new-period-ms and reset the alarm accordingly if
