@@ -65,11 +65,11 @@
       (->LogItem this msg))))
 
 (defloggable PendingSyncsEvent INFO
-  [action         :- (enum :merge :release)
+  [action         :- (enum :pool :release)
    mbchan->mboxes :- {String StringList}]
   (->> mbchan->mboxes
        join-sync-request
-       (str (if (= action :merge)
+       (str (if (= action :pool)
               "Delaying syncs: "
               "Releasing pending syncs: "))))
 
@@ -110,6 +110,44 @@
                  [mbchan m])))
        (into {})))
 
+(s/defn ^:private pending-sync-changes :- (pair {String StringList} "pool"
+                                                {String StringList} "release")
+  [old-conn-map :- ConnectionMap
+   new-conn-map :- ConnectionMap
+   log-chan     :- WritePort
+   cmd-chan-out :- WritePort]
+  (let [dt (DateTime.)]
+    (reduce
+      (fn [[pool release] mbchan]
+        (let [new-mbchan-map (new-conn-map mbchan)
+              old-mbchan-map (old-conn-map mbchan)
+              old-pending-syncs (:pending-syncs old-mbchan-map)
+              new-pending-syncs (:pending-syncs new-mbchan-map)
+              ;; Newly pooled pending syncs
+              pool (if (and new-pending-syncs
+                            (not= old-pending-syncs new-pending-syncs))
+                     (assoc pool mbchan new-pending-syncs)
+                     pool)
+              release (cond
+                        ;; mbchan has been dissociated
+                        (nil? new-mbchan-map)
+                        (do (put! log-chan (ConnectionEvent. mbchan nil dt))
+                            release)
+                        ;; status has not changed
+                        (= (:status old-mbchan-map) (:status new-mbchan-map))
+                        release
+                        ;; status has changed
+                        :else
+                        (do
+                          (put! log-chan (ConnectionEvent.
+                                           mbchan (:status new-mbchan-map) dt))
+                          ;; status changed from nil|false -> true
+                          (if (and (true? (:status new-mbchan-map)) new-pending-syncs)
+                            (assoc release mbchan new-pending-syncs)
+                            release)))]
+          [pool release]))
+      [{} {}] (distinct (mapcat keys [old-conn-map new-conn-map])))))
+
 (s/defn ^:private watch-conn-changes-fn :- IFn
   "Log changes in connection statuses and release pending syncs. Pending syncs
    are not flushed from the reference when released; they are expected to be
@@ -117,38 +155,14 @@
   [log-chan     :- WritePort
    cmd-chan-out :- WritePort]
   (fn [_ _ old-conn-map new-conn-map]
-    ;; Statuses are swapped in atomically, so don't mislead the user
-    (-> (let [dt (DateTime.)]
-          (reduce
-            (fn [ps mbchan]
-              (let [new-mbchan-map (new-conn-map mbchan)
-                    old-mbchan-map (old-conn-map mbchan)
-                    old-pending-syncs (:pending-syncs old-mbchan-map)
-                    new-pending-syncs (:pending-syncs new-mbchan-map)]
-                ;; Report altered pending syncs
-                (when (and new-pending-syncs
-                           (not= old-pending-syncs new-pending-syncs))
-                  (put! log-chan (->PendingSyncsEvent :merge {mbchan new-pending-syncs})))
-                (cond
-                  ;; mbchan has been dissociated
-                  (nil? new-mbchan-map)
-                  (do (put! log-chan (ConnectionEvent. mbchan nil dt)) ps)
-                  ;; status has not changed
-                  (= (:status old-mbchan-map) (:status new-mbchan-map)) ps
-                  :else
-                  (do
-                    ;; log status change
-                    (put! log-chan (ConnectionEvent. mbchan (:status new-mbchan-map) dt))
-                    ;; status changed from nil|false -> true
-                    (if (and (true? (:status new-mbchan-map)) new-pending-syncs)
-                      (assoc ps mbchan new-pending-syncs)
-                      ps)))))
-            {} (distinct (mapcat keys [old-conn-map new-conn-map]))))
-        (as-> ps
-          (when (seq ps)
-            (put! log-chan (->PendingSyncsEvent :release ps))
-            ;; Commands must be conveyed
-            (>!! cmd-chan-out (->Command :sync ps)))))))
+    (let [[pool release] (pending-sync-changes old-conn-map new-conn-map
+                                               log-chan cmd-chan-out)]
+      (when (seq pool)
+        (put! log-chan (->PendingSyncsEvent :pool pool)))
+      (when (seq release)
+        (put! log-chan (->PendingSyncsEvent :release release))
+        ;; Commands must be conveyed
+        (>!! cmd-chan-out (->Command :sync release))))))
 
 (declare process-command)
 (declare watch-connections!)
