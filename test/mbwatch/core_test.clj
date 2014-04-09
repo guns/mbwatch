@@ -5,8 +5,6 @@
             [mbwatch.core :as c]
             [schema.test :as s]))
 
-;; TODO: Integration tests
-
 (s/deftest test-Application
   ;; Schema validation
   (c/->Application
