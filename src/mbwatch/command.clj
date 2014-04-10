@@ -13,7 +13,7 @@
    global var."
   (AtomicLong. 0))
 
-(defschema ^:private Opcode
+(defschema Opcode
   (enum :sync              ; Synchronize mailboxes
         :sync/term         ; Terminate any running mbsync processes
         :conn/trigger      ; Re-check connections
