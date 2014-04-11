@@ -59,9 +59,9 @@
 
   (log-item [this]
     (let [msg (str "Channel " mbchan (case status
-                                       true  " → reachable"
-                                       false " ✖ unreachable"
-                                       nil   " ∅ unregistered"))]
+                                       true  " -> reachable"
+                                       false " >! unreachable"
+                                       nil   " -- unregistered"))]
       (->LogItem this msg))))
 
 (defloggable ^:private PendingSyncsEvent INFO
