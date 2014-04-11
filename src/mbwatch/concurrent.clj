@@ -12,7 +12,9 @@
 (defmacro future-catch-print
   {:requires [#'catch-print]}
   [& body]
-  `(future (catch-print ~@body)))
+  `(future
+     (catch-print
+       ~@body)))
 
 (defmacro future-loop
   {:requires [#'catch-print]}
@@ -32,19 +34,23 @@
 
 (s/defn sig-wait :- VOID
   ([lock :- Object]
-   (locking lock (.wait lock)))
+   (locking lock
+     (.wait lock)))
   ([lock    :- Object
     timeout :- long]
    (when (pos? timeout)
-     (locking lock (.wait lock timeout)))))
+     (locking lock
+       (.wait lock timeout)))))
 
 (s/defn sig-notify :- VOID
   [lock :- Object]
-  (locking lock (.notify lock)))
+  (locking lock
+    (.notify lock)))
 
 (s/defn sig-notify-all :- VOID
   [lock :- Object]
-  (locking lock (.notifyAll lock)))
+  (locking lock
+    (.notifyAll lock)))
 
 (s/defn sig-wait-alarm :- VOID
   "Wait for signals on lock or wake up at alarm time. If the value of `alarm`
