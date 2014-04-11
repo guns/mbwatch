@@ -216,6 +216,23 @@
                             (if exit-fn "↓ Stopping" "↑ Starting")
                             (human-duration (.get period))))))
 
+(s/defn ->ConnectionWatcher :- ConnectionWatcher
+  [mbchan->IMAPCredential :- {Word IMAPCredential}
+   period                 :- Int
+   timeout                :- Int
+   cmd-chan-in            :- ReadPort]
+  (strict-map->ConnectionWatcher
+    {:mbchan->IMAPCredential mbchan->IMAPCredential
+     :cmd-chan-in cmd-chan-in
+     :cmd-chan-out (chan CHAN-SIZE)
+     :log-chan (chan CHAN-SIZE)
+     :connections (atom {})
+     :timeout timeout
+     :period (AtomicLong. period)
+     :alarm (AtomicLong. (System/currentTimeMillis))
+     :status (AtomicBoolean. true)
+     :exit-fn nil}))
+
 (s/defn ^:private watch-connections! :- VOID
   "Poll and update connections in the connections atom. Notify `status` to
    trigger an early connection check, and set it to false to exit.
@@ -354,20 +371,3 @@
                    command)
     :sync (partition-syncs connection-watcher command)
     command))
-
-(s/defn ->ConnectionWatcher :- ConnectionWatcher
-  [mbchan->IMAPCredential :- {Word IMAPCredential}
-   period                 :- Int
-   timeout                :- Int
-   cmd-chan-in            :- ReadPort]
-  (strict-map->ConnectionWatcher
-    {:mbchan->IMAPCredential mbchan->IMAPCredential
-     :cmd-chan-in cmd-chan-in
-     :cmd-chan-out (chan CHAN-SIZE)
-     :log-chan (chan CHAN-SIZE)
-     :connections (atom {})
-     :timeout timeout
-     :period (AtomicLong. period)
-     :alarm (AtomicLong. (System/currentTimeMillis))
-     :status (AtomicBoolean. true)
-     :exit-fn nil}))
