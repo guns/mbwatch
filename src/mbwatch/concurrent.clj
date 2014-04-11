@@ -64,15 +64,21 @@
 
 (s/defn update-period-and-alarm! :- Boolean
   "Set the period to new-period-ms and reset the alarm accordingly if
-   new-period is different from the current period value. Returns true
-   if period and alarm were updated, false if not. These changes are
-   unsynchronized."
+   new-period is different from the current period value. Negative values
+   of new-period-ms are interpreted as zero. The alarm is always set to the
+   greater of the adjusted alarm and the current time.
+
+   Returns true if period and alarm were updated, false if not.
+
+   These changes are unsynchronized."
   [new-period :- Int
    period     :- AtomicLong
    alarm      :- AtomicLong]
-  (let [old-period (.get period)]
+  (let [new-period (max 0 new-period)
+        old-period (.get period)]
     (if (= new-period old-period)
       false
       (do (.set period new-period)
-          (.set alarm (+ new-period (- (.get alarm) old-period)))
+          (.set alarm (max (+ new-period (- (.get alarm) old-period))
+                           (System/currentTimeMillis)))
           true))))
