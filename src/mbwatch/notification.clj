@@ -154,9 +154,10 @@
                   (put! log-chan-out obj)
                   (recur (process-event obj sync-requests this)))))]
       (assoc this :exit-fn
-             #(do (.set status false)  ; Stop after current iteration
-                  (close! log-chan-in) ; Unblock consumer
-                  (<!! c)))))
+             #(do (.set status false)   ; Stop after current iteration
+                  (<!! c)
+                  (close! log-chan-out) ; Close outgoing channels
+                  ))))
 
   (stop [this]
     (log-with-timestamp! log-chan-out this)

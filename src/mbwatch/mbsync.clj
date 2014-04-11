@@ -78,10 +78,10 @@
                   (let [[id boxes] req]
                     (sync-boxes! this id boxes))
                   (recur))))]
+      ;; MbsyncMaster will close the shared outgoing log-chan
       (assoc this :exit-fn
              #(do (.set status false)     ; Stop after current iteration
                   (sig-notify-all status) ; Terminate syncs
-                  (close! req-chan)       ; Unblock consumer
                   (<!! c)))))
 
   (stop [this]
@@ -151,8 +151,9 @@
                   (recur workers))))]
       (assoc this :exit-fn
              #(do (.set status false) ; Stop after current iteration
-                  (close! cmd-chan)   ; Unblock consumer
-                  (<!! c)))))
+                  (<!! c)
+                  (close! log-chan)   ; Close outgoing channels
+                  ))))
 
   (stop [this]
     (log-with-timestamp! log-chan this)
@@ -170,12 +171,11 @@
 
 (s/defn ->MbsyncMaster :- MbsyncMaster
   [mbsyncrc :- Mbsyncrc
-   cmd-chan :- ReadPort
-   log-chan :- WritePort]
+   cmd-chan :- ReadPort]
   (strict-map->MbsyncMaster
     {:mbsyncrc mbsyncrc
      :cmd-chan cmd-chan
-     :log-chan log-chan
+     :log-chan (chan CHAN-SIZE)
      :status (AtomicBoolean. true)
      :exit-fn nil}))
 
@@ -229,4 +229,7 @@
                        (sig-notify-all (:status w)))
                      workers)
       workers)
-    (dorun (pmap comp/stop (vals workers)))))
+    (dorun (pmap (fn [w]
+                   (close! (:req-chan w))
+                   (comp/stop w))
+                 (vals workers)))))

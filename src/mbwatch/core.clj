@@ -37,7 +37,7 @@
                      │ LoggingService │
                      └────────────────┘
   "
-  (:require [clojure.core.async :refer [chan]]
+  (:require [clojure.core.async :as async :refer [chan close!]]
             [clojure.core.async.impl.protocols :refer [WritePort]]
             [com.stuartsierra.component :refer [Lifecycle start-system
                                                 stop-system]]
@@ -74,42 +74,49 @@
   ;; we do generally want the LogItem consumers to start before the producers
   ;; and stop after them. Here we depend on the implicit parameter-ordering of
   ;; (keys a-record) to start and stop the components in FILO order.
-  (start [this] (start-system this (rest (keys this))))
-  (stop [this] (stop-system this (rest (keys this)))))
+
+  (start [this]
+    (start-system this (rest (keys this))))
+
+  (stop [this]
+    (close! cmd-chan)
+    (stop-system this (rest (keys this)))))
 
 (s/defn ->Application :- Application
   [config :- Config]
-  (let [;; Top level log consumer
-        notification-service (->NewMessageNotificationService
-                               (-> config :mbwatchrc :notify-command)
-                               {"self" #{"INBOX"}} ; FIXME: Move to config
-                               (chan CHAN-SIZE))
-        log-chan-0 (:log-chan-in notification-service)
-        log-chan-1 (:log-chan-out notification-service)
-        ;; Top level cmd consumer
-        sync-timer (->SyncTimer
-                     {} ; FIXME: Move to config
-                     (chan CHAN-SIZE)
-                     log-chan-0
-                     (-> config :mbwatchrc :sync-timer-period))
+  (let [;; Command pipeline
+        sync-timer (->SyncTimer {} ; FIXME: Move to config
+                                (chan CHAN-SIZE)
+                                (-> config :mbwatchrc :sync-timer-period))
         cmd-chan-0 (:cmd-chan-in sync-timer)
         cmd-chan-1 (:cmd-chan-out sync-timer)
-        ;; Middleware
+        ;; ->
         connection-watcher (->ConnectionWatcher
                              (-> config :mbsyncrc :mbchan->IMAPCredential)
                              (-> config :mbwatchrc :connection-period)
                              (-> config :mbwatchrc :connection-timeout)
-                             cmd-chan-1
-                             log-chan-0)
-        cmd-chan-2 (:cmd-chan-out connection-watcher)]
-    (Application.
-      cmd-chan-0
-      (->LoggingService DEBUG
-                        (->ConsoleLogger System/out (get-default-colors) MILLIS-TIMESTAMP-FORMAT)
-                        log-chan-1)
-      notification-service
-      (->MbsyncMaster (:mbsyncrc config)
-                      cmd-chan-2
-                      log-chan-0)
-      connection-watcher
-      sync-timer)))
+                             cmd-chan-1)
+        cmd-chan-2 (:cmd-chan-out connection-watcher)
+        ;; ->
+        mbsync-master (->MbsyncMaster (:mbsyncrc config)
+                                      cmd-chan-2)
+        ;; Logging pipeline
+        notification-service (->NewMessageNotificationService
+                               (-> config :mbwatchrc :notify-command)
+                               {"self" #{"INBOX"}} ; FIXME: Move to config
+                               (async/merge (mapv :log-chan [sync-timer
+                                                             connection-watcher
+                                                             mbsync-master])
+                                            CHAN-SIZE))
+        log-chan-1 (:log-chan-out notification-service)
+        ;; ->
+        logging-service (->LoggingService
+                          DEBUG
+                          (->ConsoleLogger System/out (get-default-colors) MILLIS-TIMESTAMP-FORMAT)
+                          log-chan-1)]
+    (Application. cmd-chan-0
+                  logging-service
+                  notification-service
+                  mbsync-master
+                  connection-watcher
+                  sync-timer)))

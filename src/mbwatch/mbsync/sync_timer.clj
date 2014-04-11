@@ -5,7 +5,10 @@
 
                       ┌───────────┐
       ─── Command ──▶ │ SyncTimer ├─── Command ──▶
-                      └───────────┘
+                      └─────┬─────┘
+                            │
+                            │
+                            └─── Loggable ──▶
   "
   (:require [clojure.core.async :refer [<!! >!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
@@ -67,9 +70,10 @@
       (assoc this :exit-fn
              #(do (.set status false)    ; Stop after current iteration
                   (sig-notify-all alarm) ; Trigger timer
-                  (close! cmd-chan-in)   ; Unblock consumer
                   @f
-                  (<!! c)))))
+                  (<!! c)
+                  (close! cmd-chan-out)  ; Close outgoing channels
+                  (close! log-chan)))))
 
   (stop [this]
     (log-with-timestamp! log-chan this)
@@ -88,12 +92,11 @@
 (s/defn ->SyncTimer :- SyncTimer
   [sync-request :- {String StringList}
    cmd-chan-in  :- ReadPort
-   log-chan     :- WritePort
    period       :- Int]
   (strict-map->SyncTimer
     {:cmd-chan-in cmd-chan-in
      :cmd-chan-out (chan CHAN-SIZE)
-     :log-chan log-chan
+     :log-chan (chan CHAN-SIZE)
      :sync-request-atom (atom sync-request)
      :period (AtomicLong. period)
      :alarm (AtomicLong. 0)

@@ -196,10 +196,11 @@
       (assoc this :exit-fn
              #(do (.set status false)    ; Stop after current iteration
                   (sig-notify-all alarm) ; Trigger timer
-                  (close! cmd-chan-in)   ; Unblock consumer
                   (remove-watch connections ::watch-conn-changes)
                   @f
-                  (<!! c)))))
+                  (<!! c)
+                  (close! cmd-chan-out)  ; Close outgoing channels
+                  (close! log-chan)))))
 
   (stop [this]
     (log-with-timestamp! log-chan this)
@@ -358,13 +359,12 @@
   [mbchan->IMAPCredential :- {Word IMAPCredential}
    period                 :- Int
    timeout                :- Int
-   cmd-chan-in            :- ReadPort
-   log-chan               :- WritePort]
+   cmd-chan-in            :- ReadPort]
   (strict-map->ConnectionWatcher
     {:mbchan->IMAPCredential mbchan->IMAPCredential
      :cmd-chan-in cmd-chan-in
      :cmd-chan-out (chan CHAN-SIZE)
-     :log-chan log-chan
+     :log-chan (chan CHAN-SIZE)
      :connections (atom {})
      :timeout timeout
      :period (AtomicLong. period)

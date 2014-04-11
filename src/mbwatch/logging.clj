@@ -8,7 +8,7 @@
       ─── Loggable ──▶ │ LoggingService │
                        └────────────────┘
   "
-  (:require [clojure.core.async :refer [<!! close! put!]]
+  (:require [clojure.core.async :refer [<!! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.concurrent :refer [thread-loop]]
@@ -112,19 +112,18 @@
   Lifecycle
 
   (start [this]
-    (log-with-timestamp! log-chan this)
+    (log logger (log-item (assoc-timestamp this)))
     (let [c (thread-loop []
               (when-some [obj (<!! log-chan)]
                 (when (<= (log-level obj) level)
                   (log logger (log-item obj)))
                 (recur)))]
       (assoc this :exit-fn
-             #(do (close! log-chan) ; Unblock consumer
-                  (<!! c)))))
+             #(<!! c))))
 
   (stop [this]
-    (log-with-timestamp! log-chan this)
     (exit-fn)
+    (log logger (log-item (assoc-timestamp this)))
     (dissoc this :exit-fn))
 
   Loggable
