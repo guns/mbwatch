@@ -44,7 +44,7 @@
 (def ^:private ^:const RETRY-INTERVAL 15000)
 (def ^:private ^:const TIME-JUMP-INTERVAL 60000)
 
-(t/defrecord ConnectionEvent
+(t/defrecord ^:private ConnectionEvent
   [mbchan    :- String
    status    :- (maybe Boolean)
    timestamp :- DateTime]
@@ -64,7 +64,7 @@
                                        nil   " ∅ unregistered"))]
       (->LogItem this msg))))
 
-(defloggable PendingSyncsEvent INFO
+(defloggable ^:private PendingSyncsEvent INFO
   [action         :- (enum :pool :release)
    mbchan->mboxes :- {String StringList}]
   (->> mbchan->mboxes
@@ -73,13 +73,13 @@
               "Delaying syncs: "
               "Releasing pending syncs: "))))
 
-(defloggable TimeJumpEvent WARNING
+(defloggable ^:private TimeJumpEvent WARNING
   [retry :- Int]
   (if (pos? retry)
     (format "Connection retry #%d in %s" retry (human-duration (* retry RETRY-INTERVAL)))
     "Time jump! Retrying connections up to 3 times in the next 90 seconds."))
 
-(defloggable ConnectionWatcherPreferenceEvent INFO
+(defloggable ^:private ConnectionWatcherPreferenceEvent INFO
   [period :- Int]
   (str "Connection polling period set to " (human-duration period)))
 
@@ -165,7 +165,7 @@
 (declare process-command)
 (declare watch-connections!)
 
-(t/defrecord ConnectionWatcher
+(t/defrecord ^:private ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
    cmd-chan-in            :- ReadPort
    cmd-chan-out           :- WritePort

@@ -9,7 +9,7 @@
   (:import (mbwatch.config.mbsyncrc Mbsyncrc)
            (mbwatch.config.mbwatchrc Mbwatchrc)))
 
-(t/defrecord Config
+(t/defrecord ^:private Config
   [mbsyncrc  :- Mbsyncrc
    mbwatchrc :- Mbwatchrc])
 

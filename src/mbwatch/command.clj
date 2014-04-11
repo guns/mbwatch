@@ -27,7 +27,7 @@
         :timer/set-request ; Set sync timer's request
         ))
 
-(t/defrecord Command
+(t/defrecord ^:private Command
   [opcode    :- Opcode
    payload   :- Any
    id        :- Long

@@ -7,7 +7,7 @@
   (:import (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
-(t/defrecord ^:public MbsyncEventStart
+(t/defrecord MbsyncEventStart
   [level  :- Int
    id     :- Int
    mbchan :- String
@@ -22,7 +22,7 @@
     (let [msg (format "Starting `mbsync %s`" (join-mbargs mbchan mboxes))]
       (LogItem. level start msg))))
 
-(t/defrecord ^:public MbsyncEventStop
+(t/defrecord MbsyncEventStop
   [level   :- Int
    id      :- Int
    mbchan  :- String
@@ -55,7 +55,7 @@
                   (str buf)))]
       (LogItem. level stop msg))))
 
-(defloggable ^:public MbsyncUnknownChannelError WARNING
+(defloggable MbsyncUnknownChannelError WARNING
   [id     :- Int
    mbchan :- String]
   (format "Unknown channel: `%s`" mbchan))

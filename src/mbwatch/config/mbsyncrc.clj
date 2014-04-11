@@ -56,13 +56,6 @@
    :path    FilteredLine
    :flatten (maybe FilteredLine)})
 
-(t/defrecord Mbsyncrc
-  [text                   :- String
-   sections               :- Sections
-   mbchans                :- #{Word}
-   mbchan->Maildirstore   :- {Word Maildirstore}
-   mbchan->IMAPCredential :- {Word IMAPCredential}])
-
 (s/defn ^:private paragraphs :- [[String]]
   [s :- String]
   (map string/split-lines (string/split s #"\n(\s*\n)+")))
@@ -206,6 +199,13 @@
                                   (r :imapstore)
                                   (r :maildirstore)
                                   (r :channel)))))
+
+(t/defrecord ^:private Mbsyncrc
+  [text                   :- String
+   sections               :- Sections
+   mbchans                :- #{Word}
+   mbchan->Maildirstore   :- {Word Maildirstore}
+   mbchan->IMAPCredential :- {Word IMAPCredential}])
 
 (s/defn parse :- Mbsyncrc
   [s :- String]

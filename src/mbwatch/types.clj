@@ -5,20 +5,20 @@
 
 (defmacro defrecord
   "Same as clojure.core/defrecord or schema.core/defrecord, except that the
-   ->name, map->name, and strict-map->name constructors are made private. The
-   strict-map->name constructor remains public if the schema version is used
-   and the name symbol contains the :public flag in its metadata"
+   ->name and map->name constructors are unmapped. The strict-map->name
+   constructor remains if the schema version is used."
   {:requires [#'cc/defrecord #'s/defrecord]}
   [name & body]
   (let [fields (first body)
         schema? (and (coll? fields) (some #{:-} fields))
-        get-var (fn [prefix] `(resolve '~(symbol (str prefix name))))]
+        sym (fn [prefix] (symbol (str prefix name)))
+        get-var (fn [prefix] `(resolve '~(sym prefix)))]
     `(do ~(if schema?
             `(s/defrecord ~name ~@body)
             `(cc/defrecord ~name ~@body))
-         (alter-meta! ~(get-var "->") assoc :private true)
-         (alter-meta! ~(get-var "map->") assoc :private true)
-         ~(when (and schema? (not (-> name meta :public)))
+         (ns-unmap *ns* '~(sym "->"))
+         (ns-unmap *ns* '~(sym "map->"))
+         ~(when (and schema? (-> name meta :private))
             `(alter-meta! ~(get-var "strict-map->") assoc :private true)))))
 
 (defschema VOID

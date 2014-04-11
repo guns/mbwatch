@@ -37,7 +37,7 @@
   "TODO: Make configurable?"
   8)
 
-(defloggable NewMessageNotification INFO
+(defloggable ^:private NewMessageNotification INFO
   [mbchan->mbox->messages :- {String {String [MimeMessage]}}]
   (str
     (reduce
@@ -51,7 +51,7 @@
 (defschema NotifyMap
   {String #{String}})
 
-(defloggable NotifyMapChangeEvent INFO
+(defloggable ^:private NotifyMapChangeEvent INFO
   [notify-map :- NotifyMap]
   (let [msg (join-sync-request notify-map)]
     (if (seq msg)
@@ -135,7 +135,7 @@
     "Returns a new version of the sync-requests map, adding or removing self
      from it as necessary."))
 
-(t/defrecord NewMessageNotificationService
+(t/defrecord ^:private NewMessageNotificationService
   [notify-command  :- String
    notify-map-atom :- Atom ; NotifyMap
    log-chan-in     :- ReadPort

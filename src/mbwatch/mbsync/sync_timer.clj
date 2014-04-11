@@ -23,7 +23,7 @@
            (java.util.concurrent.atomic AtomicBoolean AtomicLong)
            (mbwatch.command Command)))
 
-(defloggable SyncTimerPreferenceEvent INFO
+(defloggable ^:private SyncTimerPreferenceEvent INFO
   [pref :- (either Int {String StringList})]
   (if (integer? pref)
     (str "Sync timer period set to: " (human-duration pref))
@@ -34,7 +34,7 @@
 
 (declare process-command)
 
-(t/defrecord SyncTimer
+(t/defrecord ^:private SyncTimer
   [cmd-chan-in       :- ReadPort
    cmd-chan-out      :- WritePort
    log-chan          :- WritePort

@@ -15,7 +15,7 @@
    :connection-timeout "2000"
    :imap-socket-timeout "10000"})
 
-(t/defrecord Mbwatchrc
+(t/defrecord ^:private Mbwatchrc
   [notify-command      :- String
    sync-timer-period   :- Int
    connection-period   :- Int

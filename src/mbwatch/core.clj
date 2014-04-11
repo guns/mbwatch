@@ -60,7 +60,7 @@
            (mbwatch.mbsync.sync_timer SyncTimer)
            (mbwatch.notification NewMessageNotificationService)))
 
-(t/defrecord Application
+(t/defrecord ^:private Application
   [cmd-chan             :- WritePort
    logging-service      :- LoggingService
    notification-service :- NewMessageNotificationService

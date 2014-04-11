@@ -35,7 +35,7 @@
   (log-level [this] "Returns this object's logging level")
   (log-item [this] "Returns a new LogItem object"))
 
-(t/defrecord LogItem
+(t/defrecord ^:private LogItem
   [level     :- Int
    timestamp :- DateTime
    message   :- String]
@@ -76,10 +76,7 @@
    and should return a LogItem message."
   {:requires [#'t/defrecord Loggable #'s/defn]}
   [name level fields & body]
-  (assert (not (contains? (meta name) :private))
-          "defloggable vars are private by default")
-  (let [ctor-name (with-meta (symbol (str "->" name))
-                             {:private (not (:public (meta name)))})
+  (let [ctor-name (with-meta (symbol (str "->" name)) (meta name))
         ctor-params (schema-params fields)]
     `(do
        (t/defrecord ~name
@@ -106,7 +103,7 @@
 (defprotocol IItemLogger
   (log [this ^LogItem log-item]))
 
-(t/defrecord LoggingService
+(t/defrecord ^:private LoggingService
   [level     :- Int
    logger    :- IItemLogger
    log-chan  :- ReadPort
