@@ -194,9 +194,9 @@
                     (>!! cmd-chan-out cmd'))
                   (recur))))]
       (assoc this :exit-fn
-             #(do (.set status false)     ; Stop after current iteration
-                  (sig-notify-all status) ; Trigger timer
-                  (close! cmd-chan-in)    ; Unblock consumer
+             #(do (.set status false)    ; Stop after current iteration
+                  (sig-notify-all alarm) ; Trigger timer
+                  (close! cmd-chan-in)   ; Unblock consumer
                   (remove-watch connections ::watch-conn-changes)
                   @f
                   (<!! c)))))
@@ -229,7 +229,7 @@
                 ^AtomicLong alarm]} connection-watcher]
     (loop [retry 0]
       (when (.get status)
-        (sig-wait-alarm status alarm)
+        (sig-wait-alarm alarm)
         (when (.get status)
           (let [time-jump? (when (> (- (System/currentTimeMillis) (.get alarm))
                                     TIME-JUMP-INTERVAL)
@@ -338,14 +338,14 @@
   [connection-watcher :- ConnectionWatcher
    command            :- Command]
   (case (:opcode command)
-    :conn/trigger (do (sig-notify-all (:status connection-watcher))
+    :conn/trigger (do (sig-notify-all (:alarm connection-watcher))
                       command)
     :conn/set-period (let [{:keys [^AtomicLong period
                                    ^AtomicLong alarm
-                                   status log-chan]} connection-watcher
+                                   log-chan]} connection-watcher
                            new-period ^long (:payload command)]
                        (when (update-period-and-alarm! new-period period alarm)
-                         (sig-notify-all status)
+                         (sig-notify-all alarm)
                          (put! log-chan (->ConnectionWatcherPreferenceEvent new-period)))
                        command)
     :conn/remove (let [{:keys [connections]} connection-watcher]

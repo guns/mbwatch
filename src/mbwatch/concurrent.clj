@@ -53,12 +53,11 @@
     (.notifyAll lock)))
 
 (s/defn sig-wait-alarm :- VOID
-  "Wait for signals on lock or wake up at alarm time. If the value of `alarm`
-   has changed in the meantime, wait on lock again until the new alarm time."
-  [lock   :- Object
-   alarm  :- AtomicLong]
+  "Wait for signals on alarm or wake up at alarm time. If the value of `alarm`
+   has changed in the meantime, wait on alarm again until the new alarm time."
+  [alarm :- AtomicLong]
   (loop [alarm-time (.get alarm)]
-    (sig-wait lock (- alarm-time (System/currentTimeMillis)))
+    (sig-wait alarm (- alarm-time (System/currentTimeMillis)))
     (let [alarm-time' (.get alarm)]
       (when-not (= alarm-time alarm-time')
         (recur alarm-time')))))

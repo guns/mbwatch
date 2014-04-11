@@ -50,7 +50,7 @@
     (log-with-timestamp! log-chan this)
     (let [f (future-loop []
               (when (.get status)
-                (sig-wait-alarm status alarm)
+                (sig-wait-alarm alarm)
                 (.set alarm (+ (System/currentTimeMillis) (.get period)))
                 (when (.get status)
                   (let [sync-req @sync-request-atom]
@@ -65,9 +65,9 @@
                   (process-command this cmd)
                   (recur))))]
       (assoc this :exit-fn
-             #(do (.set status false)     ; Stop after current iteration
-                  (sig-notify-all status) ; Trigger timer
-                  (close! cmd-chan-in)    ; Unblock consumer
+             #(do (.set status false)    ; Stop after current iteration
+                  (sig-notify-all alarm) ; Trigger timer
+                  (close! cmd-chan-in)   ; Unblock consumer
                   @f
                   (<!! c)))))
 
@@ -104,13 +104,13 @@
   [sync-timer :- SyncTimer
    command    :- Command]
   (case (:opcode command)
-    :timer/trigger (sig-notify-all (:status sync-timer))
+    :timer/trigger (sig-notify-all (:alarm sync-timer))
     :timer/set-period (let [{:keys [^AtomicLong period
                                     ^AtomicLong alarm
-                                    status log-chan]} sync-timer
+                                    log-chan]} sync-timer
                             new-period ^long (:payload command)]
                         (when (update-period-and-alarm! new-period period alarm)
-                          (sig-notify-all status)
+                          (sig-notify-all alarm)
                           (put! log-chan (->SyncTimerPreferenceEvent new-period))))
     :timer/set-request (let [{:keys [sync-request-atom log-chan]} sync-timer
                              old-req @sync-request-atom
