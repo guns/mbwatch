@@ -223,17 +223,20 @@
    period                 :- Int
    timeout                :- Int
    cmd-chan-in            :- ReadPort]
-  (strict-map->ConnectionWatcher
-    {:mbchan->IMAPCredential mbchan->IMAPCredential
-     :cmd-chan-in cmd-chan-in
-     :cmd-chan-out (chan CHAN-SIZE)
-     :log-chan (chan CHAN-SIZE)
-     :connections (atom {})
-     :timeout timeout
-     :period (AtomicLong. period)
-     :alarm (AtomicLong. (System/currentTimeMillis))
-     :status (AtomicBoolean. true)
-     :exit-fn nil}))
+  (let [[period alarm] (if (pos? period)
+                         [period (System/currentTimeMillis)]
+                         [0 0])]
+    (strict-map->ConnectionWatcher
+      {:mbchan->IMAPCredential mbchan->IMAPCredential
+       :cmd-chan-in cmd-chan-in
+       :cmd-chan-out (chan CHAN-SIZE)
+       :log-chan (chan CHAN-SIZE)
+       :connections (atom {})
+       :timeout timeout
+       :period (AtomicLong. period)
+       :alarm (AtomicLong. alarm)
+       :status (AtomicBoolean. true)
+       :exit-fn nil})))
 
 (s/defn ^:private watch-connections! :- VOID
   "Poll and update connections in the connections atom. Notify `status` to

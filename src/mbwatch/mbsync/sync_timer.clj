@@ -96,15 +96,18 @@
   [sync-request :- {String StringList}
    cmd-chan-in  :- ReadPort
    period       :- Int]
-  (strict-map->SyncTimer
-    {:cmd-chan-in cmd-chan-in
-     :cmd-chan-out (chan CHAN-SIZE)
-     :log-chan (chan CHAN-SIZE)
-     :sync-request-atom (atom sync-request)
-     :period (AtomicLong. period)
-     :alarm (AtomicLong. (System/currentTimeMillis))
-     :status (AtomicBoolean. true)
-     :exit-fn nil}))
+  (let [[period alarm] (if (pos? period)
+                         [period (System/currentTimeMillis)]
+                         [0 0])]
+    (strict-map->SyncTimer
+      {:cmd-chan-in cmd-chan-in
+       :cmd-chan-out (chan CHAN-SIZE)
+       :log-chan (chan CHAN-SIZE)
+       :sync-request-atom (atom sync-request)
+       :period (AtomicLong. period)
+       :alarm (AtomicLong. alarm)
+       :status (AtomicBoolean. true)
+       :exit-fn nil})))
 
 (s/defn ^:private process-command :- VOID
   [sync-timer :- SyncTimer
