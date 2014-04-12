@@ -54,19 +54,25 @@
 
 (s/defn sig-wait-alarm :- VOID
   "Wait for signals on alarm or wake up at alarm time. If the value of `alarm`
-   has changed in the meantime, wait on alarm again until the new alarm time."
+   has changed in the meantime, wait on alarm again until the new alarm time.
+
+   If the value of alarm is zero or less, the thread waits indefinitely."
   [alarm :- AtomicLong]
   (loop [alarm-time (.get alarm)]
-    (sig-wait alarm (- alarm-time (System/currentTimeMillis)))
+    (if (pos? alarm-time)
+      (sig-wait alarm (- alarm-time (System/currentTimeMillis)))
+      (sig-wait alarm))
     (let [alarm-time' (.get alarm)]
       (when-not (= alarm-time alarm-time')
         (recur alarm-time')))))
 
 (s/defn update-period-and-alarm! :- Boolean
   "Set the period to new-period-ms and reset the alarm accordingly if
-   new-period is different from the current period value. Negative values
-   of new-period-ms are interpreted as zero. The alarm is always set to the
-   greater of the adjusted alarm and the current time.
+   new-period is different from the current period value.
+
+   If new-period-ms is zero, the alarm is _also_ set to zero to signal the off
+   state. Otherwise, the alarm is set to the greater of the adjusted alarm and
+   the current time. Negative values of new-period-ms are interpreted as zero.
 
    Returns true if period and alarm were updated, false if not.
 
@@ -78,7 +84,11 @@
         old-period (.get period)]
     (if (= new-period old-period)
       false
-      (do (.set period new-period)
-          (.set alarm (max (+ new-period (- (.get alarm) old-period))
-                           (System/currentTimeMillis)))
-          true))))
+      (let [alarm-time (.get alarm)]
+        (.set period new-period)
+        (.set alarm (cond
+                      (zero? new-period) 0
+                      (zero? alarm-time) (+ new-period (System/currentTimeMillis))
+                      :else (max (+ new-period (- alarm-time old-period))
+                                 (System/currentTimeMillis))))
+        true))))

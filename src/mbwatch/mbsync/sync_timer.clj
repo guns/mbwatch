@@ -29,7 +29,9 @@
 (defloggable ^:private SyncTimerPreferenceEvent INFO
   [pref :- (either Int {String StringList})]
   (if (integer? pref)
-    (str "Sync timer period set to: " (human-duration pref))
+    (if (zero? pref)
+      "Sync timer disabled."
+      (str "Sync timer period set to: " (human-duration pref)))
     (let [req (join-sync-request pref)]
       (if (seq req)
         (str "Sync timer request set to: " req)
@@ -54,9 +56,10 @@
     (let [f (future-loop []
               (when (.get status)
                 (sig-wait-alarm alarm)
-                (.set alarm (+ (System/currentTimeMillis) (.get period)))
                 (when (.get status)
-                  (let [sync-req @sync-request-atom]
+                  (let [p (.get period)
+                        sync-req @sync-request-atom]
+                    (.set alarm (if (pos? p) (+ (System/currentTimeMillis) p) 0))
                     (when (seq sync-req)
                       (>!! cmd-chan-out (->Command :sync sync-req))))
                   (recur))))
@@ -99,7 +102,7 @@
      :log-chan (chan CHAN-SIZE)
      :sync-request-atom (atom sync-request)
      :period (AtomicLong. period)
-     :alarm (AtomicLong. 0)
+     :alarm (AtomicLong. (System/currentTimeMillis))
      :status (AtomicBoolean. true)
      :exit-fn nil}))
 
@@ -114,7 +117,7 @@
                             new-period ^long (:payload command)]
                         (when (update-period-and-alarm! new-period period alarm)
                           (sig-notify-all alarm)
-                          (put! log-chan (->SyncTimerPreferenceEvent new-period))))
+                          (put! log-chan (->SyncTimerPreferenceEvent (.get period)))))
     :timer/set-request (let [{:keys [sync-request-atom log-chan]} sync-timer
                              old-req @sync-request-atom
                              new-req (reset! sync-request-atom (:payload command))]

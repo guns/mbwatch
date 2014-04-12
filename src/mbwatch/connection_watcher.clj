@@ -81,7 +81,9 @@
 
 (defloggable ^:private ConnectionWatcherPreferenceEvent INFO
   [period :- Int]
-  (str "Connection polling period set to " (human-duration period)))
+  (if (zero? period) ; zero?, not pos?, so we don't mask bugs
+    "Connection polling disabled."
+    (str "Connection polling period set to " (human-duration period))))
 
 (defschema ^:private ConnectionMap
   {String {:status Boolean
@@ -269,7 +271,9 @@
                            (do (put! log-chan (->TimeJumpEvent retry))
                                (* retry RETRY-INTERVAL))
                            (.get period))]
-            (.set alarm (+ (System/currentTimeMillis) interval))
+            (.set alarm (if (pos? interval)
+                          (+ (System/currentTimeMillis) interval)
+                          0))
             (recur retry)))))))
 
 (s/defn ^:private merge-pending-syncs :- (pair ConnectionMap "conn-map"
@@ -364,7 +368,7 @@
                            new-period ^long (:payload command)]
                        (when (update-period-and-alarm! new-period period alarm)
                          (sig-notify-all alarm)
-                         (put! log-chan (->ConnectionWatcherPreferenceEvent new-period)))
+                         (put! log-chan (->ConnectionWatcherPreferenceEvent (.get period))))
                        command)
     :conn/remove (let [{:keys [connections]} connection-watcher]
                    (apply swap! connections dissoc (:payload command))
