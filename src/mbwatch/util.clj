@@ -101,7 +101,9 @@
    user   :- String
    host   :- String
    port   :- Object]
-  (str scheme "://" (URLEncoder/encode user) \@ (URLEncoder/encode host) \: port))
+  (str scheme "://"
+       (URLEncoder/encode user "UTF-8") \@
+       (URLEncoder/encode host "UTF-8") \: port))
 
 (defmacro catch-print [& body]
   `(try
