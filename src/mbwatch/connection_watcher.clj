@@ -251,8 +251,9 @@
       (when (.get status)
         (sig-wait-alarm alarm)
         (when (.get status)
-          (let [time-jump? (when (> (- (System/currentTimeMillis) (.get alarm))
-                                    TIME-JUMP-INTERVAL)
+          (let [time-jump? (when (and (seq @connections)
+                                      (> (- (System/currentTimeMillis) (.get alarm))
+                                         TIME-JUMP-INTERVAL))
                              (put! log-chan (->TimeJumpEvent 0))
                              true)
                 ;; Update connections, then check if they are all reachable
