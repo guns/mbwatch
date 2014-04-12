@@ -13,7 +13,8 @@
                  [joda-time/joda-time "2.3"]
                  [clojure-ini "0.0.2"]]
   :profiles {:dev {:dependencies [[org.clojure/test.check "0.5.7"]]
-                   :jvm-opts ["-Djavax.net.ssl.trustStore=test-resources/gmail.ks"
-                              "-XX:+CMSClassUnloadingEnabled"]
+                   :plugins [[jonase/eastwood "RELEASE"]]
+                   :jvm-opts ["-Djavax.net.ssl.trustStore=test-resources/gmail.ks"]
                    :source-paths ["dev"]
-                   :resource-paths ["test-resources"]}})
+                   :resource-paths ["test-resources"]}}
+  :eastwood {:exclude-linters [:redefd-vars]})
