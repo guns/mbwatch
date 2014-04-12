@@ -1,7 +1,7 @@
 (ns mbwatch.concurrent-test
   (:require [clojure.test :refer [is testing]]
             [clojure.test.check.clojure-test :refer [defspec]]
-            [clojure.test.check.generators :as g]
+            [clojure.test.check.generators :as g :refer [such-that]]
             [clojure.test.check.properties :refer [for-all]]
             [mbwatch.concurrent :as c])
   (:import (java.util.concurrent.atomic AtomicLong)))
@@ -14,9 +14,9 @@
 
 (defspec test-change-alarm 200
   (testing "changes in alarm time are detected and accounted for"
-    (for-all [p₀ (g/such-that #(or (zero? %) (>= % 10)) g/nat)
+    (for-all [p₀ (such-that #(or (zero? %) (>= % 10)) g/nat)
               p₁ g/int
-              p₂ (g/such-that #(>= % 10) g/nat)]
+              p₂ (such-that #(>= % 10) g/nat)]
       (let [start (System/currentTimeMillis)
             period (AtomicLong. p₀)
             alarm (AtomicLong. (if (pos? p₀) (+ start p₀) 0))
