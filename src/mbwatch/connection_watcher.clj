@@ -172,7 +172,7 @@
    cmd-chan-in            :- ReadPort
    cmd-chan-out           :- WritePort
    log-chan               :- WritePort
-   connections            :- Atom ; ConnectionMap
+   connections-atom       :- Atom ; ConnectionMap
    timeout                :- Int
    period                 :- AtomicLong
    alarm                  :- AtomicLong
@@ -184,7 +184,7 @@
   (start [this]
     (log-with-timestamp! log-chan this)
     ;; Changes to this atom can happen from multiple threads
-    (add-watch connections ::watch-conn-changes
+    (add-watch connections-atom ::watch-conn-changes
                (watch-conn-changes-fn log-chan cmd-chan-out))
     (let [f (future-catch-print
               (watch-connections! this))
@@ -198,7 +198,7 @@
       (assoc this :exit-fn
              #(do (.set status false)    ; Stop after current iteration
                   (sig-notify-all alarm) ; Trigger timer
-                  (remove-watch connections ::watch-conn-changes)
+                  (remove-watch connections-atom ::watch-conn-changes)
                   @f
                   (<!! c)
                   (close! cmd-chan-out)  ; Close outgoing channels
@@ -231,7 +231,7 @@
        :cmd-chan-in cmd-chan-in
        :cmd-chan-out (chan CHAN-SIZE)
        :log-chan (chan CHAN-SIZE)
-       :connections (atom {})
+       :connections-atom (atom {})
        :timeout timeout
        :period (AtomicLong. period)
        :alarm (AtomicLong. alarm)
@@ -246,7 +246,7 @@
    woken from sleep. Retry the connection a few times in case the gateway
    interface comes back up in the next 90 seconds."
   [connection-watcher :- ConnectionWatcher]
-  (let [{:keys [connections mbchan->IMAPCredential log-chan timeout
+  (let [{:keys [connections-atom mbchan->IMAPCredential log-chan timeout
                 ^AtomicBoolean status
                 ^AtomicLong period
                 ^AtomicLong alarm]} connection-watcher]
@@ -254,13 +254,13 @@
       (when (.get status)
         (sig-wait-alarm alarm)
         (when (.get status)
-          (let [time-jump? (when (and (seq @connections)
+          (let [time-jump? (when (and (seq @connections-atom)
                                       (> (- (System/currentTimeMillis) (.get alarm))
                                          TIME-JUMP-INTERVAL))
                              (put! log-chan (->TimeJumpEvent 0))
                              true)
                 ;; Update connections, then check if they are all reachable
-                up? (-> connections
+                up? (-> connections-atom
                         (swap! #(update-connections % mbchan->IMAPCredential timeout))
                         (as-> c (every? :status (vals c))))
                 ;; Nested `if`s to ensure all leaves are primitive
@@ -350,7 +350,7 @@
         sync-req (:payload sync-command)
         ;; Most of the work needs to be done in the transaction; note that
         ;; while the TCP connects do IO, they do not change program state.
-        sync-req' (-> (:connections connection-watcher)
+        sync-req' (-> (:connections-atom connection-watcher)
                       (swap! update-connections-for-sync
                              sync-req mbchan->IMAPCredential timeout)
                       meta
@@ -374,8 +374,8 @@
                          (sig-notify-all alarm)
                          (put! log-chan (->ConnectionWatcherPreferenceEvent (.get period))))
                        command)
-    :conn/remove (let [{:keys [connections]} connection-watcher]
-                   (apply swap! connections dissoc (:payload command))
+    :conn/remove (let [{:keys [connections-atom]} connection-watcher]
+                   (apply swap! connections-atom dissoc (:payload command))
                    command)
     :sync (partition-syncs connection-watcher command)
     command))
