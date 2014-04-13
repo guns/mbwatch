@@ -49,16 +49,16 @@
                                             get-default-colors]]
             [mbwatch.logging :refer [->LoggingService DEBUG]]
             [mbwatch.mbsync :refer [->MbsyncMaster]]
-            [mbwatch.mbsync.sync-timer :refer [->SyncTimer]]
             [mbwatch.notification :refer [->NewMessageNotificationService]]
+            [mbwatch.sync-timer :refer [->SyncTimer]]
             [mbwatch.types :as t]
             [schema.core :as s])
   (:import (mbwatch.config Config)
            (mbwatch.connection_watcher ConnectionWatcher)
            (mbwatch.logging LoggingService)
            (mbwatch.mbsync MbsyncMaster)
-           (mbwatch.mbsync.sync_timer SyncTimer)
-           (mbwatch.notification NewMessageNotificationService)))
+           (mbwatch.notification NewMessageNotificationService)
+           (mbwatch.sync_timer SyncTimer)))
 
 (t/defrecord ^:private Application
   [cmd-chan             :- WritePort

@@ -1,4 +1,4 @@
-(ns mbwatch.mbsync.sync-timer-test
+(ns mbwatch.sync-timer-test
   (:require [clojure.core.async :refer [<!! chan close!]]
             [clojure.test :refer [is]]
             [clojure.test.check.clojure-test :refer [defspec]]
@@ -9,9 +9,9 @@
             [com.stuartsierra.component :as comp]
             [mbwatch.command :refer [->Command]]
             [mbwatch.concurrent :refer [update-timer!]]
-            [mbwatch.mbsync.sync-timer :as st])
+            [mbwatch.sync-timer :as st])
   (:import (mbwatch.command Command)
-           (mbwatch.mbsync.sync_timer SyncTimer)))
+           (mbwatch.sync_timer SyncTimer)))
 
 (def mbox-gen
   (elements (mapv (comp str char) (range (int \α) (inc (int \ω))))))
