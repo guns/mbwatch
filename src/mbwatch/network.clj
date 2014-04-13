@@ -6,7 +6,7 @@
                      SocketTimeoutException)
            (java.util.concurrent ExecutionException)))
 
-(s/defn lookup :- (maybe InetAddress)
+(s/defn ^:private lookup :- (maybe InetAddress)
   "Resolve host with timeout. DNS requests that do not return in timeout
    milliseconds return nil."
   [host    :- String
