@@ -8,9 +8,9 @@
             [clojure.test.check.properties :refer [for-all]]
             [com.stuartsierra.component :as comp]
             [mbwatch.command :refer [->Command]]
+            [mbwatch.concurrent :refer [update-timer!]]
             [mbwatch.mbsync.sync-timer :as st])
-  (:import (java.util.concurrent.atomic AtomicLong)
-           (mbwatch.command Command)
+  (:import (mbwatch.command Command)
            (mbwatch.mbsync.sync_timer SyncTimer)))
 
 (def mbox-gen
@@ -46,15 +46,17 @@
 (defn chanv [ch]
   (into [] (take-while some? (repeatedly #(<!! ch)))))
 
+(defn snapshot [sync-timer]
+  (let [{:keys [sync-request-atom timer-atom]} sync-timer]
+    {:sync-request-state @sync-request-atom
+     :timer-state @timer-atom}))
+
 (defspec test-cyclic-timer 10
   (for-all [sync-timer (such-that #(seq @(:sync-request-atom %)) sync-timer-gen)
             ttl (g/choose 50 1000)]
-    (let [{:keys [cmd-chan-in cmd-chan-out log-chan sync-request-atom
-                  ^AtomicLong period
-                  ^AtomicLong alarm]} sync-timer
-          ;; Fire 10 sync requests + 1 on start
-          _ (do (.set period (quot ttl 10))
-                (.set alarm (System/currentTimeMillis)))
+    (let [{:keys [cmd-chan-in cmd-chan-out log-chan sync-request-atom timer-atom]} sync-timer
+          ;; Fire 10 sync requests
+          _ (update-timer! timer-atom (quot ttl 10))
           sync-timer (comp/start sync-timer)]
       (Thread/sleep ttl)
       (close! cmd-chan-in)
@@ -62,11 +64,30 @@
       (let [cmds (chanv cmd-chan-out)
             n (count cmds)]
         (.println System/err (format "ttl %3d │ n %2d" ttl n))
-        ;; Tolerance of max 1 extra sync (border condition)
-        (and (is (<= 10 n 11))
-             (is (every? (partial instance? Command) cmds))
+        (and (is (every? (partial instance? Command) cmds))
              (is (every? #(= ((juxt :opcode :payload) %)
                              [:sync @sync-request-atom])
                          cmds))
+             ;; Tolerate 1 sync short (border condition)
+             (is (<= 9 n 10))
              ;; Lifecycle events only
              (is (= (mapv class (chanv log-chan)) [SyncTimer SyncTimer])))))))
+
+; (defspec test-sync-timer-commands 100
+;   (for-all [sync-timer sync-timer-gen
+;             in-cmds (g/vector command-gen)]
+;     (let [{:keys [cmd-chan-in cmd-chan-out log-chan]} sync-timer
+;           state₀ (snapshot sync-timer)
+;           ;; Spam the command channel
+;           f (future
+;               (doseq [cmd in-cmds]
+;                 (>!! cmd-chan-in (with-meta cmd (snapshot sync-timer)))))
+;           sync-timer (comp/start sync-timer)]
+;       @f
+;       (Thread/sleep 5) ; Settle down
+;       (close! cmd-chan-in)
+;       (comp/stop sync-timer)
+;       (let [out-cmds (chanv cmd-chan-out)]
+;         ;; Now re-play our input through a state machine:
+;         (loop [state {}]
+;           )))))

@@ -26,9 +26,10 @@
             [clojure.set :refer [intersection]]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command :refer [->Command]]
-            [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
-                                        sig-notify-all sig-wait-alarm
-                                        thread-loop update-period-and-alarm!]]
+            [mbwatch.concurrent :refer [->Timer CHAN-SIZE TimerAtom
+                                        future-catch-print set-alarm!
+                                        sig-notify-all sig-wait-timer
+                                        thread-loop update-timer!]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable NOTICE
                                      WARNING defloggable log-with-timestamp!]]
@@ -37,7 +38,7 @@
             [mbwatch.util :refer [human-duration join-sync-request]]
             [schema.core :as s :refer [Int defschema enum maybe pair]])
   (:import (clojure.lang Atom IFn)
-           (java.util.concurrent.atomic AtomicBoolean AtomicLong)
+           (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.command Command)
            (org.joda.time DateTime)))
 
@@ -78,12 +79,6 @@
   (if (pos? retry)
     (format "Connection retry #%d in %s" retry (human-duration (* retry RETRY-INTERVAL)))
     "Time jump! Retrying connections up to 3 times in the next 90 seconds."))
-
-(defloggable ^:private ConnectionWatcherPreferenceEvent INFO
-  [period :- Int]
-  (if (zero? period) ; zero?, not pos?, so we don't mask bugs
-    "Connection polling disabled."
-    (str "Connection polling period set to " (human-duration period))))
 
 (defschema ^:private ConnectionMap
   {String {:status Boolean
@@ -173,9 +168,8 @@
    cmd-chan-out           :- WritePort
    log-chan               :- WritePort
    connections-atom       :- Atom ; ConnectionMap
+   timer-atom             :- TimerAtom
    timeout                :- Int
-   period                 :- AtomicLong
-   alarm                  :- AtomicLong
    status                 :- AtomicBoolean
    exit-fn                :- (maybe IFn)]
 
@@ -196,12 +190,12 @@
                     (>!! cmd-chan-out cmd'))
                   (recur))))]
       (assoc this :exit-fn
-             #(do (.set status false)    ; Stop after current iteration
-                  (sig-notify-all alarm) ; Trigger timer
+             #(do (.set status false)         ; Stop after current iteration
+                  (sig-notify-all timer-atom) ; Trigger timer
                   (remove-watch connections-atom ::watch-conn-changes)
                   @f
                   (<!! c)
-                  (close! cmd-chan-out)  ; Close outgoing channels
+                  (close! cmd-chan-out)       ; Close outgoing channels
                   (close! log-chan)))))
 
   (stop [this]
@@ -216,27 +210,23 @@
   (log-item [this]
     (->LogItem this (format "%s ConnectionWatcher [period: %s]"
                             (if exit-fn "↓ Stopping" "↑ Starting")
-                            (human-duration (.get period))))))
+                            (human-duration (:period @timer-atom))))))
 
 (s/defn ->ConnectionWatcher :- ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
    period                 :- Int
    timeout                :- Int
    cmd-chan-in            :- ReadPort]
-  (let [[period alarm] (if (pos? period)
-                         [period (System/currentTimeMillis)]
-                         [0 0])]
-    (strict-map->ConnectionWatcher
-      {:mbchan->IMAPCredential mbchan->IMAPCredential
-       :cmd-chan-in cmd-chan-in
-       :cmd-chan-out (chan CHAN-SIZE)
-       :log-chan (chan CHAN-SIZE)
-       :connections-atom (atom {})
-       :timeout timeout
-       :period (AtomicLong. period)
-       :alarm (AtomicLong. alarm)
-       :status (AtomicBoolean. true)
-       :exit-fn nil})))
+  (strict-map->ConnectionWatcher
+    {:mbchan->IMAPCredential mbchan->IMAPCredential
+     :cmd-chan-in cmd-chan-in
+     :cmd-chan-out (chan CHAN-SIZE)
+     :log-chan (chan CHAN-SIZE)
+     :connections-atom (atom {})
+     :timer-atom (atom (->Timer period false))
+     :timeout timeout
+     :status (AtomicBoolean. true)
+     :exit-fn nil}))
 
 (s/defn ^:private watch-connections! :- VOID
   "Poll and update connections in the connections atom. Notify `status` to
@@ -246,16 +236,14 @@
    woken from sleep. Retry the connection a few times in case the gateway
    interface comes back up in the next 90 seconds."
   [connection-watcher :- ConnectionWatcher]
-  (let [{:keys [connections-atom mbchan->IMAPCredential log-chan timeout
-                ^AtomicBoolean status
-                ^AtomicLong period
-                ^AtomicLong alarm]} connection-watcher]
+  (let [{:keys [connections-atom timer-atom mbchan->IMAPCredential log-chan
+                timeout ^AtomicBoolean status]} connection-watcher]
     (loop [retry 0]
       (when (.get status)
-        (sig-wait-alarm alarm)
+        (sig-wait-timer timer-atom)
         (when (.get status)
           (let [time-jump? (when (and (seq @connections-atom)
-                                      (> (- (System/currentTimeMillis) (.get alarm))
+                                      (> (- (System/currentTimeMillis) (:alarm @timer-atom))
                                          TIME-JUMP-INTERVAL))
                              (put! log-chan (->TimeJumpEvent 0))
                              true)
@@ -271,13 +259,10 @@
                           (if (or up? (>= retry 3))
                             0 ; Stop retrying
                             (inc retry))))
-                interval (if (pos? retry)
-                           (do (put! log-chan (->TimeJumpEvent retry))
-                               (* retry RETRY-INTERVAL))
-                           (.get period))]
-            (.set alarm (if (pos? interval)
-                          (+ (System/currentTimeMillis) interval)
-                          0))
+                retry-ms (when (pos? retry)
+                           (put! log-chan (->TimeJumpEvent retry))
+                           (* retry RETRY-INTERVAL))]
+            (set-alarm! timer-atom retry-ms)
             (recur retry)))))))
 
 (s/defn ^:private merge-pending-syncs :- (pair ConnectionMap "conn-map"
@@ -360,19 +345,27 @@
       (= sync-req sync-req') sync-command
       :else (assoc sync-command :payload sync-req'))))
 
+(defloggable ^:private ConnectionWatcherPreferenceEvent INFO
+  [connection-watcher :- ConnectionWatcher
+   type               :- (enum :period)]
+  (let [{:keys [period]} @(:timer-atom connection-watcher)]
+    (case type
+      :period (if (zero? period) ; zero?, not pos?, so we don't mask bugs
+                "Connection polling disabled."
+                (str "Connection polling period set to " (human-duration period))))))
+
 (s/defn ^:private process-command :- (maybe Command)
   [connection-watcher :- ConnectionWatcher
    command            :- Command]
   (case (:opcode command)
-    :conn/trigger (do (sig-notify-all (:alarm connection-watcher))
+    :conn/trigger (do (sig-notify-all (:timer-atom connection-watcher))
                       command)
-    :conn/set-period (let [{:keys [^AtomicLong period
-                                   ^AtomicLong alarm
-                                   log-chan]} connection-watcher
+    :conn/set-period (let [{:keys [timer-atom log-chan]} connection-watcher
                            new-period ^long (:payload command)]
-                       (when (update-period-and-alarm! new-period period alarm)
-                         (sig-notify-all alarm)
-                         (put! log-chan (->ConnectionWatcherPreferenceEvent (.get period))))
+                       (when (update-timer! timer-atom new-period)
+                         (sig-notify-all timer-atom)
+                         (put! log-chan (->ConnectionWatcherPreferenceEvent
+                                          connection-watcher :period)))
                        command)
     :conn/remove (let [{:keys [connections-atom]} connection-watcher]
                    (apply swap! connections-atom dissoc (:payload command))

@@ -1,9 +1,9 @@
 (ns mbwatch.concurrent
   (:require [clojure.core.async :refer [thread]]
-            [mbwatch.types :refer [VOID]]
+            [mbwatch.types :as t :refer [VOID]]
             [mbwatch.util :refer [catch-print]]
-            [schema.core :as s :refer [Int]])
-  (:import (java.util.concurrent.atomic AtomicLong)))
+            [schema.core :as s :refer [Int defschema maybe pred]])
+  (:import (clojure.lang Atom)))
 
 (def ^:const CHAN-SIZE
   "4K ought to be enough for anybody."
@@ -52,43 +52,76 @@
   (locking lock
     (.notifyAll lock)))
 
-(s/defn sig-wait-alarm :- VOID
-  "Wait for signals on alarm or wake up at alarm time. If the value of `alarm`
-   has changed in the meantime, wait on alarm again until the new alarm time.
+(t/defrecord ^:private Timer
+  [period :- long
+   alarm  :- long])
 
-   If the value of alarm is zero or less, the thread waits indefinitely."
-  [alarm :- AtomicLong]
-  (loop [alarm-time (.get alarm)]
-    (if (pos? alarm-time)
-      (sig-wait alarm (- alarm-time (System/currentTimeMillis)))
-      (sig-wait alarm))
-    (let [alarm-time' (.get alarm)]
-      (when-not (= alarm-time alarm-time')
-        (recur alarm-time')))))
+(s/defn ->Timer :- Timer
+  "Construct a new Timer with sane values. If trigger-now? is true, the alarm
+   is set set to the current time."
+  [period       :- long
+   trigger-now? :- Boolean]
+  (if (pos? period)
+    (let [now (System/currentTimeMillis)]
+      (Timer. period (if trigger-now? now (+ now period))))
+    (Timer. 0 0)))
 
-(s/defn update-period-and-alarm! :- Boolean
-  "Set the period to new-period-ms and reset the alarm accordingly if
-   new-period is different from the current period value.
+(defschema TimerAtom
+  (pred #(and (instance? Atom %)
+              (instance? Timer @%))
+        "TimerAtom"))
 
-   If new-period-ms is zero, the alarm is _also_ set to zero to signal the off
-   state. Otherwise, the alarm is set to the greater of the adjusted alarm and
-   the current time. Negative values of new-period-ms are interpreted as zero.
+(s/defn set-alarm! :- Timer
+  "Set the :alarm entry ms-forward in a Timer. The 1-arity version sets the
+   value to the current time + :period. When :period or ms-forward is zero,
+   the :alarm is set to zero."
+  ([timer-atom :- TimerAtom]
+   (set-alarm! timer-atom nil))
+  ([timer-atom :- TimerAtom
+    ms-forward :- (maybe Int)]
+   (swap! timer-atom
+          (fn [timer Δt now]
+            (let [Δt (max 0 (or Δt (:period timer)))]
+              (assoc timer :alarm (if (zero? Δt) 0 (+ now Δt)))))
+          ms-forward (System/currentTimeMillis))))
 
-   Returns true if period and alarm were updated, false if not.
+(s/defn sig-wait-timer :- VOID
+  "Wait for signals on timer or wake up at :alarm time. If the value of :alarm
+   has changed in the meantime, wait on timer again until the new alarm time.
 
-   These changes are unsynchronized."
-  [new-period :- Int
-   period     :- AtomicLong
-   alarm      :- AtomicLong]
-  (let [new-period (max 0 new-period)
-        old-period (.get period)]
-    (if (= new-period old-period)
-      false
-      (let [alarm-time (.get alarm)]
-        (.set period new-period)
-        (.set alarm (cond
+   If the value of :alarm is zero or less, the thread waits indefinitely."
+  [timer-atom :- TimerAtom]
+  (loop [alarm (:alarm @timer-atom)]
+    (if (pos? alarm)
+      (sig-wait timer-atom (- alarm (System/currentTimeMillis)))
+      (sig-wait timer-atom))
+    (let [alarm' (:alarm @timer-atom)]
+      (when-not (= alarm alarm')
+        (recur alarm')))))
+
+(s/defn ^:private update-timer* :- Timer
+  [timer      :- Timer
+   new-period :- Int]
+  (let [new-period (max 0 new-period)]
+    (if (= new-period (:period timer))
+      timer
+      (assoc timer
+             :period new-period
+             :alarm (cond
                       (zero? new-period) 0
-                      (zero? alarm-time) (+ new-period (System/currentTimeMillis))
-                      :else (max (+ new-period (- alarm-time old-period))
-                                 (System/currentTimeMillis))))
-        true))))
+                      (zero? (:alarm timer)) (+ new-period (System/currentTimeMillis))
+                      :else (max (+ new-period (- (:alarm timer) (:period timer)))
+                                 (System/currentTimeMillis)))))))
+
+(s/defn update-timer! :- Boolean
+  "Swap in a new value of :period and set :alarm accordingly.
+
+   If new-period is zero, :alarm is also set to zero to signal the off state.
+   Otherwise, :alarm is set to the greater of the adjusted :alarm value and
+   the current time. Negative values of new-period are interpreted as zero.
+
+   Returns true if the Timer value changed, and false if it did not."
+  [timer      :- TimerAtom
+   new-period :- Int]
+  (let [timer₀ @timer]
+    (not= timer₀ (swap! timer update-timer* new-period))))
