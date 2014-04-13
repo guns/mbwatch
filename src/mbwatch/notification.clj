@@ -23,10 +23,10 @@
             [mbwatch.maildir :refer [new-messages senders]]
             [mbwatch.mbsync.events]
             [mbwatch.process :as process]
-            [mbwatch.types :as t :refer [VOID]]
+            [mbwatch.types :as t :refer [VOID atom-of]]
             [mbwatch.util :refer [join-sync-request to-ms]]
             [schema.core :as s :refer [Int defschema either maybe]])
-  (:import (clojure.lang Atom IFn)
+  (:import (clojure.lang IFn)
            (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
            (javax.mail.internet MimeMessage)
@@ -48,8 +48,11 @@
           s (sort mbox->messages)))
       (StringBuilder. "NewMessageNotification:") (sort mbchan->mbox->messages))))
 
-(defschema NotifyMap
+(defschema ^:private NotifyMap
   {String #{String}})
+
+(defschema ^:private NotifyMapAtom
+  (atom-of NotifyMap "NotifyMapAtom"))
 
 (defloggable ^:private NotifyMapChangeEvent INFO
   [notify-map :- NotifyMap]
@@ -137,7 +140,7 @@
 
 (t/defrecord ^:private NewMessageNotificationService
   [notify-command  :- String
-   notify-map-atom :- Atom ; NotifyMap
+   notify-map-atom :- NotifyMapAtom
    log-chan-in     :- ReadPort
    log-chan-out    :- WritePort
    status          :- AtomicBoolean

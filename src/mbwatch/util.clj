@@ -1,6 +1,6 @@
 (ns mbwatch.util
   (:require [clojure.string :as string]
-            [mbwatch.types :refer [StringList]]
+            [mbwatch.types :refer [StringList SyncRequest]]
             [schema.core :as s :refer [Int]])
   (:import (clojure.lang Symbol)
            (java.net URLEncoder)
@@ -14,8 +14,8 @@
     (str mbchan)))
 
 (s/defn join-sync-request :- String
-  [sync-request :- {String StringList}]
-  (->> sync-request
+  [sync-req :- SyncRequest]
+  (->> sync-req
        sort
        (mapv (fn [[mbchan mboxes]] (join-mbargs mbchan (sort mboxes))))
        (string/join \space)))

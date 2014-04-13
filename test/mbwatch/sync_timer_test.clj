@@ -55,7 +55,7 @@
   (for-all [sync-timer (such-that #(seq @(:sync-request-atom %)) sync-timer-gen)
             ttl (g/choose 100 1000)]
     (let [{:keys [cmd-chan-in cmd-chan-out log-chan sync-request-atom timer-atom]} sync-timer
-          ;; Fire 1 + 20 sync requests
+          ;; Fire up to 1 + 20 sync requests
           _ (update-timer! timer-atom (quot ttl 20))
           sync-timer (comp/start sync-timer)]
       (Thread/sleep ttl)

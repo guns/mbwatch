@@ -1,6 +1,8 @@
 (ns mbwatch.types
   (:require [clojure.core :as cc]
-            [schema.core :as s :refer [both defschema either eq pred]])
+            [schema.core :as s :refer [Schema both defschema either eq pred
+                                       validate]])
+  (:import (clojure.lang Atom))
   (:refer-clojure :exclude [defrecord]))
 
 (defmacro defrecord
@@ -20,6 +22,13 @@
          (ns-unmap *ns* '~(sym "map->"))
          ~(when (and schema? (-> name meta :private))
             `(alter-meta! ~(get-var "strict-map->") assoc :private true)))))
+
+(s/defn atom-of :- Schema
+  [inner-schema :- Schema
+   desc         :- String]
+  (pred #(and (validate Atom %)
+              (validate inner-schema @%))
+        desc))
 
 (defschema VOID
   (eq nil))
@@ -42,3 +51,6 @@
 
 (defschema StringList
   (either [String] #{String}))
+
+(defschema SyncRequest
+  {String StringList})

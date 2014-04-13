@@ -1,9 +1,8 @@
 (ns mbwatch.concurrent
   (:require [clojure.core.async :refer [thread]]
-            [mbwatch.types :as t :refer [VOID]]
+            [mbwatch.types :as t :refer [VOID atom-of]]
             [mbwatch.util :refer [catch-print]]
-            [schema.core :as s :refer [Int defschema maybe pred]])
-  (:import (clojure.lang Atom)))
+            [schema.core :as s :refer [Int defschema maybe]]))
 
 (def ^:const CHAN-SIZE
   "4K ought to be enough for anybody."
@@ -67,9 +66,7 @@
     (Timer. 0 0)))
 
 (defschema TimerAtom
-  (pred #(and (instance? Atom %)
-              (instance? Timer @%))
-        "TimerAtom"))
+  (atom-of Timer "TimerAtom"))
 
 (s/defn set-alarm! :- Timer
   "Set the :alarm entry ms-forward in a Timer. The 1-arity version sets the

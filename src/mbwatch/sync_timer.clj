@@ -20,12 +20,15 @@
                                         update-timer!]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable
                                      defloggable log-with-timestamp!]]
-            [mbwatch.types :as t :refer [StringList VOID]]
+            [mbwatch.types :as t :refer [SyncRequest VOID atom-of]]
             [mbwatch.util :refer [human-duration join-sync-request]]
-            [schema.core :as s :refer [Int enum maybe]])
-  (:import (clojure.lang Atom IFn)
+            [schema.core :as s :refer [Int defschema enum maybe]])
+  (:import (clojure.lang IFn)
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.command Command)))
+
+(defschema ^:private SyncRequestAtom
+  (atom-of SyncRequest "SyncRequestAtom"))
 
 (declare process-command)
 
@@ -33,7 +36,7 @@
   [cmd-chan-in       :- ReadPort
    cmd-chan-out      :- WritePort
    log-chan          :- WritePort
-   sync-request-atom :- Atom ; {mbchan [mbox]}
+   sync-request-atom :- SyncRequestAtom
    timer-atom        :- TimerAtom
    status            :- AtomicBoolean
    exit-fn           :- (maybe IFn)]
@@ -81,14 +84,14 @@
                             (human-duration (:period @timer-atom))))))
 
 (s/defn ->SyncTimer :- SyncTimer
-  [sync-request :- {String StringList}
-   cmd-chan-in  :- ReadPort
-   period       :- Int]
+  [sync-req    :- SyncRequest
+   cmd-chan-in :- ReadPort
+   period      :- Int]
   (strict-map->SyncTimer
     {:cmd-chan-in cmd-chan-in
      :cmd-chan-out (chan CHAN-SIZE)
      :log-chan (chan CHAN-SIZE)
-     :sync-request-atom (atom sync-request)
+     :sync-request-atom (atom sync-req)
      :timer-atom (atom (->Timer period true))
      :status (AtomicBoolean. true)
      :exit-fn nil}))

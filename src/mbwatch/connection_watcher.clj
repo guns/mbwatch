@@ -34,10 +34,10 @@
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable NOTICE
                                      WARNING defloggable log-with-timestamp!]]
             [mbwatch.network :refer [reachable?]]
-            [mbwatch.types :as t :refer [StringList VOID Word]]
+            [mbwatch.types :as t :refer [SyncRequest VOID Word atom-of]]
             [mbwatch.util :refer [human-duration join-sync-request]]
             [schema.core :as s :refer [Int defschema enum maybe pair]])
-  (:import (clojure.lang Atom IFn)
+  (:import (clojure.lang IFn)
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.command Command)
            (org.joda.time DateTime)))
@@ -66,9 +66,9 @@
       (->LogItem this msg))))
 
 (defloggable ^:private PendingSyncsEvent INFO
-  [action         :- (enum :pool :release)
-   mbchan->mboxes :- {String StringList}]
-  (->> mbchan->mboxes
+  [action   :- (enum :pool :release)
+   sync-req :- SyncRequest]
+  (->> sync-req
        join-sync-request
        (str (if (= action :pool)
               "Delaying syncs: "
@@ -83,6 +83,9 @@
 (defschema ^:private ConnectionMap
   {String {:status Boolean
            :pending-syncs (maybe #{String})}})
+
+(defschema ^:private ConnectionMapAtom
+  (atom-of ConnectionMap "ConnectionMapAtom"))
 
 (s/defn ^:private update-connections :- ConnectionMap
   "Update the :status entries conn-map by checking connections in parallel.
@@ -105,8 +108,8 @@
                  [mbchan m])))
        (into {})))
 
-(s/defn ^:private pending-sync-changes :- (pair {String StringList} "pool"
-                                                {String StringList} "release")
+(s/defn ^:private pending-sync-changes :- (pair SyncRequest "pool"
+                                                SyncRequest "release")
   [old-conn-map :- ConnectionMap
    new-conn-map :- ConnectionMap
    log-chan     :- WritePort
@@ -167,7 +170,7 @@
    cmd-chan-in            :- ReadPort
    cmd-chan-out           :- WritePort
    log-chan               :- WritePort
-   connections-atom       :- Atom ; ConnectionMap
+   connections-atom       :- ConnectionMapAtom
    timer-atom             :- TimerAtom
    timeout                :- Int
    status                 :- AtomicBoolean
@@ -266,7 +269,7 @@
             (recur retry)))))))
 
 (s/defn ^:private merge-pending-syncs :- (pair ConnectionMap "conn-map"
-                                               {String StringList} "sync-req")
+                                               SyncRequest "sync-req")
   "Merge sync-req into conn-map as :pending-syncs entries if the :status of
    the mbchan is false. Returns the new conn-map and the new sync-req with
    merged entries removed.
@@ -276,7 +279,7 @@
    :pending-syncs value that has :all-mboxes is ignored since a full mbchan
    sync will be issued once the server is reachable."
   [conn-map :- ConnectionMap
-   sync-req :- {String StringList}]
+   sync-req :- SyncRequest]
   (reduce-kv
     (fn [[conn-map sync-req] mbchan mboxes]
       (if (false? (:status (conn-map mbchan)))
@@ -298,7 +301,7 @@
    output of merge-pending-syncs, except that we are abusing the metadata
    system to avoid external synchronization from within a transaction."
   [conn-map               :- ConnectionMap
-   sync-req               :- {String StringList}
+   sync-req               :- SyncRequest
    mbchan->IMAPCredential :- {Word IMAPCredential}
    timeout                :- Int]
   (let [mbchans-with-imap (intersection (set (keys sync-req))

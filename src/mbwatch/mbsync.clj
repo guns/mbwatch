@@ -36,7 +36,7 @@
                                            strict-map->MbsyncEventStart
                                            strict-map->MbsyncEventStop]]
             [mbwatch.process :as process]
-            [mbwatch.types :as t :refer [StringList VOID]]
+            [mbwatch.types :as t :refer [StringList SyncRequest VOID]]
             [mbwatch.util :refer [join-mbargs shell-escape]]
             [schema.core :as s :refer [Int maybe]])
   (:import (clojure.lang IFn)
@@ -197,7 +197,7 @@
    if it does not exist."
   [workers       :- {String MbsyncWorker}
    id            :- Int
-   sync-req      :- {String StringList}
+   sync-req      :- SyncRequest
    mbsync-master :- MbsyncMaster]
   (let [mbchans (-> mbsync-master :mbsyncrc :mbchans)]
     (reduce-kv
