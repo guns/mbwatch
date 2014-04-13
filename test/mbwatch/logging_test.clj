@@ -1,5 +1,5 @@
 (ns mbwatch.logging-test
-  (:require [clojure.core.async :refer [<!! >!! chan]]
+  (:require [clojure.core.async :refer [<!! >!! chan close!]]
             [clojure.test :refer [is]]
             [com.stuartsierra.component :as comp]
             [mbwatch.logging :as l]
@@ -35,5 +35,6 @@
                 (LogItem. l/DEBUG (DateTime.) "SYN ACK")
                 (LogItem. 0 (DateTime.) "FIN")]]
     (doseq [v values] (>!! ch v))
+    (close! ch)
     (comp/stop service)
     (is (= @sink ["SYN" "ACK" "FIN"]))))

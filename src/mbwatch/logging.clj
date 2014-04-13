@@ -12,7 +12,7 @@
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.concurrent :refer [thread-loop]]
-            [mbwatch.types :as t]
+            [mbwatch.types :as t :refer [VOID]]
             [mbwatch.util :refer [class-name schema-params]]
             [schema.core :as s :refer [Any Int maybe]])
   (:import (clojure.lang Associative IFn)
@@ -103,6 +103,14 @@
 (defprotocol IItemLogger
   (log [this ^LogItem log-item]))
 
+(s/defn ^:private log* :- VOID
+  [logger    :- IItemLogger
+   max-level :- Int
+   loggable  :- Loggable]
+  ;; Malkovich malkovich Malkovich!
+  (when (<= (log-level loggable) max-level)
+    (log logger (log-item loggable))))
+
 (t/defrecord ^:private LoggingService
   [level     :- Int
    logger    :- IItemLogger
@@ -112,18 +120,17 @@
   Lifecycle
 
   (start [this]
-    (log logger (log-item (assoc-timestamp this)))
+    (log* logger level (log-item (assoc-timestamp this)))
     (let [c (thread-loop []
-              (when-some [obj (<!! log-chan)]
-                (when (<= (log-level obj) level)
-                  (log logger (log-item obj)))
+              (when-some [loggable (<!! log-chan)]
+                (log* logger level loggable)
                 (recur)))]
       (assoc this :exit-fn
              #(<!! c))))
 
   (stop [this]
     (exit-fn)
-    (log logger (log-item (assoc-timestamp this)))
+    (log* logger level (log-item (assoc-timestamp this)))
     (dissoc this :exit-fn))
 
   Loggable
