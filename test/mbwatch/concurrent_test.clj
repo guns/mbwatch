@@ -9,7 +9,7 @@
 (defn tol?
   "Is x within the expected deviation of k due to concurrent scheduling?"
   [k x]
-  (<= (double (/ (- k x) k)) 0.05))
+  (<= -0.05 (double (/ (- x k) k)) 0.05))
 
 (defspec test-simple-cyclic-timer 20
   (for-all [p (such-that #(>= % 5) g/nat)]
@@ -25,7 +25,7 @@
           (c/set-alarm! timer-atom)
           (recur)))
       (.println System/err (format "p: %3d │ E[i]: %3d │ i: %3d │ ΔE[i]: %+.3f%%"
-                                   p E_i (.get i) (double (/ (- E_i i) E_i))))
+                                   p E_i (.get i) (double (/ (- i E_i) E_i))))
       (is (tol? E_i i)))))
 
 (defspec test-change-alarm 200

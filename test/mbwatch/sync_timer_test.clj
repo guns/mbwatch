@@ -53,10 +53,10 @@
 
 (defspec test-cyclic-timer 10
   (for-all [sync-timer (such-that #(seq @(:sync-request-atom %)) sync-timer-gen)
-            ttl (g/choose 50 1000)]
+            ttl (g/choose 100 1000)]
     (let [{:keys [cmd-chan-in cmd-chan-out log-chan sync-request-atom timer-atom]} sync-timer
-          ;; Fire 10 sync requests
-          _ (update-timer! timer-atom (quot ttl 10))
+          ;; Fire 1 + 20 sync requests
+          _ (update-timer! timer-atom (quot ttl 20))
           sync-timer (comp/start sync-timer)]
       (Thread/sleep ttl)
       (close! cmd-chan-in)
@@ -68,8 +68,8 @@
              (is (every? #(= ((juxt :opcode :payload) %)
                              [:sync @sync-request-atom])
                          cmds))
-             ;; Tolerate 1 sync short (border condition)
-             (is (<= 9 n 10))
+             ;; Tolerate ±1 syncs (border conditions)
+             (is (<= 19 n 21))
              ;; Lifecycle events only
              (is (= (mapv class (chanv log-chan)) [SyncTimer SyncTimer])))))))
 

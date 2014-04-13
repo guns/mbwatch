@@ -109,7 +109,8 @@
    loggable  :- Loggable]
   ;; Malkovich malkovich Malkovich!
   (when (<= (log-level loggable) max-level)
-    (log logger (log-item loggable))))
+    (log logger (log-item loggable)))
+  nil)
 
 (t/defrecord ^:private LoggingService
   [level     :- Int
