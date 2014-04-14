@@ -3,7 +3,8 @@
             [clojure.test.check.clojure-test :refer [defspec]]
             [clojure.test.check.generators :as g :refer [such-that]]
             [clojure.test.check.properties :refer [for-all]]
-            [mbwatch.concurrent :as c :refer [->Timer]]
+            [mbwatch.concurrent :refer [->Timer set-alarm! sig-notify-all
+                                        sig-wait-timer update-timer!]]
             [mbwatch.test.common :refer [tol?]])
   (:import (java.util.concurrent.atomic AtomicBoolean AtomicLong)))
 
@@ -12,7 +13,7 @@
             m g/int
             b g/boolean]
     (let [start (System/currentTimeMillis)
-          t (c/->Timer p m b)]
+          t (->Timer p m b)]
       (if (pos? p)
         (do (is (= (:period t) (max p m)) "period is at least min")
             (if b
@@ -29,9 +30,9 @@
           f (future (Thread/sleep 1000) (.set status false))]
       (loop []
         (when (.get status)
-          (c/sig-wait-timer timer-atom)
+          (sig-wait-timer timer-atom)
           (.set i (inc i))
-          (c/set-alarm! timer-atom)
+          (set-alarm! timer-atom)
           (recur)))
       (.println System/err (format "p: %3d │ E[i]: %3d │ i: %3d │ ΔE[i]: %+.3f%%"
                                    p E_i (.get i) (double (/ (- i E_i) E_i))))
@@ -47,15 +48,15 @@
           f (future
               ;; Wait for parent thread to enter wait
               (Thread/sleep 5)
-              (deliver update? (c/update-timer! timer-atom p₁ 0))
+              (deliver update? (update-timer! timer-atom p₁ 0))
               (when @update?
-                (c/sig-notify-all timer-atom))
+                (sig-notify-all timer-atom))
               ;; Parent will wait indefinitely when :alarm is 0, so notify
               ;; again in p₂ - 5 (ms we waited above)
               (when (zero? (:alarm @timer-atom))
                 (Thread/sleep (- p₂ 5))
-                (c/sig-notify-all timer-atom)))
-          _ (c/sig-wait-timer timer-atom)
+                (sig-notify-all timer-atom)))
+          _ (sig-wait-timer timer-atom)
           stop (System/currentTimeMillis)
           _ (future-cancel f)
           Δt (- stop start)
@@ -77,4 +78,4 @@
                (if (pos? p₀)
                  (is (<= 0 (- alarm (+ start p₀)) 1) "woke up at alarm time")
                  (is (zero? alarm) "alarm was set to zero")))
-             (is (<= 0 ΔE_Δt 6) "test stopped at expected time"))))))
+             (is (<= 0 ΔE_Δt 6) "test stops at expected time"))))))

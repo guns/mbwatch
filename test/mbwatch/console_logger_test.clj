@@ -1,6 +1,7 @@
 (ns mbwatch.console-logger-test
   (:require [clojure.test :refer [is]]
-            [mbwatch.console-logger :as c]
+            [mbwatch.console-logger :refer [->ConsoleLogger SGR
+                                            get-default-colors]]
             [mbwatch.logging :refer [log log-item]]
             [schema.core :refer [validate]]
             [schema.test :refer [deftest]])
@@ -9,14 +10,14 @@
            (org.joda.time.format DateTimeFormat)))
 
 (deftest test-sgr
-  (is (validate {Keyword String} c/SGR)))
+  (is (validate {Keyword String} SGR)))
 
 (deftest test-get-default-colors
-  (is (= (count (c/get-default-colors)) 8)))
+  (is (= (count (get-default-colors)) 8)))
 
 (defn logger-out [colors log-item]
   (let [s (StringWriter.)
-        logger (c/->ConsoleLogger s colors (DateTimeFormat/forPattern "❤"))]
+        logger (->ConsoleLogger s colors (DateTimeFormat/forPattern "❤"))]
     (log logger log-item)
     (str s)))
 

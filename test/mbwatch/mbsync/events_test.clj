@@ -1,20 +1,22 @@
 (ns mbwatch.mbsync.events-test
   (:require [clojure.test :refer [is]]
             [mbwatch.logging :refer [DEBUG ERR WARNING log-item log-level]]
-            [mbwatch.mbsync.events :as e]
+            [mbwatch.mbsync.events :refer [->MbsyncUnknownChannelError
+                                           strict-map->MbsyncEventStart
+                                           strict-map->MbsyncEventStop]]
             [schema.test :refer [deftest]])
   (:import (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
 (deftest test-events
   (let [dt (DateTime.)
-        start (e/strict-map->MbsyncEventStart
+        start (strict-map->MbsyncEventStart
                 {:level DEBUG
                  :id 1
                  :mbchan "test"
                  :mboxes ["INBOX"]
                  :start dt})
-        stop (e/strict-map->MbsyncEventStop
+        stop (strict-map->MbsyncEventStop
                {:level ERR
                 :id 1
                 :mbchan "test"
@@ -24,7 +26,7 @@
                 :status 1
                 :error "ERROR"
                 :maildir {:inbox "inbox/" :path "path/"}})
-        unknown (e/->MbsyncUnknownChannelError 0 "FOO")]
+        unknown (->MbsyncUnknownChannelError 0 "FOO")]
     (is (= [DEBUG ERR WARNING]
            (map log-level [start stop unknown])))
     (is (= (log-item start)

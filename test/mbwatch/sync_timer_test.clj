@@ -8,14 +8,14 @@
             [com.stuartsierra.component :as comp]
             [mbwatch.command]
             [mbwatch.concurrent :refer [update-timer!]]
-            [mbwatch.sync-timer :as st]
+            [mbwatch.sync-timer :refer [->SyncTimer]]
             [mbwatch.test.common :refer [chanv sync-request-gen]])
   (:import (mbwatch.command Command)
            (mbwatch.sync_timer SyncTimer)))
 
 (def sync-timer-gen
   (->> (tuple sync-request-gen g/nat)
-       (fmap (fn [[req n]] (st/->SyncTimer req (chan 0x10000) n)))))
+       (fmap (fn [[req n]] (->SyncTimer req (chan 0x10000) n)))))
 
 ; (defn =*
 ;   "Equal to, within tolerances."

@@ -1,11 +1,10 @@
 (ns mbwatch.core-test
-  (:require [clojure.core.async :as a]
-            [clojure.java.io :as io]
+  (:require [clojure.java.io :as io]
             [mbwatch.config :refer [->Config]]
-            [mbwatch.core :as c]
+            [mbwatch.core :refer [->Application]]
             [schema.test :as s]))
 
 (s/deftest test-Application
   ;; Schema validation
-  (c/->Application
+  (->Application
     (->Config (io/resource "mbsyncrc") (io/resource "mbwatchrc"))))
