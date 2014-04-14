@@ -2,7 +2,7 @@
   (:require [clojure.core.async :refer [thread]]
             [mbwatch.types :as t :refer [VOID atom-of]]
             [mbwatch.util :refer [catch-print]]
-            [schema.core :as s :refer [Int defschema maybe]]))
+            [schema.core :as s :refer [Int defschema maybe pred]]))
 
 (def ^:const CHAN-SIZE
   "4K ought to be enough for anybody."
@@ -55,32 +55,28 @@
   [period :- long
    alarm  :- long])
 
+(s/defn ^:private zero-or-min :- (pred #(>= % 0))
+  "{n ∈ ℕ : n = 0, n ≥ min}"
+  [n   :- long
+   min :- long]
+  (if (pos? n)
+    (max n min)
+    0))
+
 (s/defn ->Timer :- Timer
   "Construct a new Timer with sane values. If trigger-now? is true, the alarm
    is set set to the current time."
   [period       :- long
+   min-pos      :- long
    trigger-now? :- Boolean]
-  (if (pos? period)
-    (let [now (System/currentTimeMillis)]
-      (Timer. period (if trigger-now? now (+ now period))))
-    (Timer. 0 0)))
+  (let [p (zero-or-min period min-pos)]
+    (if (zero? p)
+      (Timer. 0 0)
+      (let [now (System/currentTimeMillis)]
+        (Timer. p (if trigger-now? now (+ now p)))))))
 
 (defschema TimerAtom
   (atom-of Timer "TimerAtom"))
-
-(s/defn set-alarm! :- Timer
-  "Set the :alarm entry ms-forward in a Timer. The 1-arity version sets the
-   value to the current time + :period. When :period or ms-forward is zero,
-   the :alarm is set to zero."
-  ([timer-atom :- TimerAtom]
-   (set-alarm! timer-atom nil))
-  ([timer-atom :- TimerAtom
-    ms-forward :- (maybe Int)]
-   (swap! timer-atom
-          (fn [timer Δt now]
-            (let [Δt (max 0 (or Δt (:period timer)))]
-              (assoc timer :alarm (if (zero? Δt) 0 (+ now Δt)))))
-          ms-forward (System/currentTimeMillis))))
 
 (s/defn sig-wait-timer :- VOID
   "Wait for signals on timer or wake up at :alarm time. If the value of :alarm
@@ -96,10 +92,25 @@
       (when-not (= alarm alarm')
         (recur alarm')))))
 
+(s/defn set-alarm! :- Timer
+  "Set the :alarm entry ms-forward in a Timer. The 1-arity version sets the
+   value to the current time + :period. When :period or ms-forward is zero,
+   the :alarm is set to zero."
+  ([timer-atom :- TimerAtom]
+   (set-alarm! timer-atom nil))
+  ([timer-atom :- TimerAtom
+    ms-forward :- (maybe Int)]
+   (swap! timer-atom
+          (fn [timer Δt now]
+            (let [Δt (max 0 (or Δt (:period timer)))]
+              (assoc timer :alarm (if (zero? Δt) 0 (+ now Δt)))))
+          ms-forward (System/currentTimeMillis))))
+
 (s/defn ^:private update-timer* :- Timer
   [timer      :- Timer
-   new-period :- Int]
-  (let [new-period (max 0 new-period)]
+   new-period :- Int
+   min-pos    :- Int]
+  (let [new-period (zero-or-min new-period min-pos)]
     (if (= new-period (:period timer))
       timer
       (assoc timer
@@ -116,9 +127,11 @@
    If new-period is zero, :alarm is also set to zero to signal the off state.
    Otherwise, :alarm is set to the greater of the adjusted :alarm value and
    the current time. Negative values of new-period are interpreted as zero.
+   Positive values lower than min-pos are interpreted as min-pos.
 
    Returns true if the Timer value changed, and false if it did not."
   [timer      :- TimerAtom
-   new-period :- Int]
+   new-period :- Int
+   min-pos    :- Int]
   (let [timer₀ @timer]
-    (not= timer₀ (swap! timer update-timer* new-period))))
+    (not= timer₀ (swap! timer update-timer* new-period min-pos))))

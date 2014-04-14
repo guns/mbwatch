@@ -42,6 +42,7 @@
            (mbwatch.command Command)
            (org.joda.time DateTime)))
 
+(def ^:private ^:const MIN-POS-PERIOD 5000)
 (def ^:private ^:const RETRY-INTERVAL 15000)
 (def ^:private ^:const TIME-JUMP-INTERVAL 60000)
 
@@ -226,7 +227,7 @@
      :cmd-chan-out (chan CHAN-SIZE)
      :log-chan (chan CHAN-SIZE)
      :connections-atom (atom {})
-     :timer-atom (atom (->Timer period false))
+     :timer-atom (atom (->Timer period MIN-POS-PERIOD false))
      :timeout timeout
      :status (AtomicBoolean. true)
      :exit-fn nil}))
@@ -365,7 +366,7 @@
                       command)
     :conn/set-period (let [{:keys [timer-atom log-chan]} connection-watcher
                            new-period ^long (:payload command)]
-                       (when (update-timer! timer-atom new-period)
+                       (when (update-timer! timer-atom new-period MIN-POS-PERIOD)
                          (sig-notify-all timer-atom)
                          (put! log-chan (->ConnectionWatcherPreferenceEvent
                                           connection-watcher :period)))

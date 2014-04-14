@@ -27,6 +27,8 @@
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.command Command)))
 
+(def ^:private ^:const MIN-POS-PERIOD 5000)
+
 (defschema ^:private SyncRequestAtom
   (atom-of SyncRequest "SyncRequestAtom"))
 
@@ -92,7 +94,7 @@
      :cmd-chan-out (chan CHAN-SIZE)
      :log-chan (chan CHAN-SIZE)
      :sync-request-atom (atom sync-req)
-     :timer-atom (atom (->Timer period true))
+     :timer-atom (atom (->Timer period MIN-POS-PERIOD true))
      :status (AtomicBoolean. true)
      :exit-fn nil}))
 
@@ -117,7 +119,7 @@
     :timer/trigger (sig-notify-all (:timer-atom sync-timer))
     :timer/set-period (let [{:keys [timer-atom log-chan]} sync-timer
                             new-period ^long (:payload command)]
-                        (when (update-timer! timer-atom new-period)
+                        (when (update-timer! timer-atom new-period MIN-POS-PERIOD)
                           (sig-notify-all timer-atom)
                           (put! log-chan (->SyncTimerPreferenceEvent sync-timer :period))))
     :timer/set-request (let [{:keys [sync-request-atom log-chan]} sync-timer

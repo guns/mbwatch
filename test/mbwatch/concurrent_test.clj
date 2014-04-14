@@ -3,21 +3,30 @@
             [clojure.test.check.clojure-test :refer [defspec]]
             [clojure.test.check.generators :as g :refer [such-that]]
             [clojure.test.check.properties :refer [for-all]]
-            [mbwatch.concurrent :as c :refer [->Timer]])
+            [mbwatch.concurrent :as c :refer [->Timer]]
+            [mbwatch.test.common :refer [tol?]])
   (:import (java.util.concurrent.atomic AtomicBoolean AtomicLong)))
 
-(defn tol?
-  "Is x within the expected deviation of k due to concurrent scheduling?"
-  [k x]
-  (<= -0.05 (double (/ (- x k) k)) 0.05))
+(defspec test-Timer 10000
+  (for-all [p g/int
+            m g/int
+            b g/boolean]
+    (let [start (System/currentTimeMillis)
+          t (c/->Timer p m b)]
+      (if (pos? p)
+        (do (is (= (:period t) (max p m)) "period is at least min")
+            (if b
+              (is (<= 0 (- (:alarm t) start) 1) "alarm is set to go off immediately")
+              (is (<= 0 (- (:alarm t) (+ start (:period t))) 1) "alarm is set +period")))
+        (is (= 0 (:period t) (:alarm t)) "period and alarm are 0")))))
 
-(defspec test-simple-cyclic-timer 20
-  (for-all [p (such-that #(>= % 5) g/nat)]
-    (let [timer-atom (atom (->Timer p false))
+(defspec test-simple-cyclic-timer 10
+  (for-all [p (such-that #(>= % 10) g/nat)]
+    (let [timer-atom (atom (->Timer p 0 false))
           status (AtomicBoolean. true)
-          E_i (quot 500 p)
+          E_i (quot 1000 p)
           i (AtomicLong. 0)
-          f (future (Thread/sleep 500) (.set status false))]
+          f (future (Thread/sleep 1000) (.set status false))]
       (loop []
         (when (.get status)
           (c/sig-wait-timer timer-atom)
@@ -26,19 +35,19 @@
           (recur)))
       (.println System/err (format "p: %3d │ E[i]: %3d │ i: %3d │ ΔE[i]: %+.3f%%"
                                    p E_i (.get i) (double (/ (- i E_i) E_i))))
-      (is (tol? E_i i)))))
+      (is (tol? E_i i) "performs like a simple sleep loop"))))
 
 (defspec test-change-alarm 200
   (for-all [p₀ (such-that #(or (zero? %) (>= % 10)) g/nat)
             p₁ g/int
             p₂ (such-that #(>= % 10) g/nat)]
     (let [start (System/currentTimeMillis)
-          timer-atom (atom (->Timer p₀ false))
+          timer-atom (atom (->Timer p₀ 0 false))
           update? (promise)
           f (future
               ;; Wait for parent thread to enter wait
               (Thread/sleep 5)
-              (deliver update? (c/update-timer! timer-atom p₁))
+              (deliver update? (c/update-timer! timer-atom p₁ 0))
               (when @update?
                 (c/sig-notify-all timer-atom))
               ;; Parent will wait indefinitely when :alarm is 0, so notify
@@ -58,13 +67,14 @@
                 (format "p₀ %4d │ p₁ %4d │ p₂ %4d │ update? %5s │ E[Δt] %4d │ Δt %4d │ ΔE[Δt] %2d"
                         p₀ p₁ p₂ @update? E_Δt Δt ΔE_Δt))
       (let [{:keys [period alarm]} @timer-atom]
-        (and (is (= @update? (not= p₀ (max p₁ 0))))
-             (is (= period (max p₁ 0)))
+        (and (is (= @update? (not= p₀ (max p₁ 0)))
+                 "update-timer! returns true if value changed")
+             (is (= period (max p₁ 0)) "period is not negative")
              (if @update?
                (if (pos? p₁)
-                 (is (<= 0 (- stop alarm) 1))
-                 (is (zero? alarm)))
+                 (is (<= 0 (- stop alarm) 1) "woke up at alarm time")
+                 (is (zero? alarm) "alarm started at zero"))
                (if (pos? p₀)
-                 (is (<= 0 (- alarm (+ start p₀)) 1))
-                 (is (zero? alarm))))
-             (is (<= 0 ΔE_Δt 6)))))))
+                 (is (<= 0 (- alarm (+ start p₀)) 1) "woke up at alarm time")
+                 (is (zero? alarm) "alarm was set to zero")))
+             (is (<= 0 ΔE_Δt 6) "test stopped at expected time"))))))
