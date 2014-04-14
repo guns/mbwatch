@@ -26,7 +26,7 @@
 (s/defn atom-of :- Schema
   [inner-schema :- Schema
    desc         :- String]
-  (pred #(and (validate Atom %)
+  (pred #(and (instance? Atom %)
               (validate inner-schema @%))
         desc))
 
