@@ -2,11 +2,22 @@
   (:require [clojure.core.async :refer [thread]]
             [mbwatch.types :as t :refer [VOID atom-of]]
             [mbwatch.util :refer [catch-print]]
-            [schema.core :as s :refer [Int defschema maybe pred]]))
+            [schema.core :as s :refer [Int defschema maybe pred]])
+  (:import (java.util.concurrent Future)))
 
 (def ^:const CHAN-SIZE
   "4K ought to be enough for anybody."
   0x1000)
+
+(s/defn shutdown-future :- Boolean
+  "Wait for a future for timeout ms, then cancel it. Returns true if the
+   future completed without intervention."
+  [f       :- Future
+   timeout :- Int]
+  (if (deref f timeout false)
+    true
+    (do (future-cancel f)
+        false)))
 
 (defmacro future-catch-print
   {:requires [#'catch-print]}

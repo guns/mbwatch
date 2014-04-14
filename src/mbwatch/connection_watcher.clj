@@ -28,8 +28,9 @@
             [mbwatch.command :refer [->Command]]
             [mbwatch.concurrent :refer [->Timer CHAN-SIZE TimerAtom
                                         future-catch-print set-alarm!
-                                        sig-notify-all sig-wait-timer
-                                        thread-loop update-timer!]]
+                                        shutdown-future sig-notify-all
+                                        sig-wait-timer thread-loop
+                                        update-timer!]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable NOTICE
                                      WARNING defloggable log-with-timestamp!]]
@@ -195,9 +196,9 @@
                   (recur))))]
       (assoc this :exit-fn
              #(do (.set status false)         ; Stop after current iteration
-                  (sig-notify-all timer-atom) ; Trigger timer
                   (remove-watch connections-atom ::watch-conn-changes)
-                  @f
+                  (sig-notify-all timer-atom) ; Trigger timer
+                  (shutdown-future f 100)
                   (<!! c)
                   (close! cmd-chan-out)       ; Close outgoing channels
                   (close! log-chan)))))

@@ -15,7 +15,8 @@
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command :refer [->Command]]
             [mbwatch.concurrent :refer [->Timer CHAN-SIZE TimerAtom
-                                        future-loop set-alarm! sig-notify-all
+                                        future-loop set-alarm!
+                                        shutdown-future sig-notify-all
                                         sig-wait-timer thread-loop
                                         update-timer!]]
             [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable
@@ -66,7 +67,7 @@
       (assoc this :exit-fn
              #(do (.set status false)         ; Stop after current iteration
                   (sig-notify-all timer-atom) ; Trigger timer
-                  @f
+                  (shutdown-future f 100)
                   (<!! c)
                   (close! cmd-chan-out)       ; Close outgoing channels
                   (close! log-chan)))))
