@@ -7,8 +7,8 @@
     (try
       (eval `(do (ns ~ns-sym ~'(:require [mbwatch.types :as t]))
                  ~'(t/defrecord ^:private Foo [bar :- Integer])))
-      (is (-> ns-sym (ns-resolve '->Foo) nil?))
-      (is (-> ns-sym (ns-resolve 'map->Foo) nil?))
-      (is (-> ns-sym (ns-resolve 'strict-map->Foo) meta :private))
+      (is (nil? (ns-resolve ns-sym '->Foo)))
+      (is (nil? (ns-resolve ns-sym 'map->Foo)))
+      (is (:private (meta (ns-resolve ns-sym 'strict-map->Foo))))
       (finally
         (remove-ns ns-sym)))))
