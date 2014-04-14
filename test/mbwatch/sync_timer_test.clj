@@ -2,8 +2,7 @@
   (:require [clojure.core.async :refer [chan close!]]
             [clojure.test :refer [is]]
             [clojure.test.check.clojure-test :refer [defspec]]
-            [clojure.test.check.generators :as g :refer [fmap such-that
-                                                         tuple]]
+            [clojure.test.check.generators :as g :refer [such-that]]
             [clojure.test.check.properties :refer [for-all]]
             [com.stuartsierra.component :as comp]
             [mbwatch.command]
@@ -12,10 +11,6 @@
             [mbwatch.test.common :refer [chanv sync-request-gen]])
   (:import (mbwatch.command Command)
            (mbwatch.sync_timer SyncTimer)))
-
-(def sync-timer-gen
-  (->> (tuple sync-request-gen g/nat)
-       (fmap (fn [[req n]] (->SyncTimer req (chan 0x10000) n)))))
 
 ; (defn =*
 ;   "Equal to, within tolerances."
@@ -27,10 +22,11 @@
 ;     (is (= state' state))))
 
 (defspec test-cyclic-timer 10
-  (for-all [sync-timer (such-that #(seq @(:sync-request-atom %)) sync-timer-gen)
+  (for-all [sync-req (such-that seq sync-request-gen)
             ttl (g/choose 100 1000)]
-    (let [{:keys [cmd-chan-in cmd-chan-out log-chan sync-request-atom timer-atom]} sync-timer
-          ;; Fire up to 1 + 20 sync requests
+    (let [sync-timer (->SyncTimer sync-req (chan 0x10000) 0)
+          {:keys [cmd-chan-in cmd-chan-out log-chan sync-request-atom timer-atom]} sync-timer
+          ;; Fire up to 20 sync requests
           _ (update-timer! timer-atom (quot ttl 20) 0)
           sync-timer (comp/start sync-timer)]
       (Thread/sleep ttl)
@@ -45,7 +41,7 @@
                          cmds)
                  "only produces :sync Commands")
              ;; Tolerate ±1 syncs (border conditions)
-             (is (<= 20 n 22) "cycles at a predictable rate")
+             (is (<= 19 n 21) "cycles at a predictable rate")
              ;; Lifecycle events only
              (is (= (mapv class (chanv log-chan)) [SyncTimer SyncTimer])
                  "only logs itself"))))))
