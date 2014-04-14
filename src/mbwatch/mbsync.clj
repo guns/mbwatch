@@ -30,11 +30,11 @@
             [mbwatch.command]
             [mbwatch.concurrent :refer [CHAN-SIZE sig-notify-all thread-loop]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
+            [mbwatch.events :refer [->MbsyncUnknownChannelError
+                                    strict-map->MbsyncEventStart
+                                    strict-map->MbsyncEventStop]]
             [mbwatch.logging :refer [->LogItem DEBUG ERR INFO Loggable NOTICE
                                      WARNING log-with-timestamp!]]
-            [mbwatch.mbsync.events :refer [->MbsyncUnknownChannelError
-                                           strict-map->MbsyncEventStart
-                                           strict-map->MbsyncEventStop]]
             [mbwatch.process :as process]
             [mbwatch.types :as t :refer [StringList SyncRequest VOID]]
             [mbwatch.util :refer [join-mbargs shell-escape]]

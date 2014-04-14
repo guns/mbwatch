@@ -1,9 +1,9 @@
-(ns mbwatch.mbsync.events-test
+(ns mbwatch.events-test
   (:require [clojure.test :refer [is]]
+            [mbwatch.events :refer [->MbsyncUnknownChannelError
+                                    strict-map->MbsyncEventStart
+                                    strict-map->MbsyncEventStop]]
             [mbwatch.logging :refer [DEBUG ERR WARNING log-item log-level]]
-            [mbwatch.mbsync.events :refer [->MbsyncUnknownChannelError
-                                           strict-map->MbsyncEventStart
-                                           strict-map->MbsyncEventStop]]
             [schema.test :refer [deftest]])
   (:import (mbwatch.logging LogItem)
            (org.joda.time DateTime)))

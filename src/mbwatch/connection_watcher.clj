@@ -32,55 +32,23 @@
                                         sig-wait-timer thread-loop
                                         update-timer!]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
-            [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable NOTICE
-                                     WARNING defloggable log-with-timestamp!]]
+            [mbwatch.events :refer [->ConnectionWatcherPreferenceEvent
+                                    ->PendingSyncsEvent ->TimeJumpEvent]]
+            [mbwatch.logging :refer [->LogItem DEBUG Loggable
+                                     log-with-timestamp!]]
             [mbwatch.network :refer [reachable?]]
             [mbwatch.types :as t :refer [SyncRequest VOID Word atom-of]]
-            [mbwatch.util :refer [human-duration join-sync-request]]
-            [schema.core :as s :refer [Int defschema enum maybe pair]])
+            [mbwatch.util :refer [human-duration]]
+            [schema.core :as s :refer [Int defschema maybe pair]])
   (:import (clojure.lang IFn)
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.command Command)
+           (mbwatch.events ConnectionEvent)
            (org.joda.time DateTime)))
 
 (def ^:private ^:const MIN-POS-PERIOD 5000)
 (def ^:private ^:const RETRY-INTERVAL 15000)
 (def ^:private ^:const TIME-JUMP-INTERVAL 60000)
-
-(t/defrecord ^:private ConnectionEvent
-  [mbchan    :- String
-   status    :- (maybe Boolean)
-   timestamp :- DateTime]
-
-  Loggable
-
-  (log-level [_]
-    (case status
-      true  NOTICE
-      false WARNING
-      nil   INFO))
-
-  (log-item [this]
-    (let [msg (str "Channel " mbchan (case status
-                                       true  " -> reachable"
-                                       false " >! unreachable"
-                                       nil   " -- unregistered"))]
-      (->LogItem this msg))))
-
-(defloggable ^:private PendingSyncsEvent INFO
-  [action   :- (enum :pool :release)
-   sync-req :- SyncRequest]
-  (->> sync-req
-       join-sync-request
-       (str (if (= action :pool)
-              "Delaying syncs: "
-              "Releasing pending syncs: "))))
-
-(defloggable ^:private TimeJumpEvent WARNING
-  [retry :- Int]
-  (if (pos? retry)
-    (format "Connection retry #%d in %s" retry (human-duration (* retry RETRY-INTERVAL)))
-    "Time jump! Retrying connections up to 3 times in the next 90 seconds."))
 
 (defschema ^:private ConnectionMap
   {String {:status Boolean
@@ -250,7 +218,7 @@
           (let [time-jump? (when (and (seq @connections-atom)
                                       (> (- (System/currentTimeMillis) (:alarm @timer-atom))
                                          TIME-JUMP-INTERVAL))
-                             (put! log-chan (->TimeJumpEvent 0))
+                             (put! log-chan (->TimeJumpEvent 0 0))
                              true)
                 ;; Update connections, then check if they are all reachable
                 up? (-> connections-atom
@@ -265,7 +233,7 @@
                             0 ; Stop retrying
                             (inc retry))))
                 retry-ms (when (pos? retry)
-                           (put! log-chan (->TimeJumpEvent retry))
+                           (put! log-chan (->TimeJumpEvent retry RETRY-INTERVAL))
                            (* retry RETRY-INTERVAL))]
             (set-alarm! timer-atom retry-ms)
             (recur retry)))))))
@@ -350,15 +318,6 @@
       (= sync-req sync-req') sync-command
       :else (assoc sync-command :payload sync-req'))))
 
-(defloggable ^:private ConnectionWatcherPreferenceEvent INFO
-  [connection-watcher :- ConnectionWatcher
-   type               :- (enum :period)]
-  (let [{:keys [period]} @(:timer-atom connection-watcher)]
-    (case type
-      :period (if (zero? period) ; zero?, not pos?, so we don't mask bugs
-                "Connection polling disabled."
-                (str "Connection polling period set to " (human-duration period))))))
-
 (s/defn ^:private process-command :- (maybe Command)
   [connection-watcher :- ConnectionWatcher
    command            :- Command]
@@ -370,7 +329,7 @@
                        (when (update-timer! timer-atom new-period MIN-POS-PERIOD)
                          (sig-notify-all timer-atom)
                          (put! log-chan (->ConnectionWatcherPreferenceEvent
-                                          connection-watcher :period)))
+                                          :period @(:timer-atom connection-watcher))))
                        command)
     :conn/remove (let [{:keys [connections-atom]} connection-watcher]
                    (apply swap! connections-atom dissoc (:payload command))

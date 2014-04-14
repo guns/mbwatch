@@ -54,3 +54,9 @@
 
 (defschema SyncRequest
   {String StringList})
+
+(defschema NotifyMap
+  {String #{String}})
+
+(defschema NotifyMapAtom
+  (atom-of NotifyMap "NotifyMapAtom"))

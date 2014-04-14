@@ -18,48 +18,26 @@
             [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
                                         thread-loop]]
             [mbwatch.config :refer [mdir-path]]
-            [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable
-                                     defloggable log-with-timestamp!]]
+            [mbwatch.events :refer [->NewMessageNotification
+                                    ->NotifyMapChangeEvent]]
+            [mbwatch.logging :refer [->LogItem DEBUG Loggable
+                                     log-with-timestamp!]]
             [mbwatch.maildir :refer [new-messages senders]]
-            [mbwatch.mbsync.events]
             [mbwatch.process :as process]
-            [mbwatch.types :as t :refer [VOID atom-of]]
-            [mbwatch.util :refer [join-sync-request to-ms]]
+            [mbwatch.types :as t :refer [NotifyMap NotifyMapAtom VOID]]
+            [mbwatch.util :refer [to-ms]]
             [schema.core :as s :refer [Int defschema either maybe]])
   (:import (clojure.lang IFn)
            (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
            (javax.mail.internet MimeMessage)
            (mbwatch.command Command)
-           (mbwatch.mbsync.events MbsyncEventStop MbsyncUnknownChannelError)))
+           (mbwatch.events MbsyncEventStop MbsyncUnknownChannelError
+                           NewMessageNotification)))
 
 (def ^:private ^:const MAX-SENDERS-SHOWN
   "TODO: Make configurable?"
   8)
-
-(defloggable ^:private NewMessageNotification INFO
-  [mbchan->mbox->messages :- {String {String [MimeMessage]}}]
-  (str
-    (reduce
-      (fn [s [mbchan mbox->messages]]
-        (reduce
-          (fn [^StringBuilder s [mbox messages]]
-            (.append s (format " [%s/%s %d]" mbchan mbox (count messages))))
-          s (sort mbox->messages)))
-      (StringBuilder. "NewMessageNotification:") (sort mbchan->mbox->messages))))
-
-(defschema ^:private NotifyMap
-  {String #{String}})
-
-(defschema ^:private NotifyMapAtom
-  (atom-of NotifyMap "NotifyMapAtom"))
-
-(defloggable ^:private NotifyMapChangeEvent INFO
-  [notify-map :- NotifyMap]
-  (let [msg (join-sync-request notify-map)]
-    (if (seq msg)
-      (str "Now notifying on: " msg)
-      "Notifications disabled.")))
 
 (s/defn ^:private format-msg :- (maybe String)
   [messages :- [MimeMessage]]

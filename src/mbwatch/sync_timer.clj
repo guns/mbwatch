@@ -19,11 +19,12 @@
                                         shutdown-future sig-notify-all
                                         sig-wait-timer thread-loop
                                         update-timer!]]
-            [mbwatch.logging :refer [->LogItem DEBUG INFO Loggable
-                                     defloggable log-with-timestamp!]]
+            [mbwatch.events :refer [->SyncTimerPreferenceEvent]]
+            [mbwatch.logging :refer [->LogItem DEBUG Loggable
+                                     log-with-timestamp!]]
             [mbwatch.types :as t :refer [SyncRequest VOID atom-of]]
-            [mbwatch.util :refer [human-duration join-sync-request]]
-            [schema.core :as s :refer [Int defschema enum maybe]])
+            [mbwatch.util :refer [human-duration]]
+            [schema.core :as s :refer [Int defschema maybe]])
   (:import (clojure.lang IFn)
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.command Command)))
@@ -99,34 +100,22 @@
      :status (AtomicBoolean. true)
      :exit-fn nil}))
 
-(defloggable ^:private SyncTimerPreferenceEvent INFO
-  [sync-timer :- SyncTimer
-   type       :- (enum :period :sync-request)]
-  (let [{:keys [timer-atom sync-request-atom]} sync-timer
-        period (:period @timer-atom)
-        sync-req @sync-request-atom]
-    (case type
-      :period (if (zero? period)
-                "Sync timer disabled."
-                (str "Sync timer period set to: " (human-duration period)))
-      :sync-request (if (seq sync-req)
-                      (str "Sync timer request set to: " (join-sync-request sync-req))
-                      "Sync timer disabled."))))
-
 (s/defn ^:private process-command :- VOID
   [sync-timer :- SyncTimer
    command    :- Command]
   (case (:opcode command)
     :timer/trigger (sig-notify-all (:timer-atom sync-timer))
-    :timer/set-period (let [{:keys [timer-atom log-chan]} sync-timer
+    :timer/set-period (let [{:keys [sync-request-atom timer-atom log-chan]} sync-timer
                             new-period ^long (:payload command)]
                         (when (update-timer! timer-atom new-period MIN-POS-PERIOD)
                           (sig-notify-all timer-atom)
-                          (put! log-chan (->SyncTimerPreferenceEvent sync-timer :period))))
-    :timer/set-request (let [{:keys [sync-request-atom log-chan]} sync-timer
+                          (put! log-chan (->SyncTimerPreferenceEvent
+                                           :period @timer-atom @sync-request-atom))))
+    :timer/set-request (let [{:keys [sync-request-atom timer-atom log-chan]} sync-timer
                              old-req @sync-request-atom
                              new-req (reset! sync-request-atom (:payload command))]
                          (when-not (= old-req new-req)
-                           (put! log-chan (->SyncTimerPreferenceEvent sync-timer :sync-request))))
+                           (put! log-chan (->SyncTimerPreferenceEvent
+                                            :sync-request @timer-atom @sync-request-atom))))
     nil)
   nil)
