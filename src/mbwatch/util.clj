@@ -1,7 +1,7 @@
 (ns mbwatch.util
   (:require [clojure.string :as string]
             [mbwatch.types :refer [StringList SyncRequest]]
-            [schema.core :as s :refer [Int]])
+            [schema.core :as s :refer [Int pred]])
   (:import (clojure.lang Symbol)
            (java.net URLEncoder)
            (org.joda.time DateTime Duration Instant ReadableInstant)))
@@ -94,6 +94,14 @@
 (s/defn to-ms :- Long
   [datetime :- DateTime]
   (.getMillis (Instant. datetime)))
+
+(s/defn zero-or-min :- (pred #(>= % 0))
+  "{n ∈ ℕ : n = 0, n ≥ min}"
+  [n   :- long
+   min :- long]
+  (if (pos? n)
+    (max n min)
+    0))
 
 (s/defn url-for :- String
   "Returns scheme://user@host:port with appropriate escaping."

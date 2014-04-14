@@ -1,8 +1,8 @@
 (ns mbwatch.concurrent
   (:require [clojure.core.async :refer [thread]]
             [mbwatch.types :as t :refer [VOID atom-of]]
-            [mbwatch.util :refer [catch-print]]
-            [schema.core :as s :refer [Int defschema maybe pred]])
+            [mbwatch.util :refer [catch-print zero-or-min]]
+            [schema.core :as s :refer [Int defschema maybe]])
   (:import (java.util.concurrent Future)))
 
 (def ^:const CHAN-SIZE
@@ -65,14 +65,6 @@
 (t/defrecord ^:private Timer
   [period :- long
    alarm  :- long])
-
-(s/defn ^:private zero-or-min :- (pred #(>= % 0))
-  "{n ∈ ℕ : n = 0, n ≥ min}"
-  [n   :- long
-   min :- long]
-  (if (pos? n)
-    (max n min)
-    0))
 
 (s/defn ->Timer :- Timer
   "Construct a new Timer with sane values. If trigger-now? is true, the alarm

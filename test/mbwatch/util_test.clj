@@ -4,7 +4,7 @@
             [mbwatch.util :refer [catch-print chomp class-name dequote
                                   human-duration join-mbargs
                                   join-sync-request schema-params
-                                  shell-escape to-ms url-for]]
+                                  shell-escape to-ms url-for zero-or-min]]
             [schema.test :refer [deftest]])
   (:import (org.joda.time DateTime)))
 
@@ -56,6 +56,10 @@
 
 (deftest test-to-ms
   (is (= 0 (to-ms (DateTime. 0)))))
+
+(deftest test-zero-or-min
+  (is (every? zero? (mapv #(zero-or-min % 0) [-1 0 Long/MIN_VALUE])))
+  (is (every? #(= 5000 %) (mapv #(zero-or-min % 5000) [1 4999 5000]))))
 
 (deftest test-url-for
   (is (= "imaps://foo%40example.com@example.com:993"
