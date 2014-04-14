@@ -132,7 +132,7 @@
   (stop [this]
     (exit-fn)
     (log* logger level (log-item (assoc-timestamp this)))
-    (dissoc this :exit-fn))
+    (assoc this :exit-fn nil))
 
   Loggable
 

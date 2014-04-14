@@ -143,7 +143,7 @@
   (stop [this]
     (log-with-timestamp! log-chan-out this)
     (exit-fn)
-    (dissoc this :exit-fn))
+    (assoc this :exit-fn nil))
 
   Loggable
 
