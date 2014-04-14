@@ -1,9 +1,8 @@
 (ns mbwatch.test.common
-  (:require [clojure.core.async :refer [<!! chan]]
+  (:require [clojure.core.async :refer [<!!]]
             [clojure.test.check.generators :as g :refer [elements fmap one-of
-                                                         return tuple]]
-            [mbwatch.command :refer [->Command]]
-            [mbwatch.sync-timer :as st]))
+                                                         return]]
+            [mbwatch.command :refer [->Command]]))
 
 (def mbox-gen
   (elements (mapv (comp str char) (range (int \α) (inc (int \ω))))))
@@ -14,7 +13,7 @@
                         phi chi psi omega])))
 
 (def sync-request-gen
-  (->> (tuple mbchan-gen (g/vector mbox-gen))
+  (->> (g/tuple mbchan-gen (g/vector mbox-gen))
        g/vector
        (fmap (partial into {}))))
 

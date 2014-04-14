@@ -4,10 +4,10 @@
             [clojure.string :as string]
             [mbwatch.passwd :refer [expand-user-path parse-passwd]]
             [mbwatch.types :as t :refer [FilteredLine LowerCaseWord
-                                         PortNumber Word]]
+                                         PortNumber Word tuple]]
             [mbwatch.util :refer [chomp dequote]]
             [schema.core :as s :refer [defschema either enum eq maybe one
-                                       optional-key pair]]))
+                                       optional-key]]))
 
 (def ^:const DEFAULT-PATH
   "Default path of mbsyncrc."
@@ -20,8 +20,7 @@
 (def ^:private ^:const imaps-port 993)
 
 (defschema ^:private Entry
-  (pair LowerCaseWord "name"
-        FilteredLine "value"))
+  (tuple LowerCaseWord FilteredLine))
 
 (defschema ^:private MapSectionToken
   [(one (enum :imapstore :maildirstore :channel) "section type")

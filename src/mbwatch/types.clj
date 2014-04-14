@@ -1,7 +1,7 @@
 (ns mbwatch.types
   (:require [clojure.core :as cc]
-            [schema.core :as s :refer [Schema both defschema either eq pred
-                                       validate]])
+            [schema.core :as s :refer [Schema both defschema either eq one
+                                       pred validate]])
   (:import (clojure.lang Atom))
   (:refer-clojure :exclude [defrecord]))
 
@@ -22,6 +22,9 @@
          (ns-unmap *ns* '~(sym "map->"))
          ~(when (and schema? (-> name meta :private))
             `(alter-meta! ~(get-var "strict-map->") assoc :private true)))))
+
+(defmacro tuple [& schemas]
+  `[~@(mapv (fn [f s d] `(~f ~s ~d)) (repeat one) schemas (mapv str schemas))])
 
 (s/defn atom-of :- Schema
   [inner-schema :- Schema

@@ -37,7 +37,7 @@
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
             [mbwatch.network :refer [reachable?]]
-            [mbwatch.types :as t :refer [SyncRequest VOID Word atom-of]]
+            [mbwatch.types :as t :refer [SyncRequest VOID Word atom-of tuple]]
             [mbwatch.util :refer [human-duration]]
             [schema.core :as s :refer [Int defschema maybe pair]])
   (:import (clojure.lang IFn)
@@ -238,8 +238,7 @@
             (set-alarm! timer-atom retry-ms)
             (recur retry)))))))
 
-(s/defn ^:private merge-pending-syncs :- (pair ConnectionMap "conn-map"
-                                               SyncRequest "sync-req")
+(s/defn ^:private merge-pending-syncs :- (tuple ConnectionMap SyncRequest)
   "Merge sync-req into conn-map as :pending-syncs entries if the :status of
    the mbchan is false. Returns the new conn-map and the new sync-req with
    merged entries removed.
