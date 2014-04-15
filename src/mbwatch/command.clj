@@ -20,6 +20,10 @@
         :conn/trigger      ; Re-check connections
         :conn/set-period   ; Set connection watcher's period
         :conn/remove       ; Remove channel from ConnectionMap
+        :idle/add          ; Add {mbchan [mbox]} to idle-map
+        :idle/remove       ; Remove {mbchan [mbox]} from idle-map
+        :idle/set          ; Set idle-map to {mbchan [mbox]}
+        :idle/restart      ; Restart IMAP connections
         :notify/add        ; Add {mbchan [mbox]} to notify-map
         :notify/remove     ; Remove {mbchan [mbox]} from notify-map
         :notify/set        ; Set notify-map to {mbchan [mbox]}
