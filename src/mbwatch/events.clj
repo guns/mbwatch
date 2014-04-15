@@ -3,8 +3,8 @@
    provide their own Loggable implementations."
   (:require [mbwatch.concurrent]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
-            [mbwatch.logging :refer [->LogItem ERR INFO Loggable NOTICE
-                                     WARNING defloggable]]
+            [mbwatch.logging :refer [ERR INFO Loggable NOTICE WARNING
+                                     defloggable]]
             [mbwatch.types :as t :refer [NotifyMap StringList SyncRequest]]
             [mbwatch.util :refer [human-duration join-mbargs
                                   join-sync-request]]
@@ -14,6 +14,11 @@
            (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
+(def ^:private connection-event-map
+  {true  [NOTICE  " -> reachable"]
+   false [WARNING " >! unreachable"]
+   nil   [INFO    " -- unregistered"]})
+
 (t/defrecord ConnectionEvent
   [mbchan    :- String
    status    :- (maybe Boolean)
@@ -22,17 +27,11 @@
   Loggable
 
   (log-level [_]
-    (case status
-      true  NOTICE
-      false WARNING
-      nil   INFO))
+    (first (connection-event-map status)))
 
   (log-item [this]
-    (let [msg (str "Channel " mbchan (case status
-                                       true  " -> reachable"
-                                       false " >! unreachable"
-                                       nil   " -- unregistered"))]
-      (->LogItem this msg))))
+    (let [[level suffix] (connection-event-map status)]
+      (LogItem. level timestamp (str "Channel " mbchan suffix)))))
 
 (defloggable PendingSyncsEvent INFO
   [action   :- (enum :pool :release)

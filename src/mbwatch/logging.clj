@@ -64,8 +64,9 @@
   (put! chan (assoc-timestamp map)))
 
 (s/defn ->LogItem :- LogItem
-  "Create a LogItem from a Loggable, assuming that the timestamp can be found
-   in the :timestamp field of the Loggable."
+  "This is a convenience function for creating LogItems from objects
+   without explicit :timestamp fields, intended to be used together with
+   log-with-timestamp!"
   [loggable :- Object
    message  :- String]
   (LogItem. (log-level loggable) (get-timestamp loggable) message))

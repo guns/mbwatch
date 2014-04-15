@@ -1,10 +1,11 @@
 (ns mbwatch.command
   "Commands are broadcast to all command listeners, therefore the namespace of
    Opcodes is global (KISS)."
-  (:require [mbwatch.logging :refer [->LogItem DEBUG Loggable]]
+  (:require [mbwatch.logging :refer [DEBUG Loggable]]
             [mbwatch.types :as t]
             [schema.core :as s :refer [Any defschema enum]])
   (:import (java.util.concurrent.atomic AtomicLong)
+           (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
 (def ^:private ^AtomicLong command-id
@@ -36,7 +37,7 @@
   Loggable
 
   (log-level [_] DEBUG)
-  (log-item [this] (->LogItem this (str "Command: " opcode " " payload))))
+  (log-item [this] (LogItem. DEBUG timestamp (str "Command: " opcode " " payload))))
 
 (s/defn ->Command :- Command
   ([opcode]
