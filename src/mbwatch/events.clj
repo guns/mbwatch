@@ -9,7 +9,8 @@
             [mbwatch.util :refer [human-duration join-mbargs
                                   join-sync-request]]
             [schema.core :refer [Int enum maybe]])
-  (:import (javax.mail.internet MimeMessage)
+  (:import (com.sun.mail.imap IMAPStore)
+           (javax.mail.internet MimeMessage)
            (mbwatch.concurrent Timer)
            (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
@@ -18,6 +19,15 @@
   {true  [NOTICE  " -> reachable"]
    false [WARNING " >! unreachable"]
    nil   [INFO    " -- unregistered"]})
+
+(def ^:private imap-connection-event-map
+  {:start      [INFO    "Connecting "]
+   :success    [NOTICE  "Connected "]
+   :badauth    [ERR     "Authentication failed for "]
+   :failure    [WARNING "Failed to connect "]
+   :stop       [INFO    "Disconnecting "]
+   :disconnect [INFO    "Disconnected "]
+   :lost       [WARNING "Lost connection to "]})
 
 (t/defrecord ConnectionEvent
   [mbchan    :- String
@@ -32,6 +42,41 @@
   (log-item [this]
     (let [[level suffix] (connection-event-map status)]
       (LogItem. level timestamp (str "Channel " mbchan suffix)))))
+
+(t/defrecord IMAPConnectionEvent
+  [type            :- (enum :start :success :badauth :failure :stop :disconnect :lost)
+   imap-url        :- String
+   error           :- (maybe String)
+   timestamp       :- DateTime]
+
+  Loggable
+
+  (log-level [_]
+    (first (imap-connection-event-map type)))
+
+  (log-item [this]
+    (let [[level prefix] (imap-connection-event-map type)
+          msg (str prefix imap-url)]
+      (LogItem. level timestamp (if error (str msg "\n" error) msg)))))
+
+(defloggable IDLEEvent NOTICE
+  [imap-url :- String]
+  (str "IDLE " imap-url))
+
+(defloggable IDLENewMessageEvent INFO
+  [n        :- Int
+   imap-url :- String]
+  (if (= 1 n)
+    (str "IDLE: New message in " imap-url)
+    (str "IDLE: " n " new messages in " imap-url)))
+
+(defloggable IMAPCommandError ERR
+  [type     :- (enum :folder-not-found)
+   imap-url :- String
+   error    :- (maybe String)]
+  (case type
+    :folder-not-found (let [msg (format "IMAP folder %s does not exist!" imap-url)]
+                        (if error (str msg "\n" error) msg))))
 
 (defloggable PendingSyncsEvent INFO
   [action   :- (enum :pool :release)
