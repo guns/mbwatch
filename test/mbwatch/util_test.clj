@@ -2,7 +2,7 @@
   (:require [clojure.java.shell :refer [sh]]
             [clojure.test :refer [is]]
             [mbwatch.util :refer [catch-print chomp class-name dequote
-                                  human-duration join-mbargs
+                                  human-duration istr= join-mbargs
                                   join-sync-request schema-params
                                   shell-escape to-ms url-for zero-or-min]]
             [schema.test :refer [deftest]])
@@ -22,6 +22,11 @@
          (schema-params '[foo :- Int bar :- String baz :- #{Symbol}])
          (schema-params '[foo :- Int bar baz :- #{Symbol}])
          (schema-params '[foo bar baz]))))
+
+(deftest test-istr=
+  (is (istr= "foo" "foo"))
+  (is (istr= "ΩMEGA" "ωmega"))
+  (is (not (istr= "Alpha" "αlfa"))))
 
 (deftest test-chomp
   (is (= ""    (chomp "") (chomp "" "")))

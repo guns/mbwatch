@@ -30,6 +30,11 @@
         (recur (conj v p) (rest params)))
       v)))
 
+(s/defn istr= :- Boolean
+  [s₁ :- String
+   s₂ :- String]
+  (zero? (.compareToIgnoreCase s₁ s₂)))
+
 (s/defn chomp :- String
   "Like Ruby's String#chomp, remove trailing newlines or a constant suffix."
   ([s :- String]
