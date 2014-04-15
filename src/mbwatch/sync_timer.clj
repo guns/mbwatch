@@ -8,7 +8,7 @@
                       └─────┬─────┘
                             │
                             │
-                            └─── Loggable ──▶
+                            └──────── Loggable ──▶
   "
   (:require [clojure.core.async :refer [<!! >!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
