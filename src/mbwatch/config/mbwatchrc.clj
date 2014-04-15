@@ -8,7 +8,7 @@
 (def ^:const DEFAULT-PATH
   (str (System/getProperty "user.home") "/.config/mbwatch/rc"))
 
-(def ^:const DEFAULT-OPTIONS
+(def DEFAULT-OPTIONS
   {:notify-command "notify-send \"$(cat)\""
    :sync-timer-period "900000"
    :connection-period "300000"

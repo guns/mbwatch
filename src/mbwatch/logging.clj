@@ -28,7 +28,7 @@
 (def ^:const INFO    6) ; /* informational */
 (def ^:const DEBUG   7) ; /* debug-level messages */
 
-(def ^:private ^:const LOG-LEVELS
+(def ^:private LOG-LEVELS
   (mapv str '[EMERG ALERT CRIT ERR WARNING NOTICE INFO DEBUG]))
 
 (defprotocol Loggable
