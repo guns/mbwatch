@@ -5,7 +5,7 @@
             [mbwatch.passwd :refer [expand-user-path parse-passwd]]
             [mbwatch.types :as t :refer [FilteredLine LowerCaseWord
                                          PortNumber Word tuple]]
-            [mbwatch.util :refer [chomp dequote]]
+            [mbwatch.util :refer [chomp dequote istr=]]
             [schema.core :as s :refer [defschema either enum eq maybe one
                                        optional-key]]))
 
@@ -48,7 +48,8 @@
   {:host String
    :port PortNumber
    :user String
-   :pass String})
+   :pass String
+   :ssl? Boolean})
 
 (defschema Maildirstore
   {:inbox   FilteredLine
@@ -103,8 +104,11 @@
   "Extract credentials from an IMAPStore key-value map. Shells out for
    evaluation of PassCmd."
   [imap :- {LowerCaseWord FilteredLine}]
-  (let [v (comp dequote imap)]
-    (-> (cond-> {}
+  (let [v (comp dequote imap)
+        ;; Only disable SSL if the user insists
+        secure? (not (and (istr= (imap "useimaps") "no")
+                          (istr= (imap "requiressl") "no")))]
+    (-> (cond-> {:ssl? secure?}
           (imap "host") (assoc :host (v "host"))
           (imap "port") (assoc :port (Integer/parseInt (v "port")))
           (imap "user") (assoc :user (v "user"))

@@ -20,8 +20,8 @@
             "BAR-imap" {"host" "imap.example.com"
                         "user" "bar@example.com"
                         "port" "993"
-                        "useimaps" "yes"
-                        "requiressl" "yes"
+                        "useimaps" "no"
+                        "requiressl" "no"
                         "pass" "\"H'|&z]0pIcU2?T/(<!zaIq[wW\\\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\\\"\""}}))
     (is (= (-> mbsyncrc :sections :maildirstore)
            {"FOO-mdir" {"inbox" "test-resources/maildir/foo-mdir/INBOX"
@@ -54,11 +54,13 @@
            {"FOO-chan" {:host "imap.example.com"
                         :user "foo@example.com"
                         :port 993
-                        :pass "@Y9GZa G!Dsl ZQ'PC(Gj5#6`-Sv->$xH0s{5|bMgq/0.R&g.u714\"; F3aN"}
+                        :pass "@Y9GZa G!Dsl ZQ'PC(Gj5#6`-Sv->$xH0s{5|bMgq/0.R&g.u714\"; F3aN"
+                        :ssl? true}
             "BAR-chan" {:host "imap.example.com"
                         :user "bar@example.com"
                         :port 993
-                        :pass "H'|&z]0pIcU2?T/(<!zaIq[wW\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\""}}))
+                        :pass "H'|&z]0pIcU2?T/(<!zaIq[wW\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\""
+                        :ssl? false}}))
     (is (= (:mbchan->Maildirstore mbsyncrc)
            {"FOO-chan" {:inbox "test-resources/maildir/foo-mdir/INBOX"
                         :path "test-resources/maildir/foo-mdir/"
