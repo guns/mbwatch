@@ -37,9 +37,10 @@
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
             [mbwatch.network :refer [reachable?]]
-            [mbwatch.types :as t :refer [SyncRequest VOID Word atom-of tuple]]
+            [mbwatch.types :as t :refer [ConnectionMap ConnectionMapAtom
+                                         SyncRequest VOID Word tuple]]
             [mbwatch.util :refer [human-duration]]
-            [schema.core :as s :refer [Int defschema maybe pair]])
+            [schema.core :as s :refer [Int maybe pair]])
   (:import (clojure.lang IFn)
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.command Command)
@@ -49,13 +50,6 @@
 (def ^:private ^:const MIN-POS-PERIOD 5000)
 (def ^:private ^:const RETRY-INTERVAL 15000)
 (def ^:private ^:const TIME-JUMP-INTERVAL 60000)
-
-(defschema ^:private ConnectionMap
-  {String {:status Boolean
-           :pending-syncs (maybe #{String})}})
-
-(defschema ^:private ConnectionMapAtom
-  (atom-of ConnectionMap "ConnectionMapAtom"))
 
 (s/defn ^:private update-connections :- ConnectionMap
   "Update the :status entries conn-map by checking connections in parallel.

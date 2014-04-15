@@ -1,7 +1,7 @@
 (ns mbwatch.types
   (:require [clojure.core :as cc]
-            [schema.core :as s :refer [Schema both defschema either eq one
-                                       pred validate]])
+            [schema.core :as s :refer [Schema both defschema either eq maybe
+                                       one pred validate]])
   (:import (clojure.lang Atom))
   (:refer-clojure :exclude [defrecord]))
 
@@ -63,3 +63,10 @@
 
 (defschema NotifyMapAtom
   (atom-of NotifyMap "NotifyMapAtom"))
+
+(defschema ConnectionMap
+  {String {:status Boolean
+           :pending-syncs (maybe #{String})}})
+
+(defschema ConnectionMapAtom
+  (atom-of ConnectionMap "ConnectionMapAtom"))
