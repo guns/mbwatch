@@ -126,7 +126,7 @@
         ;; Commands must be conveyed
         (>!! cmd-chan-out (->Command :sync release))))))
 
-(declare process-command)
+(declare filter-command)
 (declare watch-connections!)
 
 (t/defrecord ^:private ConnectionWatcher
@@ -152,7 +152,7 @@
           c (thread-loop []
               (when (.get status)
                 (when-some [cmd (<!! cmd-chan-in)]
-                  (when-some [cmd' (process-command this cmd)]
+                  (when-some [cmd' (filter-command this cmd)]
                     ;; Commands must be conveyed
                     (>!! cmd-chan-out cmd'))
                   (recur))))]
@@ -311,7 +311,7 @@
       (= sync-req sync-req') sync-command
       :else (assoc sync-command :payload sync-req'))))
 
-(s/defn ^:private process-command :- (maybe Command)
+(s/defn ^:private filter-command :- (maybe Command)
   [connection-watcher :- ConnectionWatcher
    command            :- Command]
   (case (:opcode command)

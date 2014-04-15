@@ -75,8 +75,7 @@
     (let [c (thread-loop []
               (when (.get status)
                 (when-some [req (<!! req-chan)]
-                  (let [[id boxes] req]
-                    (sync-boxes! this id boxes))
+                  (apply sync-boxes! this req)
                   (recur))))]
       ;; MbsyncMaster will close the shared outgoing log-chan
       (assoc this :exit-fn
@@ -127,6 +126,13 @@
     (put! log-chan ev')
     nil))
 
+(s/defn ^:private stop-workers! :- VOID
+  [workers :- [MbsyncWorker]]
+  (dorun
+    (pmap #(do (close! (:req-chan %))
+               (comp/stop %))
+          workers)))
+
 (declare process-command)
 
 (t/defrecord ^:private MbsyncMaster
@@ -140,14 +146,13 @@
 
   (start [this]
     (log-with-timestamp! log-chan this)
-    (let [c (thread-loop [workers {}]
-              (let [cmd (when (.get status)
-                          (<!! cmd-chan))]
-                ;; We are terminal consumer of commands, so log them
-                (when cmd
-                  (put! log-chan cmd))
-                (when-let [workers (process-command this workers cmd)]
-                  (recur workers))))]
+    (let [c (thread-loop [worker-map {}]
+              (if-some [cmd (when (.get status)
+                              (<!! cmd-chan))]
+                ;; We are the terminal consumer of commands, so log them
+                (do (put! log-chan cmd)
+                    (recur (process-command this worker-map cmd)))
+                (stop-workers! (vals worker-map))))]
       (assoc this :exit-fn
              #(do (.set status false) ; Stop after current iteration
                   (<!! c)
@@ -194,7 +199,7 @@
 (s/defn ^:private dispatch-syncs :- {String MbsyncWorker}
   "Dispatch sync jobs to MbsyncWorker instances. Creates a new mbchan worker
    if it does not exist."
-  [workers       :- {String MbsyncWorker}
+  [worker-map    :- {String MbsyncWorker}
    id            :- Int
    sync-req      :- SyncRequest
    mbsync-master :- MbsyncMaster]
@@ -212,23 +217,16 @@
           (do
             (put! (:log-chan mbsync-master) (->MbsyncUnknownChannelError id ch))
             ws)))
-      workers sync-req)))
+      worker-map sync-req)))
 
-(s/defn ^:private process-command :- (maybe {String MbsyncWorker})
+(s/defn ^:private process-command :- {String MbsyncWorker}
   [mbsync-master :- MbsyncMaster
-   workers       :- {String MbsyncWorker}
+   worker-map    :- {String MbsyncWorker}
    cmd           :- (maybe Command)]
-  (if cmd
-    (case (:opcode cmd)
-      :sync (dispatch-syncs workers
-                            (:id cmd)
-                            (:payload cmd)
-                            mbsync-master)
-      :sync/term (do (doseq [w (vals workers)]
-                       (sig-notify-all (:status w)))
-                     workers)
-      workers)
-    (dorun (pmap (fn [w]
-                   (close! (:req-chan w))
-                   (comp/stop w))
-                 (vals workers)))))
+  (case (:opcode cmd)
+    :sync (dispatch-syncs
+            worker-map (:id cmd) (:payload cmd) mbsync-master)
+    :sync/term (do (doseq [w (vals worker-map)]
+                     (sig-notify-all (:status w)))
+                   worker-map)
+    worker-map))
