@@ -60,27 +60,26 @@
                 (str "Connection polling period set to " (human-duration period))))))
 
 (t/defrecord MbsyncEventStart
-  [level  :- Int
-   id     :- Int
+  [id     :- Int
    mbchan :- String
    mboxes :- StringList
    start  :- DateTime]
 
   Loggable
 
-  (log-level [_] level)
+  (log-level [_] INFO)
 
   (log-item [_]
     (let [msg (format "Starting `mbsync %s`" (join-mbargs mbchan mboxes))]
-      (LogItem. level start msg))))
+      (LogItem. INFO start msg))))
 
 (t/defrecord MbsyncEventStop
-  [level   :- Int
-   id      :- Int
+  [id      :- Int
    mbchan  :- String
    mboxes  :- StringList
    start   :- DateTime
    stop    :- DateTime
+   level   :- Int
    status  :- Int
    error   :- (maybe String)
    maildir :- (maybe Maildirstore)]

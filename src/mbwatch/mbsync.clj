@@ -33,7 +33,7 @@
             [mbwatch.events :refer [->MbsyncUnknownChannelError
                                     strict-map->MbsyncEventStart
                                     strict-map->MbsyncEventStop]]
-            [mbwatch.logging :refer [->LogItem DEBUG ERR INFO Loggable NOTICE
+            [mbwatch.logging :refer [->LogItem DEBUG ERR Loggable NOTICE
                                      WARNING log-with-timestamp!]]
             [mbwatch.process :as process]
             [mbwatch.types :as t :refer [StringList SyncRequest VOID]]
@@ -104,8 +104,7 @@
    mboxes        :- StringList]
   (let [{:keys [rc maildir mbchan log-chan status]} mbsync-worker
         ev (strict-map->MbsyncEventStart
-             {:level INFO
-              :id id
+             {:id id
               :mbchan mbchan
               :mboxes mboxes
               :start (DateTime.)})
@@ -117,8 +116,8 @@
         v (.exitValue proc)
         ev' (strict-map->MbsyncEventStop
               (assoc ev
-                     :level (if graceful? (if (zero? v) NOTICE ERR) WARNING)
                      :stop (DateTime.)
+                     :level (if graceful? (if (zero? v) NOTICE ERR) WARNING)
                      :status v
                      :error (when (and graceful? (not (zero? v)))
                               (let [s (StringWriter.)]
