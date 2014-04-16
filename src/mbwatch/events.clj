@@ -44,10 +44,10 @@
       (LogItem. level timestamp (str "Channel " mbchan suffix)))))
 
 (t/defrecord IMAPConnectionEvent
-  [type            :- (enum :start :success :badauth :failure :stop :disconnect :lost)
-   imap-url        :- String
-   error           :- (maybe String)
-   timestamp       :- DateTime]
+  [type      :- (enum :start :success :badauth :failure :stop :disconnect :lost)
+   imap-url  :- String
+   error     :- (maybe String)
+   timestamp :- DateTime]
 
   Loggable
 
@@ -174,9 +174,9 @@
       "Notifications disabled.")))
 
 (defloggable SyncTimerPreferenceEvent INFO
-  [type       :- (enum :period :sync-request)
-   timer      :- Timer
-   sync-req   :- SyncRequest]
+  [type     :- (enum :period :sync-request)
+   timer    :- Timer
+   sync-req :- SyncRequest]
   (let [period (:period timer)]
     (case type
       :period (if (zero? period)
