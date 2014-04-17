@@ -24,7 +24,7 @@
             `(alter-meta! ~(get-var "strict-map->") assoc :private true)))))
 
 (defmacro tuple [& schemas]
-  `[~@(mapv (fn [f s d] `(~f ~s ~d)) (repeat one) schemas (mapv str schemas))])
+  `[~@(mapv (fn [s] `(~one ~s ~(str s))) schemas)])
 
 (s/defn atom-of :- Schema
   [inner-schema :- Schema
