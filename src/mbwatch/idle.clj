@@ -28,7 +28,7 @@
             [mbwatch.types :as t :refer [ConnectionMapAtom NotifyMap
                                          NotifyMapAtom VOID Word]]
             [mbwatch.util :refer [url-for]]
-            [schema.core :as s :refer [Int]])
+            [schema.core :as s :refer [Any Int maybe]])
   (:import (clojure.lang IFn)
            (com.sun.mail.imap IMAPFolder IMAPStore)
            (com.sun.mail.util MailConnectException)
@@ -57,39 +57,39 @@
       (.setProperty props (str "mail.imaps" k) v))
     props))
 
-(defmacro ^:private with-connection
-  {:requires [->IMAPProperties Session]}
-  [imap-credential log-chan timeout [store-sym] & body]
-  `(let [{host# :host port# :port user# :user pass# :pass ssl?# :ssl?} ~imap-credential
-         scheme# (if ssl?# "imaps" "imap")
-         url# (~url-for scheme# host# user# port#)
-         store# (-> (->IMAPProperties ~timeout)
-                    (Session/getDefaultInstance)
-                    (.getStore scheme#))
-         log# (fn log#
-                ([type#] (log# type# nil))
-                ([type# err#] (~put! ~log-chan (new ~IMAPConnectionEvent
-                                                    % url# err# (new ~DateTime)))))]
-     (try
-       (log# :start)
-       (.connect store# host# port# user# pass#)
-       (log# :success)
-       (let [~store-sym store#]
-         ~@body)
-       (catch ~AuthenticationFailedException e#
-         (log# :badauth (str e#)))
-       ;; TODO: This is a subclass of MessagingException, but maybe it has
-       ;;       more descriptive messages?
-       (catch ~MailConnectException e#
-         (log# :failure (str e#)))
-       (catch ~MessagingException e#
-         (log# :failure (str e#)))
-       (finally
-         (if (.isConnected store#)
-           (do (log# :stop)
-               (.close store#)
-               (log# :disconnect))
-           (log# :lost))))))
+(s/defn ^:private with-imap-connection :- Any
+  [imap-credential :- IMAPCredential
+   log-chan        :- WritePort
+   timeout         :- Int
+   f               :- IFn]
+  (let [{:keys [host port user pass ssl?]} imap-credential
+        scheme (if ssl? "imaps" "imap")
+        url (url-for scheme host user port)
+        store (-> (->IMAPProperties timeout)
+                 (Session/getDefaultInstance)
+                  (.getStore scheme))
+        log (fn log
+              ([type] (log type nil))
+              ([type err] (put! log-chan (IMAPConnectionEvent. type url err (DateTime.)))))]
+    (try
+      (log :start)
+      (.connect store host port user pass)
+      (log :success)
+      (f store)
+      (catch AuthenticationFailedException e
+        (log :badauth (str e)))
+      ;; TODO: This is a subclass of MessagingException, but maybe it has more
+      ;;       descriptive messages?
+      (catch MailConnectException e
+        (log :failure (str e)))
+      (catch MessagingException e
+        (log :failure (str e)))
+      (finally
+        (if (.isConnected store)
+          (do (log :stop)
+              (.close store)
+              (log :disconnect))
+          (log :lost))))))
 
 (s/defn ^:private idle! :- VOID
   "IDLE on mbchan/mbox and queue :sync Commands on new messages. Blocks thread
@@ -152,7 +152,7 @@
    cmd-chan-out           :- WritePort
    log-chan               :- WritePort
    status                 :- AtomicBoolean
-   exit-fn                :- IFn]
+   exit-fn                :- (maybe IFn)]
 
   Lifecycle
 
