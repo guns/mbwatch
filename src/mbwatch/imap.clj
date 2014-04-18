@@ -67,7 +67,7 @@
         scheme (if ssl? "imaps" "imap")
         url (url-for scheme host user port)
         store (-> (->IMAPProperties timeout)
-                 (Session/getDefaultInstance)
+                  (Session/getDefaultInstance)
                   (.getStore scheme))
         log (fn log
               ([type] (log type nil))
@@ -77,14 +77,9 @@
       (.connect store host port user pass)
       (log :success)
       (f store)
-      (catch AuthenticationFailedException e
-        (log :badauth (str e)))
-      ;; TODO: This is a subclass of MessagingException, but maybe it has more
-      ;;       descriptive messages?
-      (catch MailConnectException e
-        (log :failure (str e)))
-      (catch MessagingException e
-        (log :failure (str e)))
+      (catch AuthenticationFailedException e (log :badauth (str e)))
+      (catch MailConnectException e (log :failure (str e))) ;; TODO: Do we want this?
+      (catch MessagingException e (log :failure (str e)))
       (finally
         (if (.isConnected store)
           (do (log :stop)
@@ -124,7 +119,7 @@
       (catch FolderNotFoundException e
         (put! log-chan (->IMAPCommandError :folder-not-found url (str e)))))))
 
-(t/defrecord IDLEWorker
+(t/defrecord ^:private IDLEWorker
   [mbchan          :- String
    mbox            :- String
    imap-credential :- IMAPCredential

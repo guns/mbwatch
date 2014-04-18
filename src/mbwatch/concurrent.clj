@@ -133,8 +133,8 @@
    Positive values lower than min-pos are interpreted as min-pos.
 
    Returns true if the Timer value changed, and false if it did not."
-  [timer      :- TimerAtom
+  [timer-atom :- TimerAtom
    new-period :- Int
    min-pos    :- Int]
-  (let [timer₀ @timer]
-    (not= timer₀ (swap! timer update-timer* new-period min-pos))))
+  (let [timer₀ @timer-atom]
+    (not= timer₀ (swap! timer-atom update-timer* new-period min-pos))))
