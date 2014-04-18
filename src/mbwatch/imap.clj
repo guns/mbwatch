@@ -1,4 +1,4 @@
-(ns mbwatch.idle
+(ns mbwatch.imap
   "
      ─────── Command ────────┐
                              │
@@ -18,8 +18,8 @@
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command :refer [->Command]]
-            [mbwatch.concurrent :refer [CHAN-SIZE sig-notify-all sig-wait
-                                        thread-loop]]
+            [mbwatch.concurrent :refer [CHAN-SIZE future-loop shutdown-future
+                                        sig-notify-all sig-wait thread-loop]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
             [mbwatch.events :refer [->IDLEEvent ->IDLENewMessageEvent
                                     ->IMAPCommandError]]
@@ -42,6 +42,7 @@
 
 (def ^:private ^:const CONNECTION-POOL-SIZE "16")
 (def ^:private ^:const IDLE-PERIOD (* 20 60 1000))
+(def ^:private ^:const IMAP-SHUTDOWN-TIMEOUT 2000)
 
 (s/defn ^:private ->IMAPProperties :- Properties
   "Return a copy of system properties with mail.imap(s) entries."
@@ -93,24 +94,16 @@
 
 (s/defn ^:private idle! :- VOID
   "IDLE on mbchan/mbox and queue :sync Commands on new messages. Blocks thread
-   indefinitely. Signal exit-lock to exit."
+   indefinitely. Signal status to restart. Set status to false then signal it
+   to exit."
   [imap-store :- IMAPStore
    mbchan     :- String
    mbox       :- String
-   exit-lock  :- Object
+   status     :- AtomicBoolean
    cmd-chan   :- WritePort
    log-chan   :- WritePort]
   (let [folder ^IMAPFolder (.getFolder imap-store mbox)
         url (str imap-store \/ mbox)
-        status (AtomicBoolean. true)
-        ;; A signal on exit-lock means GTFO
-        exit-loop (future
-                    (sig-wait exit-lock)
-                    (.set status false)
-                    (loop []
-                      (sig-notify-all status)
-                      (Thread/sleep 100)
-                      (recur)))
         handler (reify MessageCountListener
                   (messagesAdded [this ev]
                     (put! log-chan (->IDLENewMessageEvent (count (.getMessages ev)) url))
@@ -123,23 +116,53 @@
         (when (.get status)
           (let [idle (future (.idle folder))]
             ;; The IDLE command may be terminated after 30 minutes
-            (sig-wait status IDLE-PERIOD)
-            (future-cancel idle)
+            (try
+              (sig-wait status IDLE-PERIOD)
+              (finally
+                (future-cancel idle)))
             (recur))))
       (catch FolderNotFoundException e
-        (put! log-chan (->IMAPCommandError :folder-not-found url (str e))))
-      (finally
-        (future-cancel exit-loop)))))
+        (put! log-chan (->IMAPCommandError :folder-not-found url (str e)))))))
 
 (t/defrecord IDLEWorker
-  []
-  ; imap-credential log-chan timeout
-  ; mbchan     :- String
-  ; mbox       :- String
-  ; exit-lock  :- Object
-  ; cmd-chan   :- WritePort
-  ; log-chan   :- WritePort
-  )
+  [mbchan          :- String
+   mbox            :- String
+   imap-credential :- IMAPCredential
+   timeout         :- Int
+   cmd-chan        :- WritePort
+   log-chan        :- WritePort
+   status          :- AtomicBoolean
+   exit-fn         :- (maybe IFn)]
+
+  Lifecycle
+
+  (start [this]
+    (log-with-timestamp! log-chan this)
+    (let [f (future-loop []
+              (when (.get status)
+                (with-imap-connection imap-credential log-chan timeout
+                  (fn [store]
+                    (idle! store mbchan mbox status cmd-chan log-chan)))
+                (recur)))]
+      ;; IDLEMaster will close the shared outgoing channels
+      (assoc this :exit-fn
+             #(do (.set status false)     ; Stop after current iteration
+                  (sig-notify-all status) ; Stop IMAP connection
+                  (shutdown-future f IMAP-SHUTDOWN-TIMEOUT)))))
+
+  (stop [this]
+    (log-with-timestamp! log-chan this)
+    (exit-fn)
+    (assoc this :exit-fn nil))
+
+  Loggable
+
+  (log-level [_] DEBUG)
+
+  (log-item [this]
+    (->LogItem this (format "%s IDLEWorker for %s/%s"
+                            (if exit-fn "↓ Stopping" "↑ Starting")
+                            mbchan mbox))))
 
 (declare process-command)
 (declare stop-workers!)
