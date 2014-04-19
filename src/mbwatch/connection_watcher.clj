@@ -45,7 +45,7 @@
             [mbwatch.types :as t :refer [ConnectionMap ConnectionMapAtom
                                          SyncRequest VOID Word tuple]]
             [mbwatch.util :refer [human-duration]]
-            [schema.core :as s :refer [Int maybe pair]])
+            [schema.core :as s :refer [Int either maybe pair]])
   (:import (clojure.lang IFn)
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.command Command)
@@ -61,14 +61,19 @@
    When an mbchan goes from true -> false, its :pending-syncs value is reset
    to nil.
 
+   If timeout-or-status is a boolean value, no network connections are
+   attempted, and all relevant :status entries are set to the value.
+
    mbchans not present in mbchan->IMAPCredential are ignored."
   [conn-map               :- ConnectionMap
    mbchan->IMAPCredential :- {Word IMAPCredential}
-   timeout                :- Int]
+   timeout-or-status      :- (either Int Boolean)]
   (->> conn-map
        (pmap (fn [[mbchan m]]
                (if-some [imap (mbchan->IMAPCredential mbchan)]
-                 (let [status (reachable? (:host imap) (:port imap) timeout)]
+                 (let [status (if (integer? timeout-or-status)
+                                (reachable? (:host imap) (:port imap) timeout-or-status)
+                                timeout-or-status)]
                    ;; true -> false
                    (if (and (true? (:status m)) (false? status))
                      [mbchan (assoc m :status status :pending-syncs nil)]
@@ -201,6 +206,21 @@
      :status (AtomicBoolean. true)
      :exit-fn nil}))
 
+(s/defn ^:private handle-time-jump! :- Boolean
+  "Sets :connections-atom to false, logs a TimeJumpEvent, and returns true if
+   the interval between the current time and the :alarm time is greater than
+   TIME-JUMP-INTERVAL."
+  [connection-watcher :- ConnectionWatcher]
+  (let [{:keys [connections-atom timer-atom log-chan mbchan->IMAPCredential]} connection-watcher]
+    (if (and (seq @connections-atom)
+             (> (- (System/currentTimeMillis) (:alarm @timer-atom)) TIME-JUMP-INTERVAL))
+      (do (put! log-chan (->TimeJumpEvent 0 0))
+          ;; Set all connections to false; anything could have happened while
+          ;; the machine was asleep
+          (swap! connections-atom #(update-connections % mbchan->IMAPCredential false))
+          true)
+      false)))
+
 (s/defn ^:private watch-connections! :- VOID
   "Poll and update connections in the connections atom. Notify `status` to
    trigger an early connection check, and set it to false to exit.
@@ -215,11 +235,7 @@
       (when (.get status)
         (sig-wait-timer timer-atom)
         (when (.get status)
-          (let [time-jump? (when (and (seq @connections-atom)
-                                      (> (- (System/currentTimeMillis) (:alarm @timer-atom))
-                                         TIME-JUMP-INTERVAL))
-                             (put! log-chan (->TimeJumpEvent 0 0))
-                             true)
+          (let [time-jump? (handle-time-jump! connection-watcher)
                 ;; Update connections, then check if they are all reachable
                 up? (-> connections-atom
                         (swap! #(update-connections % mbchan->IMAPCredential timeout))
