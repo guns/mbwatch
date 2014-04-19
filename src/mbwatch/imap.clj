@@ -1,18 +1,18 @@
 (ns mbwatch.imap
   "
-     ─────── Command ────────┐
-                             │
-                             ▼                      ─┐
-                       ┌────────────┐                │
-                       │ IDLEMaster │                │
-                       └─────┬──────┘                │
-                             │                       │
-                  ┌──────────┴──────────┐            ├── Loggable ───▶
-                  ▼                     ▼            │
-           ┌────────────┐         ┌────────────┐     │
-           │ IDLEWorker │    …    │ IDLEWorker │     │
-           └────────────┘         └────────────┘     │
-                                                    ─┘
+             ─────── Command ────────┐
+                                     │
+                                     ▼                      ─┐
+   ┌┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┐       ┌────────────┐                │
+   ┊ ConnectionMapAtom ├┄┄┄┄┄▷ │ IDLEMaster │                │
+   └┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┘       └─────┬──────┘                │
+                                     │                       │
+                          ┌──────────┴──────────┐            ├── Loggable ───▶
+                          ▼                     ▼            │
+                   ┌────────────┐         ┌────────────┐     │
+                   │ IDLEWorker │    …    │ IDLEWorker │     │
+                   └────────────┘         └────────────┘     │
+                                                            ─┘
   "
   (:require [clojure.core.async :refer [<!! >!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
@@ -42,7 +42,7 @@
 
 (def ^:private ^:const CONNECTION-POOL-SIZE "16")
 (def ^:private ^:const IDLE-PERIOD (* 20 60 1000))
-(def ^:private ^:const IMAP-SHUTDOWN-TIMEOUT 2000)
+(def ^:private ^:const IMAP-SHUTDOWN-TIMEOUT 5000)
 
 (s/defn ^:private ->IMAPProperties :- Properties
   "Return a copy of system properties with mail.imap(s) entries."
@@ -165,6 +165,7 @@
 (t/defrecord IDLEMaster
   [mbchan->IMAPCredential :- {Word IMAPCredential}
    idle-map-atom          :- NotifyMapAtom
+   connections-atom       :- ConnectionMapAtom
    timeout                :- Int
    cmd-chan-in            :- ReadPort
    cmd-chan-out           :- WritePort
@@ -182,10 +183,10 @@
                 (recur (process-command this worker-map cmd))
                 (stop-workers! (vals worker-map))))]
       (assoc this :exit-fn
-             #(do (.set status false) ; Stop after current iteration
+             #(do (.set status false)   ; Stop after current iteration
                   (<!! c)
-                  (close! log-chan)   ; Close outgoing channels
-                  ))))
+                  (close! cmd-chan-out) ; Close outgoing channels
+                  (close! log-chan)))))
 
   (stop [this]
     (log-with-timestamp! log-chan this)
@@ -202,14 +203,14 @@
 (s/defn ->IDLEMaster :- IDLEMaster
   [mbchan->IMAPCredential :- {Word IMAPCredential}
    idle-map               :- NotifyMap
-   timeout                :- Int
    connections-atom       :- ConnectionMapAtom ; Read-only!
+   timeout                :- Int
    cmd-chan-in            :- ReadPort]
   (strict-map->IDLEMaster
     {:mbchan->IMAPCredential mbchan->IMAPCredential
-     :notify-map-atom (atom idle-map)
-     :timeout timeout
+     :idle-map-atom (atom idle-map)
      :connections-atom connections-atom
+     :timeout timeout
      :cmd-chan-in cmd-chan-in
      :cmd-chan-out (chan CHAN-SIZE)
      :log-chan (chan CHAN-SIZE)

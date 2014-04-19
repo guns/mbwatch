@@ -14,7 +14,12 @@
    The unreachable :sync entries are merged into a pool of pending syncs which
    are released as each respective server becomes available.
 
-                        ┌───────────────────┐
+                        ┌┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┐
+                        ┊ ConnectionMapAtom ┊
+                        └┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┘
+                                  △
+                                  │
+                        ┌─────────┴─────────┐
         ─── Command ──▶ │ ConnectionWatcher ├─── Command ──▶
                         └─────────┬─────────┘
                                   │
@@ -180,7 +185,8 @@
                             (human-duration (:period @timer-atom))))))
 
 (s/defn ->ConnectionWatcher :- ConnectionWatcher
-  [mbchan->IMAPCredential :- {Word IMAPCredential}
+  [connections-atom       :- ConnectionMapAtom
+   mbchan->IMAPCredential :- {Word IMAPCredential}
    period                 :- Int
    timeout                :- Int
    cmd-chan-in            :- ReadPort]
@@ -189,7 +195,7 @@
      :cmd-chan-in cmd-chan-in
      :cmd-chan-out (chan CHAN-SIZE)
      :log-chan (chan CHAN-SIZE)
-     :connections-atom (atom {})
+     :connections-atom connections-atom
      :timer-atom (atom (->Timer period MIN-POS-PERIOD false))
      :timeout timeout
      :status (AtomicBoolean. true)

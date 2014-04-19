@@ -1,54 +1,54 @@
 (ns mbwatch.core
   "
-     ────── Command ─────────┐
-                             │
-                             │ 0
-                             ▼                     ──┐
-                       ┌───────────┐                 │
-                       │ SyncTimer │                 │
-                       └─────┬─────┘                 │
-                             │                       │
-                             │ 1                     │
-                             ▼                       │
-                       ┌────────────┐                │
-     ┌ ─ ─ ─ ─ ─ ─ ─ ▷ │ IDLEMaster │                │
-                       └─────┬──────┘                │
-     │                       │                       │
-                  ┌──────────┴──────────┐            │
-     │            ▼                     ▼            │
-           ┌────────────┐         ┌────────────┐     │
-     │     │ IDLEWorker │    …    │ IDLEWorker │     │
-           └──────┬─────┘         └─────┬──────┘     │
-     │            └──────────┬──────────┘            │
-                             │ 2                     ├── Loggable ──┐
-     │                       ▼                       │              │
-                   ┌───────────────────┐             │              │
-     └ ─ ─ ─ ─ ─ ─ │ ConnectionWatcher │             │              │
-                   └─────────┬─────────┘             │              │
-                             │                       │              │
-                             │ 3                     │              │
-                             ▼                       │              │
-                      ┌──────────────┐               │              │
-                      │ MbsyncMaster │               │              │
-                      └──────┬───────┘               │              │
-                             │                       │              │
-                  ┌──────────┴──────────┐            │              │
-                  ▼                     ▼            │              │
-          ┌──────────────┐       ┌──────────────┐    │              │
-          │ MbsyncWorker │   …   │ MbsyncWorker │    │              │
-          └──────────────┘       └──────────────┘    │              │
-                                                   ──┘              │
-                                                                    │
-                                                                    │
-             ┌───────────────────────────────┐                      │
-             │ NewMessageNotificationService │ ◀────────────────────┘
-             └───────────────┬───────────────┘            0
-                             │
-                             │ 1
-                             ▼
-                     ┌────────────────┐
-                     │ LoggingService │
-                     └────────────────┘
+              ────── Command ─────────┐
+                                      │
+                                      │ 0
+                                      ▼                     ──┐
+                                ┌───────────┐                 │
+                                │ SyncTimer │                 │
+                                └─────┬─────┘                 │
+                                      │                       │
+                                      │ 1                     │
+                                      ▼                       │
+                                ┌────────────┐                │
+             ┌┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄▷ │ IDLEMaster │                │
+             ┊                  └─────┬──────┘                │
+             ┊                        │                       │
+             ┊             ┌──────────┴──────────┐            │
+             ┊             ▼                     ▼            │
+             ┊      ┌────────────┐         ┌────────────┐     │
+             ┊      │ IDLEWorker │    …    │ IDLEWorker │     │
+             ┊      └──────┬─────┘         └─────┬──────┘     │
+             ┊             └──────────┬──────────┘            │
+             ┊                        │ 2                     ├── Loggable ──┐
+             ┊                        ▼                       │              │
+   ┌┄┄┄┄┄┄┄┄┄┴┄┄┄┄┄┄┄┄┄┐    ┌───────────────────┐             │              │
+   ┊ ConnectionMapAtom ┊ ◁┄┄┤ ConnectionWatcher │             │              │
+   └┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┘    └─────────┬─────────┘             │              │
+                                      │                       │              │
+                                      │ 3                     │              │
+                                      ▼                       │              │
+                               ┌──────────────┐               │              │
+                               │ MbsyncMaster │               │              │
+                               └──────┬───────┘               │              │
+                                      │                       │              │
+                           ┌──────────┴──────────┐            │              │
+                           ▼                     ▼            │              │
+                   ┌──────────────┐       ┌──────────────┐    │              │
+                   │ MbsyncWorker │   …   │ MbsyncWorker │    │              │
+                   └──────────────┘       └──────────────┘    │              │
+                                                            ──┘              │
+                                                                             │
+                                                                             │
+                      ┌───────────────────────────────┐                      │
+                      │ NewMessageNotificationService │ ◀────────────────────┘
+                      └───────────────┬───────────────┘            0
+                                      │
+                                      │ 1
+                                      ▼
+                              ┌────────────────┐
+                              │ LoggingService │
+                              └────────────────┘
   "
   (:require [clojure.core.async :as async :refer [chan close!]]
             [clojure.core.async.impl.protocols :refer [WritePort]]
@@ -60,6 +60,7 @@
             [mbwatch.console-logger :refer [->ConsoleLogger
                                             MILLIS-TIMESTAMP-FORMAT
                                             get-default-colors]]
+            [mbwatch.imap :refer [->IDLEMaster]]
             [mbwatch.logging :refer [->LoggingService DEBUG]]
             [mbwatch.mbsync :refer [->MbsyncMaster]]
             [mbwatch.notification :refer [->NewMessageNotificationService]]
@@ -68,6 +69,7 @@
             [schema.core :as s])
   (:import (mbwatch.config Config)
            (mbwatch.connection_watcher ConnectionWatcher)
+           (mbwatch.imap IDLEMaster)
            (mbwatch.logging LoggingService)
            (mbwatch.mbsync MbsyncMaster)
            (mbwatch.notification NewMessageNotificationService)
@@ -79,6 +81,7 @@
    notification-service :- NewMessageNotificationService
    mbsync-master        :- MbsyncMaster
    connection-watcher   :- ConnectionWatcher
+   idle-master          :- IDLEMaster
    sync-timer           :- SyncTimer]
 
   Lifecycle
@@ -97,30 +100,41 @@
 
 (s/defn ->Application :- Application
   [config :- Config]
-  (let [;; Command pipeline
+  (let [connections-atom (atom {})
+        ;; Command pipeline
         sync-timer (->SyncTimer {} ; FIXME: Move to config
                                 (chan CHAN-SIZE)
                                 (-> config :mbwatchrc :sync-timer-period))
         cmd-chan-0 (:cmd-chan-in sync-timer)
         cmd-chan-1 (:cmd-chan-out sync-timer)
         ;; ->
+        idle-master (->IDLEMaster (-> config :mbsyncrc :mbchan->IMAPCredential)
+                                  {"self" #{"INBOX"}}
+                                  connections-atom
+                                  (-> config :mbwatchrc :imap-socket-timeout)
+                                  cmd-chan-1)
+        cmd-chan-2 (:cmd-chan-out idle-master)
+        ;; ->
         connection-watcher (->ConnectionWatcher
+                             connections-atom
                              (-> config :mbsyncrc :mbchan->IMAPCredential)
                              (-> config :mbwatchrc :connection-period)
                              (-> config :mbwatchrc :connection-timeout)
                              cmd-chan-1)
-        cmd-chan-2 (:cmd-chan-out connection-watcher)
+        cmd-chan-3 (:cmd-chan-out connection-watcher)
         ;; ->
         mbsync-master (->MbsyncMaster (:mbsyncrc config)
-                                      cmd-chan-2)
+                                      cmd-chan-3)
         ;; Logging pipeline
+        log-chan-0 (-> (mapv :log-chan [sync-timer
+                                        idle-master
+                                        connection-watcher
+                                        mbsync-master])
+                       (async/merge CHAN-SIZE))
         notification-service (->NewMessageNotificationService
                                (-> config :mbwatchrc :notify-command)
                                {"self" #{"INBOX"}} ; FIXME: Move to config
-                               (async/merge (mapv :log-chan [sync-timer
-                                                             connection-watcher
-                                                             mbsync-master])
-                                            CHAN-SIZE))
+                               log-chan-0)
         log-chan-1 (:log-chan-out notification-service)
         ;; ->
         logging-service (->LoggingService
@@ -132,4 +146,5 @@
                   notification-service
                   mbsync-master
                   connection-watcher
+                  idle-master
                   sync-timer)))
