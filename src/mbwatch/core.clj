@@ -50,10 +50,11 @@
                               │ LoggingService │
                               └────────────────┘
   "
-  (:require [clojure.core.async :as async :refer [chan close!]]
+  (:require [clojure.core.async :as async :refer [>!! chan close!]]
             [clojure.core.async.impl.protocols :refer [WritePort]]
             [com.stuartsierra.component :refer [Lifecycle start-system
                                                 stop-system]]
+            [mbwatch.command :refer [->Command]]
             [mbwatch.concurrent :refer [CHAN-SIZE]]
             [mbwatch.config]
             [mbwatch.connection-watcher :refer [->ConnectionWatcher]]
@@ -102,7 +103,7 @@
   [config :- Config]
   (let [connections-atom (atom {})
         ;; Command pipeline
-        sync-timer (->SyncTimer {} ; FIXME: Move to config
+        sync-timer (->SyncTimer {"self" ["INBOX"]} ; FIXME: Move to config
                                 (chan CHAN-SIZE)
                                 (-> config :mbwatchrc :sync-timer-period))
         cmd-chan-0 (:cmd-chan-in sync-timer)
@@ -141,6 +142,9 @@
                           DEBUG
                           (->ConsoleLogger System/out (get-default-colors) MILLIS-TIMESTAMP-FORMAT)
                           log-chan-1)]
+    ;; Initial sync
+    ;; FIXME: This should be a union of the idle-map and the sync-request-map
+    (>!! cmd-chan-0 (->Command :sync {"self" ["INBOX"]}))
     (Application. cmd-chan-0
                   logging-service
                   notification-service

@@ -140,7 +140,9 @@
                 (with-imap-connection imap-credential log-chan timeout
                   (fn [store]
                     (idle! store mbchan mbox status cmd-chan log-chan)))
-                (recur)))]
+                (when (.get status)
+                  (>!! cmd-chan (->Command :sync {mbchan [mbox]}))
+                  (recur))))]
       ;; IDLEMaster will close the shared outgoing channels
       (assoc this :exit-fn
              #(do (.set status false)     ; Stop after current iteration

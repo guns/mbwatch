@@ -22,7 +22,7 @@
 
 (def ^:private imap-connection-event-map
   {:start      [INFO    "Connecting "]
-   :success    [NOTICE  "Connected "]
+   :success    [INFO    "Connected "]
    :badauth    [ERR     "Authentication failed for "]
    :failure    [WARNING "Failed to connect "]
    :stop       [INFO    "Disconnecting "]

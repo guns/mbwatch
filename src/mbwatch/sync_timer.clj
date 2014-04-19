@@ -96,7 +96,7 @@
      :cmd-chan-out (chan CHAN-SIZE)
      :log-chan (chan CHAN-SIZE)
      :sync-request-atom (atom sync-req)
-     :timer-atom (atom (->Timer period MIN-POS-PERIOD true))
+     :timer-atom (atom (->Timer period MIN-POS-PERIOD false))
      :status (AtomicBoolean. true)
      :exit-fn nil}))
 
