@@ -16,7 +16,8 @@
   "
   (:require [clojure.core.async :refer [<!! >!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
-            [com.stuartsierra.component :refer [Lifecycle]]
+            [clojure.set :refer [intersection subset?]]
+            [com.stuartsierra.component :as comp :refer [Lifecycle]]
             [mbwatch.command :refer [->Command]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-loop shutdown-future
                                         sig-notify-all sig-wait thread-loop]]
@@ -25,10 +26,10 @@
                                     ->IMAPCommandError]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
-            [mbwatch.types :as t :refer [ConnectionMapAtom NotifyMap
+            [mbwatch.types :as t :refer [ConnectionMapAtom MbTuple NotifyMap
                                          NotifyMapAtom VOID Word]]
-            [mbwatch.util :refer [url-for]]
-            [schema.core :as s :refer [Any Int maybe]])
+            [mbwatch.util :refer [map-mbtuples notify-map-diff url-for]]
+            [schema.core :as s :refer [Any Int defschema maybe]])
   (:import (clojure.lang IFn)
            (com.sun.mail.imap IMAPFolder IMAPStore)
            (com.sun.mail.util MailConnectException)
@@ -37,6 +38,7 @@
            (javax.mail AuthenticationFailedException Folder
                        FolderNotFoundException MessagingException Session)
            (javax.mail.event MessageCountListener)
+           (mbwatch.command Command)
            (mbwatch.events IMAPConnectionEvent)
            (org.joda.time DateTime)))
 
@@ -160,7 +162,8 @@
                             mbchan mbox))))
 
 (declare process-command)
-(declare stop-workers!)
+(declare start-workers)
+(declare stop-workers)
 
 (t/defrecord IDLEMaster
   [mbchan->IMAPCredential :- {Word IMAPCredential}
@@ -177,12 +180,13 @@
 
   (start [this]
     (log-with-timestamp! log-chan this)
-    (let [c (thread-loop [worker-map {}]
+    (let [c (thread-loop [worker-map (start-workers
+                                       this {} (map-mbtuples @idle-map-atom))]
               (if-some [cmd (when (.get status) (<!! cmd-chan-in))]
                 ;; Convey commands ASAP
                 (do (>!! cmd-chan-out cmd)
                     (recur (process-command this worker-map cmd)))
-                (stop-workers! (vals worker-map))))]
+                (stop-workers worker-map)))]
       (assoc this :exit-fn
              #(do (.set status false)   ; Stop after current iteration
                   (<!! c)
@@ -217,3 +221,55 @@
      :log-chan (chan CHAN-SIZE)
      :status (AtomicBoolean. true)
      :exit-fn nil}))
+
+(s/defn ^:private ->IDLEWorker :- IDLEWorker
+  [idle-master :- IDLEMaster
+   mbchan      :- String
+   mbox        :- String]
+  (let [{:keys [mbchan->IMAPCredential timeout cmd-chan-out log-chan]} idle-master]
+    (strict-map->IDLEWorker
+      {:mbchan mbchan
+       :mbox mbox
+       :imap-credential (mbchan->IMAPCredential mbchan)
+       :timeout timeout
+       :cmd-chan cmd-chan-out
+       :log-chan log-chan
+       :status (AtomicBoolean. true)
+       :exit-fn nil})))
+
+(defschema IDLEWorkerMap
+  {MbTuple IDLEWorker})
+
+(s/defn ^:private stop-workers :- IDLEWorkerMap
+  ([worker-map]
+   (stop-workers worker-map (set (keys worker-map))))
+  ([worker-map :- IDLEWorkerMap
+    mbtuples   :- #{MbTuple}]
+   {:pre [(subset? mbtuples (set (keys worker-map)))]}
+   (dorun
+     (pmap comp/stop (vals (select-keys worker-map mbtuples))))
+   (apply dissoc worker-map mbtuples)))
+
+(s/defn ^:private start-workers :- IDLEWorkerMap
+  [idle-master :- IDLEMaster
+   worker-map  :- IDLEWorkerMap
+   mbtuples    :- #{MbTuple}]
+  {:pre [(empty? (intersection mbtuples (set (keys worker-map))))]}
+  (reduce
+    (fn [m [mbchan mbox]]
+      (assoc m [mbchan mbox] (.start (->IDLEWorker idle-master mbchan mbox))))
+    worker-map mbtuples))
+
+(s/defn ^:private process-command :- IDLEWorkerMap
+  [idle-master :- IDLEMaster
+   worker-map  :- IDLEWorkerMap
+   command     :- Command]
+  (case (:opcode command)
+    :idle/set (let [{:keys [idle-map-atom]} idle-master
+                    state₀ @idle-map-atom
+                    state₁ (reset! idle-map-atom (:payload command))
+                    [Δ- Δ+] (notify-map-diff state₀ state₁)]
+                (-> worker-map
+                    (stop-workers Δ-)
+                    (as-> m (start-workers idle-master m Δ+))))
+    worker-map))
