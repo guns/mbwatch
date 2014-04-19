@@ -214,10 +214,10 @@
   (let [{:keys [connections-atom timer-atom log-chan mbchan->IMAPCredential]} connection-watcher]
     (if (and (seq @connections-atom)
              (> (- (System/currentTimeMillis) (:alarm @timer-atom)) TIME-JUMP-INTERVAL))
-      (do (put! log-chan (->TimeJumpEvent 0 0))
-          ;; Set all connections to false; anything could have happened while
-          ;; the machine was asleep
-          (swap! connections-atom #(update-connections % mbchan->IMAPCredential false))
+      ;; Set all connections to false; anything could have happened while the
+      ;; machine was asleep
+      (do (swap! connections-atom #(update-connections % mbchan->IMAPCredential false))
+          (put! log-chan (->TimeJumpEvent 0 0))
           true)
       false)))
 
