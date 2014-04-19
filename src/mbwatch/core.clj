@@ -109,7 +109,7 @@
         cmd-chan-1 (:cmd-chan-out sync-timer)
         ;; ->
         idle-master (->IDLEMaster (-> config :mbsyncrc :mbchan->IMAPCredential)
-                                  {"self" #{"INBOX"}}
+                                  {"self" #{"INBOX"}} ; FIXME: Move to config
                                   connections-atom
                                   (-> config :mbwatchrc :imap-socket-timeout)
                                   cmd-chan-1)

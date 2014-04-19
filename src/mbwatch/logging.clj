@@ -128,7 +128,8 @@
                 (log* logger level loggable)
                 (recur)))]
       (assoc this :exit-fn
-             #(<!! c))))
+             #(<!! c) ; Process all loggables before exiting
+             )))
 
   (stop [this]
     (exit-fn)

@@ -178,9 +178,10 @@
   (start [this]
     (log-with-timestamp! log-chan this)
     (let [c (thread-loop [worker-map {}]
-              (if-some [cmd (when (.get status)
-                              (<!! cmd-chan-in))]
-                (recur (process-command this worker-map cmd))
+              (if-some [cmd (when (.get status) (<!! cmd-chan-in))]
+                ;; Convey commands ASAP
+                (do (>!! cmd-chan-out cmd)
+                    (recur (process-command this worker-map cmd)))
                 (stop-workers! (vals worker-map))))]
       (assoc this :exit-fn
              #(do (.set status false)   ; Stop after current iteration

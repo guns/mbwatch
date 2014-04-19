@@ -147,8 +147,7 @@
   (start [this]
     (log-with-timestamp! log-chan this)
     (let [c (thread-loop [worker-map {}]
-              (if-some [cmd (when (.get status)
-                              (<!! cmd-chan))]
+              (if-some [cmd (when (.get status) (<!! cmd-chan))]
                 ;; We are the terminal consumer of commands, so log them
                 (do (put! log-chan cmd)
                     (recur (process-command this worker-map cmd)))
