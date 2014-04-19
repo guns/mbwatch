@@ -1,7 +1,8 @@
 (ns mbwatch.util
-  (:require [clojure.string :as string]
-            [mbwatch.types :refer [StringList SyncRequest]]
-            [schema.core :as s :refer [Int pred]])
+  (:require [clojure.set :refer [difference]]
+            [clojure.string :as string]
+            [mbwatch.types :refer [NotifyMap StringList SyncRequest]]
+            [schema.core :as s :refer [Int pair pred]])
   (:import (clojure.lang Symbol)
            (java.net URLEncoder)
            (org.joda.time DateTime Duration Instant ReadableInstant)))
@@ -117,6 +118,37 @@
   (str scheme "://"
        (URLEncoder/encode user "UTF-8") \@
        (URLEncoder/encode host "UTF-8") \: port))
+
+(s/defn ^:private notify-map-entries :- #{(pair String "mbchan" String "mbox")}
+  [notify-map :- NotifyMap]
+  (reduce-kv
+    (fn [v mbchan mboxes]
+      (reduce
+        (fn [v mbox]
+          (conj v [mbchan mbox]))
+        v mboxes))
+    #{} notify-map))
+
+(s/defn ^:private notify-map-diff* :- (pair NotifyMap "removals"
+                                  NotifyMap "additions")
+  [nm₁ :- NotifyMap
+   nm₂ :- NotifyMap]
+  (reduce
+    (fn [[rem add] mbchan]
+      (let [s₁ (or (nm₁ mbchan) #{})
+            s₂ (or (nm₂ mbchan) #{})
+            Δ- (difference s₁ s₂)
+            Δ+ (difference s₂ s₁)]
+        [(cond-> rem (seq Δ-) (assoc mbchan Δ-))
+         (cond-> add (seq Δ+) (assoc mbchan Δ+))]))
+    [{} {}] (distinct (mapcat keys [nm₁ nm₂]))))
+
+(s/defn notify-map-diff :- (pair #{(pair String "mbchan" String "mbox")} "removals"
+                                 #{(pair String "mbchan" String "mbox")} "additions")
+  [nm₁ :- NotifyMap
+   nm₂ :- NotifyMap]
+  (->> (notify-map-diff* nm₁ nm₂)
+       (mapv notify-map-entries)))
 
 (defmacro catch-print [& body]
   `(try

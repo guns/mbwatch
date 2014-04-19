@@ -3,8 +3,9 @@
             [clojure.test :refer [is]]
             [mbwatch.util :refer [catch-print chomp class-name dequote
                                   human-duration istr= join-mbargs
-                                  join-sync-request schema-params
-                                  shell-escape to-ms url-for zero-or-min]]
+                                  join-sync-request notify-map-diff
+                                  schema-params shell-escape to-ms url-for
+                                  zero-or-min]]
             [schema.test :refer [deftest]])
   (:import (org.joda.time DateTime)))
 
@@ -69,6 +70,12 @@
 (deftest test-url-for
   (is (= "imaps://foo%40example.com@example.com:993"
          (url-for "imaps" "foo@example.com" "example.com" 993))))
+
+(deftest test-notify-map-diff
+  (is (= (notify-map-diff {"α" #{"b"} "β" #{"b"} "γ" #{"b"}}
+                          {"α" #{"a" "c"} "β" #{"b" "c"}})
+         [#{["α" "b"] ["γ" "b"]}
+          #{["α" "a"] ["α" "c"] ["β" "c"]}])))
 
 (deftest test-catch-print
   (is (nil? (catch-print (throw (RuntimeException. "TESTING catch-print"))))))
