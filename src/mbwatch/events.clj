@@ -26,7 +26,7 @@
    :badauth    [ERR     "Authentication failed for "]
    :failure    [WARNING "Failed to connect "]
    :stop       [INFO    "Disconnecting "]
-   :disconnect [INFO    "Disconnected "]
+   :disconnect [WARNING "Disconnected "]
    :lost       [WARNING "Lost connection to "]})
 
 (t/defrecord ConnectionEvent

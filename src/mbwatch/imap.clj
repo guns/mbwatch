@@ -16,7 +16,7 @@
   "
   (:require [clojure.core.async :refer [<!! >!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
-            [clojure.set :refer [intersection subset?]]
+            [clojure.set :refer [intersection subset? union]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
             [mbwatch.command :refer [->Command]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-loop shutdown-future
@@ -28,7 +28,8 @@
                                      log-with-timestamp!]]
             [mbwatch.types :as t :refer [ConnectionMapAtom MbTuple NotifyMap
                                          NotifyMapAtom VOID Word]]
-            [mbwatch.util :refer [map-mbtuples notify-map-diff url-for]]
+            [mbwatch.util :refer [map-mbtuples notify-map-diff
+                                  notify-map-disj url-for]]
             [schema.core :as s :refer [Any Int defschema maybe]])
   (:import (clojure.lang IFn)
            (com.sun.mail.imap IMAPFolder IMAPStore)
@@ -248,9 +249,11 @@
   ([worker-map :- IDLEWorkerMap
     mbtuples   :- #{MbTuple}]
    {:pre [(subset? mbtuples (set (keys worker-map)))]}
-   (dorun
-     (pmap comp/stop (vals (select-keys worker-map mbtuples))))
-   (apply dissoc worker-map mbtuples)))
+   (if (seq mbtuples)
+     (do (dorun
+           (pmap comp/stop (vals (select-keys worker-map mbtuples))))
+         (apply dissoc worker-map mbtuples))
+     worker-map)))
 
 (s/defn ^:private start-workers :- IDLEWorkerMap
   [idle-master :- IDLEMaster
@@ -262,16 +265,34 @@
       (assoc m [mbchan mbox] (.start (->IDLEWorker idle-master mbchan mbox))))
     worker-map mbtuples))
 
+(s/defn ^:private swap-stop-and-restart! :- IDLEWorkerMap
+  [idle-master :- IDLEMaster
+   worker-map  :- IDLEWorkerMap
+   f           :- IFn]
+  (let [{:keys [idle-map-atom]} idle-master
+        imap₀ @idle-map-atom
+        imap₁ (f idle-map-atom)
+        [Δ- Δ+] (notify-map-diff imap₀ imap₁)]
+    (-> worker-map
+        (stop-workers Δ-)
+        (as-> m (start-workers idle-master m Δ+)))))
+
 (s/defn ^:private process-command :- IDLEWorkerMap
   [idle-master :- IDLEMaster
    worker-map  :- IDLEWorkerMap
    command     :- Command]
   (case (:opcode command)
-    :idle/set (let [{:keys [idle-map-atom]} idle-master
-                    state₀ @idle-map-atom
-                    state₁ (reset! idle-map-atom (:payload command))
-                    [Δ- Δ+] (notify-map-diff state₀ state₁)]
-                (-> worker-map
-                    (stop-workers Δ-)
-                    (as-> m (start-workers idle-master m Δ+))))
+    :idle/add (swap-stop-and-restart!
+                idle-master worker-map
+                #(swap! % (partial merge-with union) (:payload command)))
+    :idle/remove (swap-stop-and-restart!
+                   idle-master worker-map
+                   #(swap! % (partial notify-map-disj) (:payload command)))
+    :idle/set (swap-stop-and-restart!
+                idle-master worker-map
+                #(reset! % (:payload command)))
+    :idle/restart (let [mbtuples (set (keys worker-map))]
+                    (-> worker-map
+                        (stop-workers mbtuples)
+                        (as-> m (start-workers idle-master m mbtuples))))
     worker-map))
