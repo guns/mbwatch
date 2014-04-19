@@ -129,6 +129,13 @@
         v mboxes))
     #{} notify-map))
 
+(s/defn reduce-mbtuples :- NotifyMap
+  [mbtuples :- #{MbTuple}]
+  (reduce
+    (fn [m [mbchan mbox]]
+      (update-in m [mbchan] #(conj (or % #{}) mbox)))
+    {} mbtuples))
+
 (s/defn ^:private notify-map-diff* :- (pair NotifyMap "removals" NotifyMap "additions")
   [nm₁ :- NotifyMap
    nm₂ :- NotifyMap]

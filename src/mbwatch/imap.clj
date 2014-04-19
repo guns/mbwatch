@@ -29,7 +29,7 @@
             [mbwatch.types :as t :refer [ConnectionMapAtom MbTuple NotifyMap
                                          NotifyMapAtom VOID Word]]
             [mbwatch.util :refer [map-mbtuples notify-map-diff
-                                  notify-map-disj url-for]]
+                                  notify-map-disj reduce-mbtuples url-for]]
             [schema.core :as s :refer [Any Int defschema maybe]])
   (:import (clojure.lang IFn)
            (com.sun.mail.imap IMAPFolder IMAPStore)
@@ -141,9 +141,7 @@
                 (with-imap-connection imap-credential log-chan timeout
                   (fn [store]
                     (idle! store mbchan mbox status cmd-chan log-chan)))
-                (when (.get status)
-                  (>!! cmd-chan (->Command :sync {mbchan [mbox]}))
-                  (recur))))]
+                (recur)))]
       ;; IDLEMaster will close the shared outgoing channels
       (assoc this :exit-fn
              #(do (.set status false)     ; Stop after current iteration
@@ -265,17 +263,26 @@
       (assoc m [mbchan mbox] (.start (->IDLEWorker idle-master mbchan mbox))))
     worker-map mbtuples))
 
+(s/defn ^:private stop-and-restart! :- IDLEWorkerMap
+  [idle-master :- IDLEMaster
+   worker-map  :- IDLEWorkerMap
+   Δ-          :- #{MbTuple}
+   Δ+          :- #{MbTuple}]
+  (-> worker-map
+      (stop-workers Δ-)
+      (as-> m (do (>!! (:cmd-chan-out idle-master)
+                       (->Command :sync (reduce-mbtuples Δ+)))
+                  (start-workers idle-master m Δ+)))))
+
 (s/defn ^:private swap-stop-and-restart! :- IDLEWorkerMap
   [idle-master :- IDLEMaster
    worker-map  :- IDLEWorkerMap
    f           :- IFn]
-  (let [{:keys [idle-map-atom]} idle-master
+  (let [{:keys [idle-map-atom cmd-chan-out]} idle-master
         imap₀ @idle-map-atom
         imap₁ (f idle-map-atom)
         [Δ- Δ+] (notify-map-diff imap₀ imap₁)]
-    (-> worker-map
-        (stop-workers Δ-)
-        (as-> m (start-workers idle-master m Δ+)))))
+    (stop-and-restart! idle-master worker-map Δ- Δ+)))
 
 (s/defn ^:private process-command :- IDLEWorkerMap
   [idle-master :- IDLEMaster
@@ -292,7 +299,5 @@
                 idle-master worker-map
                 #(reset! % (:payload command)))
     :idle/restart (let [mbtuples (set (keys worker-map))]
-                    (-> worker-map
-                        (stop-workers mbtuples)
-                        (as-> m (start-workers idle-master m mbtuples))))
+                    (stop-and-restart! idle-master worker-map mbtuples mbtuples))
     worker-map))
