@@ -61,6 +61,18 @@
       (.setProperty props (str "mail.imaps" k) v))
     props))
 
+(defmacro ^:private with-active-connection
+  "Repeatedly check for an active connection for mbchan in connections-atom
+   and execute body when found."
+  {:requires [sig-wait]}
+  [mbchan connection status & body]
+  `(loop []
+     (if (.get ~connection)
+       ~@body
+       (when (.get ~status)
+         (sig-wait ~status)
+         (recur)))))
+
 (s/defn ^:private with-imap-connection :- Any
   [imap-credential :- IMAPCredential
    label           :- Any
@@ -86,23 +98,78 @@
       (catch MailConnectException e (log :failure (str e))) ;; TODO: Do we want this?
       (catch MessagingException e (log :failure (str e)))
       (finally
+        (log :stop)
         (if (.isConnected store)
-          (do (log :stop)
-              (.close store)
+          (do (.close store)
               (log :disconnect))
           (log :lost))))))
 
+(declare idle!)
+
+(t/defrecord ^:private IDLEWorker
+  [mbchan           :- String
+   mbox             :- String
+   imap-credential  :- IMAPCredential
+   connections-atom :- ConnectionMapAtom
+   timeout          :- Int
+   cmd-chan         :- WritePort
+   log-chan         :- WritePort
+   connection       :- AtomicBoolean
+   status           :- AtomicBoolean
+   exit-fn          :- (maybe IFn)]
+
+  Lifecycle
+
+  (start [this]
+    (log-with-timestamp! log-chan this)
+    (add-watch connections-atom [mbchan mbox]
+               (fn [_ _ _ n]
+                 (let [conn (get-in n [mbchan :status])]
+                   (when-not (= conn (.get connection))
+                     (.set connection conn)
+                     (sig-notify-all status)
+                     ;; Queue a sync when the conn goes _down_; this allows
+                     ;; the ConnectionWatcher to pool syncs
+                     (when-not conn
+                       (>!! cmd-chan (->Command :sync {mbchan [mbox]})))))))
+    (let [label (format " [%s/%s]" mbchan mbox)
+          f (future-loop []
+              (when (.get status)
+                (with-active-connection mbchan connection status
+                  (with-imap-connection imap-credential label log-chan timeout
+                    (partial idle! this)))
+                (recur)))]
+      ;; IDLEMaster will close the shared outgoing channels
+      (assoc this :exit-fn
+             #(do (.set status false)     ; Stop after current iteration
+                  (remove-watch connections-atom [mbchan mbox])
+                  (.set connection false) ; Mark connection as down
+                  (sig-notify-all status) ; Stop IMAP connection
+                  (shutdown-future f IMAP-SHUTDOWN-TIMEOUT)))))
+
+  (stop [this]
+    (log-with-timestamp! log-chan this)
+    (exit-fn)
+    (assoc this :exit-fn nil))
+
+  Loggable
+
+  (log-level [_] DEBUG)
+
+  (log-item [this]
+    (->LogItem this (format "%s IDLEWorker for %s/%s"
+                            (if exit-fn "↓ Stopping" "↑ Starting")
+                            mbchan mbox))))
+
 (s/defn ^:private idle! :- VOID
   "IDLE on mbchan/mbox and queue :sync Commands on new messages. Blocks thread
-   indefinitely. Signal status to restart. Set status to false then signal it
-   to exit."
-  [imap-store :- IMAPStore
-   mbchan     :- String
-   mbox       :- String
-   status     :- AtomicBoolean
-   cmd-chan   :- WritePort
-   log-chan   :- WritePort]
-  (let [folder ^IMAPFolder (.getFolder imap-store mbox)
+   indefinitely. Signal :status to restart. Set :status to false then signal
+   it to exit. Also exits when :connection is false."
+  [idle-worker :- IDLEWorker
+   imap-store  :- IMAPStore]
+  (let [{:keys [mbchan ^String mbox ^AtomicBoolean status ^AtomicBoolean connection
+                cmd-chan log-chan]} idle-worker
+        folder ^IMAPFolder (.getFolder imap-store mbox)
         url (str imap-store \/ mbox)
         handler (reify MessageCountListener
                   (messagesAdded [this ev]
@@ -120,50 +187,10 @@
               (sig-wait status IDLE-PERIOD)
               (finally
                 (future-cancel idle)))
-            (recur))))
+            (when (.get connection)
+              (recur)))))
       (catch FolderNotFoundException e
         (put! log-chan (->IMAPCommandError :folder-not-found url (str e)))))))
-
-(t/defrecord ^:private IDLEWorker
-  [mbchan          :- String
-   mbox            :- String
-   imap-credential :- IMAPCredential
-   timeout         :- Int
-   cmd-chan        :- WritePort
-   log-chan        :- WritePort
-   status          :- AtomicBoolean
-   exit-fn         :- (maybe IFn)]
-
-  Lifecycle
-
-  (start [this]
-    (log-with-timestamp! log-chan this)
-    (let [label (format " [%s/%s]" mbchan mbox)
-          f (future-loop []
-              (when (.get status)
-                (with-imap-connection imap-credential label log-chan timeout
-                  (fn [store]
-                    (idle! store mbchan mbox status cmd-chan log-chan)))
-                (recur)))]
-      ;; IDLEMaster will close the shared outgoing channels
-      (assoc this :exit-fn
-             #(do (.set status false)     ; Stop after current iteration
-                  (sig-notify-all status) ; Stop IMAP connection
-                  (shutdown-future f IMAP-SHUTDOWN-TIMEOUT)))))
-
-  (stop [this]
-    (log-with-timestamp! log-chan this)
-    (exit-fn)
-    (assoc this :exit-fn nil))
-
-  Loggable
-
-  (log-level [_] DEBUG)
-
-  (log-item [this]
-    (->LogItem this (format "%s IDLEWorker for %s/%s"
-                            (if exit-fn "↓ Stopping" "↑ Starting")
-                            mbchan mbox))))
 
 (declare process-command)
 (declare start-workers)
@@ -230,18 +257,21 @@
   [idle-master :- IDLEMaster
    mbchan      :- String
    mbox        :- String]
-  (let [{:keys [mbchan->IMAPCredential timeout cmd-chan-out log-chan]} idle-master]
+  (let [{:keys [mbchan->IMAPCredential connections-atom timeout cmd-chan-out
+                log-chan]} idle-master]
     (strict-map->IDLEWorker
       {:mbchan mbchan
        :mbox mbox
        :imap-credential (mbchan->IMAPCredential mbchan)
+       :connections-atom connections-atom
        :timeout timeout
        :cmd-chan cmd-chan-out
        :log-chan log-chan
+       :connection (AtomicBoolean. false)
        :status (AtomicBoolean. true)
        :exit-fn nil})))
 
-(defschema IDLEWorkerMap
+(defschema ^:private IDLEWorkerMap
   {MbTuple IDLEWorker})
 
 (s/defn ^:private stop-workers! :- VOID
