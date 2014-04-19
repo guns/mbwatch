@@ -1,7 +1,7 @@
 (ns mbwatch.util
   (:require [clojure.set :refer [difference]]
             [clojure.string :as string]
-            [mbwatch.types :refer [NotifyMap StringList SyncRequest]]
+            [mbwatch.types :refer [MbTuple NotifyMap StringList SyncRequest]]
             [schema.core :as s :refer [Int pair pred]])
   (:import (clojure.lang Symbol)
            (java.net URLEncoder)
@@ -119,7 +119,7 @@
        (URLEncoder/encode user "UTF-8") \@
        (URLEncoder/encode host "UTF-8") \: port))
 
-(s/defn ^:private notify-map-entries :- #{(pair String "mbchan" String "mbox")}
+(s/defn notify-map-entries :- #{MbTuple}
   [notify-map :- NotifyMap]
   (reduce-kv
     (fn [v mbchan mboxes]
@@ -129,8 +129,7 @@
         v mboxes))
     #{} notify-map))
 
-(s/defn ^:private notify-map-diff* :- (pair NotifyMap "removals"
-                                  NotifyMap "additions")
+(s/defn ^:private notify-map-diff* :- (pair NotifyMap "removals" NotifyMap "additions")
   [nm₁ :- NotifyMap
    nm₂ :- NotifyMap]
   (reduce
@@ -143,8 +142,7 @@
          (cond-> add (seq Δ+) (assoc mbchan Δ+))]))
     [{} {}] (distinct (mapcat keys [nm₁ nm₂]))))
 
-(s/defn notify-map-diff :- (pair #{(pair String "mbchan" String "mbox")} "removals"
-                                 #{(pair String "mbchan" String "mbox")} "additions")
+(s/defn notify-map-diff :- (pair #{MbTuple} "removals" #{MbTuple} "additions")
   [nm₁ :- NotifyMap
    nm₂ :- NotifyMap]
   (->> (notify-map-diff* nm₁ nm₂)
