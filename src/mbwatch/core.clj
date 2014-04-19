@@ -120,7 +120,7 @@
                              (-> config :mbsyncrc :mbchan->IMAPCredential)
                              (-> config :mbwatchrc :connection-period)
                              (-> config :mbwatchrc :connection-timeout)
-                             cmd-chan-1)
+                             cmd-chan-2)
         cmd-chan-3 (:cmd-chan-out connection-watcher)
         ;; ->
         mbsync-master (->MbsyncMaster (:mbsyncrc config)
