@@ -164,7 +164,7 @@
 
 (declare process-command)
 (declare start-workers)
-(declare stop-workers)
+(declare stop-workers!)
 
 (t/defrecord IDLEMaster
   [mbchan->IMAPCredential :- {Word IMAPCredential}
@@ -187,7 +187,7 @@
                 ;; Convey commands ASAP
                 (do (>!! cmd-chan-out cmd)
                     (recur (process-command this worker-map cmd)))
-                (stop-workers worker-map)))]
+                (stop-workers! (vals worker-map))))]
       (assoc this :exit-fn
              #(do (.set status false)   ; Stop after current iteration
                   (<!! c)
@@ -241,17 +241,10 @@
 (defschema IDLEWorkerMap
   {MbTuple IDLEWorker})
 
-(s/defn ^:private stop-workers :- IDLEWorkerMap
-  ([worker-map]
-   (stop-workers worker-map (set (keys worker-map))))
-  ([worker-map :- IDLEWorkerMap
-    mbtuples   :- #{MbTuple}]
-   {:pre [(subset? mbtuples (set (keys worker-map)))]}
-   (if (seq mbtuples)
-     (do (dorun
-           (pmap comp/stop (vals (select-keys worker-map mbtuples))))
-         (apply dissoc worker-map mbtuples))
-     worker-map)))
+(s/defn ^:private stop-workers! :- VOID
+  [workers :- [IDLEWorker]]
+  (dorun
+    (pmap comp/stop workers)))
 
 (s/defn ^:private start-workers :- IDLEWorkerMap
   [idle-master :- IDLEMaster
@@ -263,18 +256,22 @@
       (assoc m [mbchan mbox] (.start (->IDLEWorker idle-master mbchan mbox))))
     worker-map mbtuples))
 
-(s/defn ^:private stop-and-restart! :- IDLEWorkerMap
+(s/defn ^:private stop-and-start! :- IDLEWorkerMap
   [idle-master :- IDLEMaster
    worker-map  :- IDLEWorkerMap
    Δ-          :- #{MbTuple}
    Δ+          :- #{MbTuple}]
-  (-> worker-map
-      (stop-workers Δ-)
-      (as-> m (do (>!! (:cmd-chan-out idle-master)
-                       (->Command :sync (reduce-mbtuples Δ+)))
-                  (start-workers idle-master m Δ+)))))
+  {:pre [(subset? Δ- (set (keys worker-map)))]}
+  (let [f (future (stop-workers! (vals (select-keys worker-map Δ-))))
+        m (cond-> worker-map
+            (seq Δ-) (as-> m (apply dissoc m Δ-))
+            (seq Δ+) (as-> m (start-workers idle-master m Δ+)))]
+    (>!! (:cmd-chan-out idle-master)
+         (->Command :sync (reduce-mbtuples Δ+)))
+    @f
+    m))
 
-(s/defn ^:private swap-stop-and-restart! :- IDLEWorkerMap
+(s/defn ^:private swap-stop-and-start! :- IDLEWorkerMap
   [idle-master :- IDLEMaster
    worker-map  :- IDLEWorkerMap
    f           :- IFn]
@@ -282,22 +279,23 @@
         imap₀ @idle-map-atom
         imap₁ (f idle-map-atom)
         [Δ- Δ+] (notify-map-diff imap₀ imap₁)]
-    (stop-and-restart! idle-master worker-map Δ- Δ+)))
+    (stop-and-start! idle-master worker-map Δ- Δ+)))
 
 (s/defn ^:private process-command :- IDLEWorkerMap
   [idle-master :- IDLEMaster
    worker-map  :- IDLEWorkerMap
    command     :- Command]
   (case (:opcode command)
-    :idle/add (swap-stop-and-restart!
+    :idle/add (swap-stop-and-start!
                 idle-master worker-map
                 #(swap! % (partial merge-with union) (:payload command)))
-    :idle/remove (swap-stop-and-restart!
+    :idle/remove (swap-stop-and-start!
                    idle-master worker-map
                    #(swap! % (partial notify-map-disj) (:payload command)))
-    :idle/set (swap-stop-and-restart!
+    :idle/set (swap-stop-and-start!
                 idle-master worker-map
                 #(reset! % (:payload command)))
     :idle/restart (let [mbtuples (set (keys worker-map))]
-                    (stop-and-restart! idle-master worker-map mbtuples mbtuples))
+                    (stop-workers! (vals worker-map))
+                    (stop-and-start! idle-master {} #{} mbtuples))
     worker-map))
