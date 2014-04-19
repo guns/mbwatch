@@ -63,12 +63,14 @@
 
 (s/defn ^:private with-imap-connection :- Any
   [imap-credential :- IMAPCredential
+   label           :- Any
    log-chan        :- WritePort
    timeout         :- Int
    f               :- IFn]
   (let [{:keys [host port user pass ssl?]} imap-credential
         scheme (if ssl? "imaps" "imap")
-        url (url-for scheme host user port)
+        url (cond-> (url-for scheme host user port)
+              label (str label))
         store (-> (->IMAPProperties timeout)
                   (Session/getDefaultInstance)
                   (.getStore scheme))
@@ -136,9 +138,10 @@
 
   (start [this]
     (log-with-timestamp! log-chan this)
-    (let [f (future-loop []
+    (let [label (format " [%s/%s]" mbchan mbox)
+          f (future-loop []
               (when (.get status)
-                (with-imap-connection imap-credential log-chan timeout
+                (with-imap-connection imap-credential label log-chan timeout
                   (fn [store]
                     (idle! store mbchan mbox status cmd-chan log-chan)))
                 (recur)))]
