@@ -4,8 +4,8 @@
             [mbwatch.util :refer [catch-print chomp class-name dequote
                                   human-duration istr= join-mbargs
                                   join-sync-request notify-map-diff
-                                  schema-params shell-escape to-ms url-for
-                                  zero-or-min]]
+                                  notify-map-disj schema-params shell-escape
+                                  to-ms url-for zero-or-min]]
             [schema.test :refer [deftest]])
   (:import (org.joda.time DateTime)))
 
@@ -76,6 +76,11 @@
                           {"α" #{"a" "c"} "β" #{"b" "c"}})
          [#{["α" "b"] ["γ" "b"]}
           #{["α" "a"] ["α" "c"] ["β" "c"]}])))
+
+(deftest test-notify-map-disj
+  (is (= (notify-map-disj {"α" #{"a" "b" "c"} "β" #{"a"}}
+                          {"α" #{"b" "c" "d"} "β" #{"a"}})
+         {"α" #{"a"}})))
 
 (deftest test-catch-print
   (is (nil? (catch-print (throw (RuntimeException. "TESTING catch-print"))))))

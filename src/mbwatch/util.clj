@@ -148,6 +148,17 @@
   (->> (notify-map-diff* nm₁ nm₂)
        (mapv map-mbtuples)))
 
+(s/defn notify-map-disj :- NotifyMap
+  [nm₁ :- NotifyMap
+   nm₂ :- NotifyMap]
+  (reduce-kv
+    (fn [m mbchan mboxes]
+      (let [m (update-in m [mbchan] difference mboxes)]
+        (if (seq (m mbchan))
+          m
+          (dissoc m mbchan))))
+    nm₁ nm₂))
+
 (defmacro catch-print [& body]
   `(try
      ~@body
