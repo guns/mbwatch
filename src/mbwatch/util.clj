@@ -119,7 +119,7 @@
        (URLEncoder/encode user "UTF-8") \@
        (URLEncoder/encode host "UTF-8") \: port))
 
-(s/defn notify-map-entries :- #{MbTuple}
+(s/defn map-mbtuples :- #{MbTuple}
   [notify-map :- NotifyMap]
   (reduce-kv
     (fn [v mbchan mboxes]
@@ -146,7 +146,7 @@
   [nm₁ :- NotifyMap
    nm₂ :- NotifyMap]
   (->> (notify-map-diff* nm₁ nm₂)
-       (mapv notify-map-entries)))
+       (mapv map-mbtuples)))
 
 (defmacro catch-print [& body]
   `(try
