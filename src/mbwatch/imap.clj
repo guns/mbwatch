@@ -324,7 +324,7 @@
                 #(swap! % (partial merge-with union) (:payload command)))
     :idle/remove (swap-stop-and-start!
                    idle-master worker-map
-                   #(swap! % (partial notify-map-disj) (:payload command)))
+                   #(swap! % notify-map-disj (:payload command)))
     :idle/set (swap-stop-and-start!
                 idle-master worker-map
                 #(reset! % (:payload command)))
