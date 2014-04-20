@@ -2,6 +2,7 @@
   "Configuration from an mbwatchrc configuration file."
   (:require [clojure-ini.core :refer [read-ini]]
             [mbwatch.types :as t]
+            [mbwatch.util :refer [parse-ms]]
             [schema.core :as s :refer [Int]])
   (:import (java.io StringReader)))
 
@@ -27,7 +28,7 @@
   (strict-map->Mbwatchrc
     (-> DEFAULT-OPTIONS
         (merge (read-ini (StringReader. s) :keywordize? true))
-        (update-in [:sync-timer-period] #(Long/parseLong %))
-        (update-in [:connection-period] #(Long/parseLong %))
-        (update-in [:connection-timeout] #(Long/parseLong %))
-        (update-in [:imap-socket-timeout] #(Long/parseLong %)))))
+        (update-in [:sync-timer-period] parse-ms)
+        (update-in [:connection-period] parse-ms)
+        (update-in [:connection-timeout] parse-ms)
+        (update-in [:imap-socket-timeout] parse-ms))))
