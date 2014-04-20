@@ -93,13 +93,33 @@
     stop  :- ReadableInstant]
    (human-duration (.getMillis (Duration. start stop)))))
 
+(s/defn illegal-time-unit :- IllegalArgumentException
+  [u :- String]
+  (IllegalArgumentException.
+    (str (pr-str u) " is an unknown time unit. Please use d, h, m, s, or ms.")))
+
+(s/defn parse-ms :- Long
+  [s :- String]
+  (reduce
+    (fn [ms [_ n u]]
+      (let [n (Double/parseDouble n)
+            u (if (seq u) u "m")
+            n (cond (istr= "d" u) (* n 24 60 60 1000)
+                    (istr= "h" u) (* n 60 60 1000)
+                    (istr= "m" u) (* n 60 1000)
+                    (istr= "s" u) (* n 1000)
+                    (istr= "ms" u) n
+                    :else (throw (illegal-time-unit u)))]
+        (+ ms (Math/round ^double n))))
+    0 (re-seq #"(\d+(?:\.\d+)?)([^\d\s]*)" s)))
+
+(s/defn dt->ms :- Long
+  [datetime :- DateTime]
+  (.getMillis (Instant. datetime)))
+
 (s/defn class-name :- String
   [obj :- Object]
   (.getSimpleName (class obj)))
-
-(s/defn to-ms :- Long
-  [datetime :- DateTime]
-  (.getMillis (Instant. datetime)))
 
 (s/defn zero-or-min :- (pred #(>= % 0))
   "{n ∈ ℕ : n = 0, n ≥ min}"

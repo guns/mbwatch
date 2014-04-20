@@ -1,12 +1,12 @@
 (ns mbwatch.util-test
   (:require [clojure.java.shell :refer [sh]]
             [clojure.test :refer [is]]
-            [mbwatch.util :refer [catch-print chomp class-name dequote
+            [mbwatch.util :refer [catch-print chomp class-name dequote dt->ms
                                   human-duration istr= join-mbargs
                                   join-sync-request map-mbtuples
-                                  notify-map-diff notify-map-disj
+                                  notify-map-diff notify-map-disj parse-ms
                                   reduce-mbtuples schema-params shell-escape
-                                  to-ms url-for zero-or-min]]
+                                  url-for zero-or-min]]
             [schema.test :refer [deftest]])
   (:import (org.joda.time DateTime)))
 
@@ -58,11 +58,20 @@
   (let [dt (DateTime.)]
     (is (= "1 second" (human-duration dt (.plus dt 1000))))))
 
+(deftest test-parse-ms
+  (is (= 0 (parse-ms "")))
+  (is (= (Math/round (+ (* 1.5 24 60 60 1000)
+                        (* 1.0 60 60 1000)
+                        (* 1.5 60 1000)
+                        1000
+                        1))
+         (parse-ms "1.5d1h 1.5m1s\t1ms"))))
+
+(deftest test-dt->ms
+  (is (= 0 (dt->ms (DateTime. 0)))))
+
 (deftest test-class-name
   (is (= "String" (class-name ""))))
-
-(deftest test-to-ms
-  (is (= 0 (to-ms (DateTime. 0)))))
 
 (deftest test-zero-or-min
   (is (every? zero? (mapv #(zero-or-min % 0) [-1 0 Long/MIN_VALUE])))

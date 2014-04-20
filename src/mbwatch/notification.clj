@@ -25,7 +25,7 @@
             [mbwatch.maildir :refer [new-messages senders]]
             [mbwatch.process :as process]
             [mbwatch.types :as t :refer [NotifyMap NotifyMapAtom VOID]]
-            [mbwatch.util :refer [to-ms]]
+            [mbwatch.util :refer [dt->ms]]
             [schema.core :as s :refer [Int defschema either maybe]])
   (:import (clojure.lang IFn)
            (java.io StringWriter)
@@ -64,7 +64,7 @@
             bs (if (empty? mboxes)
                  nboxes ; [] means full sync
                  (intersection (set mboxes) nboxes))
-            timestamp (to-ms start)]
+            timestamp (dt->ms start)]
         (reduce
           (fn [m b]
             (let [msgs (new-messages (mdir-path maildir b) timestamp)]
