@@ -36,8 +36,9 @@
             [mbwatch.logging :refer [->LogItem DEBUG ERR Loggable NOTICE
                                      WARNING log-with-timestamp!]]
             [mbwatch.process :as process]
+            [mbwatch.shellwords :refer [shell-escape]]
             [mbwatch.types :as t :refer [StringList SyncRequest VOID]]
-            [mbwatch.util :refer [join-mbargs shell-escape]]
+            [mbwatch.util :refer [join-mbargs]]
             [schema.core :as s :refer [Int maybe]])
   (:import (clojure.lang IFn)
            (java.io StringWriter)

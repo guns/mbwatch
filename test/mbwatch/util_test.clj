@@ -7,7 +7,7 @@
                                   join-sync-request map-mbtuples
                                   notify-map-diff notify-map-disj
                                   parse-kv-string parse-mbargs parse-ms
-                                  reduce-mbtuples schema-params shell-escape
+                                  reduce-mbtuples schema-params
                                   url-for zero-or-min]]
             [schema.test :refer [deftest]])
   (:import (org.joda.time DateTime)))
@@ -59,11 +59,6 @@
   (is (empty? (dequote "\"\"")))
   (is (= "ab\\c\"" (dequote "\"ab\\\\c\\\"\"")))
   (is (= "ab\\c" (dequote "ab\\c"))))
-
-(deftest test-shell-escape
-  (let [s (apply str (map char (range 0x01 0x80)))]
-    (is (= (:out (sh "ruby" "-rshellwords" "-e" "print $stdin.read.shellescape" :in s))
-           (shell-escape s)))))
 
 (deftest test-human-duration
   (is (= "0 seconds" (human-duration 0)))

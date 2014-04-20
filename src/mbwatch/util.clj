@@ -91,15 +91,6 @@
       (string/replace (subs s 1 (dec len)) #"\\(.)" "$1")
       s)))
 
-(s/defn shell-escape :- String
-  "Adapted from Ruby's Shellwords#shellescape()"
-  [s :- String]
-  (if (empty? s)
-    "''"
-    (-> s
-        (string/replace #"([^A-Za-z0-9_\-.,:\/@\n])" "\\\\$1")
-        (string/replace #"\n" "'\n'"))))
-
 (s/defn human-duration :- String
   ([milliseconds :- Int]
    (let [seconds (Math/round (/ milliseconds 1000.0))
