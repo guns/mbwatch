@@ -1,0 +1,11 @@
+# These
+; are
+    # comments
+	
+α-α-α	= alpha, "the first letter"             
+
+    β β β=beta, 'the second letter'		
+
+γ_γ	γ = gamma, #the ;third # letter
+
+; vim:ft=dosini:

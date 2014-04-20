@@ -2,11 +2,18 @@
   (:require [clojure.java.io :as io]
             [clojure.test :refer [is]]
             [mbwatch.config :refer [->Config mdir-path]]
-            [schema.test :refer [deftest]]))
+            [mbwatch.config.mbsyncrc]
+            [schema.test :refer [deftest]])
+  (:import (mbwatch.config.mbsyncrc Mbsyncrc)))
 
 (deftest test-Config
-  ;; Schema validation
-  (->Config (io/resource "mbsyncrc") (io/resource "mbwatchrc")))
+  (let [c (->Config (io/resource "mbsyncrc") (io/resource "config"))]
+    (is (instance? Mbsyncrc (:mbsyncrc c)))
+    (is (= (:notify-command c) "notify - --audio=\"/home/guns/.sounds/new-message.mp3\""))
+    (is (= (:sync-timer-period c) (* 5 60 1000)))
+    (is (= (:connection-period c) (* 15 60 1000)))
+    (is (= (:connection-timeout c) 2000))
+    (is (= (:imap-socket-timeout c) 5000))))
 
 (deftest test-mdir-path
   (let [maildir {:inbox "/home/user/Mail/INBOX"

@@ -105,22 +105,22 @@
         ;; Command pipeline
         sync-timer (->SyncTimer {"self" ["INBOX"]} ; FIXME: Move to config
                                 (chan CHAN-SIZE)
-                                (-> config :mbwatchrc :sync-timer-period))
+                                (-> config :sync-timer-period))
         cmd-chan-0 (:cmd-chan-in sync-timer)
         cmd-chan-1 (:cmd-chan-out sync-timer)
         ;; ->
         idle-master (->IDLEMaster (-> config :mbsyncrc :mbchan->IMAPCredential)
                                   {"self" #{"INBOX"}} ; FIXME: Move to config
                                   connections-atom
-                                  (-> config :mbwatchrc :imap-socket-timeout)
+                                  (-> config :imap-socket-timeout)
                                   cmd-chan-1)
         cmd-chan-2 (:cmd-chan-out idle-master)
         ;; ->
         connection-watcher (->ConnectionWatcher
                              connections-atom
                              (-> config :mbsyncrc :mbchan->IMAPCredential)
-                             (-> config :mbwatchrc :connection-period)
-                             (-> config :mbwatchrc :connection-timeout)
+                             (-> config :connection-period)
+                             (-> config :connection-timeout)
                              cmd-chan-2)
         cmd-chan-3 (:cmd-chan-out connection-watcher)
         ;; ->
@@ -133,7 +133,7 @@
                                         mbsync-master])
                        (async/merge CHAN-SIZE))
         notification-service (->NewMessageNotificationService
-                               (-> config :mbwatchrc :notify-command)
+                               (-> config :notify-command)
                                {"self" #{"INBOX"}} ; FIXME: Move to config
                                log-chan-0)
         log-chan-1 (:log-chan-out notification-service)

@@ -35,7 +35,7 @@
 (t/defrecord ^:private Command
   [opcode    :- Opcode
    payload   :- Any
-   id        :- Long
+   id        :- long
    timestamp :- DateTime]
 
   Loggable

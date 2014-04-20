@@ -7,4 +7,4 @@
 (s/deftest test-Application
   ;; Schema validation
   (->Application
-    (->Config (io/resource "mbsyncrc") (io/resource "mbwatchrc"))))
+    (->Config (io/resource "mbsyncrc") (io/resource "config"))))

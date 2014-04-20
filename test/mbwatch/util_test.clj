@@ -1,12 +1,14 @@
 (ns mbwatch.util-test
-  (:require [clojure.java.shell :refer [sh]]
+  (:require [clojure.java.io :as io]
+            [clojure.java.shell :refer [sh]]
             [clojure.test :refer [is]]
             [mbwatch.util :refer [catch-print chomp class-name dequote dt->ms
                                   human-duration istr= join-mbargs
                                   join-sync-request map-mbtuples
-                                  notify-map-diff notify-map-disj parse-ms
-                                  reduce-mbtuples schema-params shell-escape
-                                  url-for zero-or-min]]
+                                  notify-map-diff notify-map-disj
+                                  parse-kv-string parse-ms reduce-mbtuples
+                                  schema-params shell-escape url-for
+                                  zero-or-min]]
             [schema.test :refer [deftest]])
   (:import (org.joda.time DateTime)))
 
@@ -24,6 +26,13 @@
          (schema-params '[foo :- Int bar :- String baz :- #{Symbol}])
          (schema-params '[foo :- Int bar baz :- #{Symbol}])
          (schema-params '[foo bar baz]))))
+
+(deftest test-parse-kv-string
+  (is (= (parse-kv-string (slurp (io/resource "test-parse-kv-string.in")))
+         {(keyword "α-α-α") "alpha, \"the first letter\""
+          (keyword "β β β") "beta, 'the second letter'"
+          (keyword "γ_γ\tγ") "gamma, #the ;third # letter"}))
+  (is (thrown? RuntimeException (parse-kv-string "foo bar"))))
 
 (deftest test-istr=
   (is (istr= "foo" "foo"))

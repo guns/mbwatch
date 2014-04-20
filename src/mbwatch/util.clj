@@ -3,7 +3,7 @@
             [clojure.string :as string]
             [mbwatch.types :refer [MbTuple NotifyMap StringList SyncRequest]]
             [schema.core :as s :refer [Int pair pred]])
-  (:import (clojure.lang Symbol)
+  (:import (clojure.lang Keyword Symbol)
            (java.net URLEncoder)
            (org.joda.time DateTime Duration Instant ReadableInstant)))
 
@@ -30,6 +30,20 @@
         (recur (conj v p) (drop 3 params))
         (recur (conj v p) (rest params)))
       v)))
+
+(s/defn parse-kv-string :- {Keyword String}
+  "Simple key = value parser. Like ini, but without hierarchy, multiline
+   values, or very many features at all."
+  [s :- String]
+  (let [lines (remove (partial re-find #"\A\s*[#;]|\A\s*\z")
+                      (string/split s #"\n"))]
+    (reduce
+      (fn [m l]
+        (let [[k v] (mapv string/trim (string/split l #"=" 2))]
+          (when (or (nil? k) (nil? v))
+            (throw (RuntimeException. (str "Malformed config line:\n" l))))
+          (assoc m (keyword k) v)))
+      {} lines)))
 
 (s/defn istr= :- Boolean
   [s₁ :- String
@@ -93,12 +107,12 @@
     stop  :- ReadableInstant]
    (human-duration (.getMillis (Duration. start stop)))))
 
-(s/defn illegal-time-unit :- IllegalArgumentException
+(s/defn ^:private illegal-time-unit :- IllegalArgumentException
   [u :- String]
   (IllegalArgumentException.
     (str (pr-str u) " is an unknown time unit. Please use d, h, m, s, or ms.")))
 
-(s/defn parse-ms :- Long
+(s/defn parse-ms :- long
   [s :- String]
   (reduce
     (fn [ms [_ n u]]
@@ -113,7 +127,7 @@
         (+ ms (Math/round ^double n))))
     0 (re-seq #"(\d+(?:\.\d+)?)([^\d\s]*)" s)))
 
-(s/defn dt->ms :- Long
+(s/defn dt->ms :- long
   [datetime :- DateTime]
   (.getMillis (Instant. datetime)))
 
