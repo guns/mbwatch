@@ -7,6 +7,18 @@
            (java.net URLEncoder)
            (org.joda.time DateTime Duration Instant ReadableInstant)))
 
+(s/defn parse-mbargs :- SyncRequest
+  "Parse mbsync string arguments. The mbox value of an mbchan with no box
+   arguments is set to [\"INBOX\"]."
+  [argv :- [String]]
+  (reduce
+    (fn [m arg]
+      (let [[[_ chan bs]] (re-seq #"\A([^:]+)(?=:(.*))?" arg)]
+        (assoc m chan (if (and bs (seq bs))
+                        (string/split bs #",")
+                        ["INBOX"]))))
+    {} argv))
+
 (s/defn join-mbargs :- String
   [mbchan :- String
    mboxes :- StringList]

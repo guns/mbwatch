@@ -6,11 +6,18 @@
                                   human-duration istr= join-mbargs
                                   join-sync-request map-mbtuples
                                   notify-map-diff notify-map-disj
-                                  parse-kv-string parse-ms reduce-mbtuples
-                                  schema-params shell-escape url-for
-                                  zero-or-min]]
+                                  parse-kv-string parse-mbargs parse-ms
+                                  reduce-mbtuples schema-params shell-escape
+                                  url-for zero-or-min]]
             [schema.test :refer [deftest]])
   (:import (org.joda.time DateTime)))
+
+(deftest test-parse-args
+  (is (= (parse-mbargs ["foo:bar,baz" "empty" "also-empty:" "quux:INBOX"])
+         {"foo" ["bar" "baz"]
+          "empty" ["INBOX"]
+          "also-empty" ["INBOX"]
+          "quux" ["INBOX"]})))
 
 (deftest test-join-mbargs
   (is (= "foo" (join-mbargs "foo" [])))
