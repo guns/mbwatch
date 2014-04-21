@@ -1,11 +1,9 @@
 (ns mbwatch.command-test
-  (:require [clojure.test.check.clojure-test :refer [defspec]]
-            [clojure.test.check.generators :as g :refer [elements]]
-            [clojure.test.check.properties :refer [for-all]]
-            [mbwatch.command :refer [->Command Opcode]]))
+  (:require [clojure.test :refer [is]]
+            [mbwatch.command :refer [->Command]]
+            [schema.test :refer [deftest]]))
 
-;; A silly test to learn test.check
-(defspec command-ids-are-unique 10
-  (let [ctor-gen (g/tuple (elements (seq (:vs Opcode))) g/any)]
-    (for-all [ctors (g/vector ctor-gen 2 100)]
-      (apply distinct? (doall (pmap (fn [[o p]] (:id (->Command o p))) ctors))))))
+(deftest test-command-ids-are-unique
+  (is (distinct? (->> (range 1000)
+                      (pmap (fn [_] (:id (->Command :sync/term nil))))
+                      doall))))
