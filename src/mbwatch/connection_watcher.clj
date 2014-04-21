@@ -45,7 +45,7 @@
             [mbwatch.types :as t :refer [ConnectionMap ConnectionMapAtom
                                          SyncRequest VOID Word tuple]]
             [mbwatch.util :refer [human-duration]]
-            [schema.core :as s :refer [Int either maybe pair]])
+            [schema.core :as s :refer [Int either maybe pair pred validate]])
   (:import (clojure.lang IFn)
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.command Command)
@@ -277,7 +277,9 @@
         [conn-map sync-req]))
     [conn-map sync-req] sync-req))
 
-(s/defn ^:private update-connections-for-sync :- ConnectionMap
+(s/defn ^:private update-connections-for-sync :- (pred #(and (validate ConnectionMap %)
+                                                             (validate SyncRequest (::sync-req (meta %))))
+                                                       "ConnectionMap with ::sync-req meta")
   "Update the connections in conn-map matching sync-req. New entries are
    created for unknown mbchans in sync-req.
 
