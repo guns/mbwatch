@@ -2,8 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.test :refer [is]]
             [mbwatch.util :refer [catch-print chomp class-name dequote istr=
-                                  parse-kv-string schema-params url-for
-                                  zero-or-min]]
+                                  parse-kv-string url-for zero-or-min]]
             [schema.test :refer [deftest]]))
 
 (deftest test-catch-print
@@ -15,12 +14,6 @@
           (keyword "β β β") "beta, 'the second letter'"
           (keyword "γ_γ\tγ") "gamma, #the ;third # letter"}))
   (is (thrown? RuntimeException (parse-kv-string "foo bar"))))
-
-(deftest test-schema-params
-  (is (= '[foo bar baz]
-         (schema-params '[foo :- Int bar :- String baz :- #{Symbol}])
-         (schema-params '[foo :- Int bar baz :- #{Symbol}])
-         (schema-params '[foo bar baz]))))
 
 (deftest test-istr=
   (is (istr= "foo" "foo"))

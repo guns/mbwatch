@@ -12,8 +12,8 @@
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.concurrent :refer [thread-loop]]
-            [mbwatch.types :as t :refer [VOID]]
-            [mbwatch.util :refer [class-name schema-params]]
+            [mbwatch.types :as t :refer [VOID schema-params]]
+            [mbwatch.util :refer [class-name]]
             [schema.core :as s :refer [Any Int maybe]])
   (:import (clojure.lang Associative IFn)
            (org.joda.time DateTime)))

@@ -1,5 +1,6 @@
 (ns mbwatch.types-test
   (:require [clojure.test :refer [is]]
+            [mbwatch.types :refer [schema-params]]
             [schema.test :refer [deftest]]))
 
 (deftest test-defrecord
@@ -12,3 +13,9 @@
       (is (:private (meta (ns-resolve ns-sym 'strict-map->Foo))))
       (finally
         (remove-ns ns-sym)))))
+
+(deftest test-schema-params
+  (is (= '[foo bar baz]
+         (schema-params '[foo :- Int bar :- String baz :- #{Symbol}])
+         (schema-params '[foo :- Int bar baz :- #{Symbol}])
+         (schema-params '[foo bar baz]))))

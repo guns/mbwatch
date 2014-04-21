@@ -2,7 +2,7 @@
   (:require [clojure.core :as cc]
             [schema.core :as s :refer [Schema both defschema eq maybe one
                                        pair pred validate]])
-  (:import (clojure.lang Atom))
+  (:import (clojure.lang Atom Symbol))
   (:refer-clojure :exclude [defrecord]))
 
 (defmacro defrecord
@@ -32,6 +32,16 @@
   (pred #(and (instance? Atom %)
               (validate inner-schema @%))
         desc))
+
+(s/defn schema-params :- [Symbol]
+  "Remove `:- Schema` information from a parameter list."
+  [params :- [Object]]
+  (loop [v [] params params]
+    (if-some [p (first params)]
+      (if (= (second params) :-)
+        (recur (conj v p) (drop 3 params))
+        (recur (conj v p) (rest params)))
+      v)))
 
 (defschema VOID
   (eq nil))

@@ -1,7 +1,7 @@
 (ns mbwatch.util
   (:require [clojure.string :as string]
             [schema.core :as s])
-  (:import (clojure.lang Keyword Symbol)
+  (:import (clojure.lang Keyword)
            (java.net URLEncoder)))
 
 (defmacro catch-print [& body]
@@ -23,16 +23,6 @@
             (throw (RuntimeException. (str "Malformed config line:\n" l))))
           (assoc m (keyword k) v)))
       {} lines)))
-
-(s/defn schema-params :- [Symbol]
-  "Remove `:- Schema` information from a parameter list."
-  [params :- [Object]]
-  (loop [v [] params params]
-    (if-some [p (first params)]
-      (if (= (second params) :-)
-        (recur (conj v p) (drop 3 params))
-        (recur (conj v p) (rest params)))
-      v)))
 
 (s/defn istr= :- Boolean
   [s₁ :- String
