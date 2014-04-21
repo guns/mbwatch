@@ -12,6 +12,12 @@
      (catch Throwable e#
        (.printStackTrace e#))))
 
+(defmacro when-seq [[sym form] & body]
+  `(let [x# ~form]
+     (when (seq x#)
+       (let [~sym x#]
+         ~@body))))
+
 (s/defn parse-kv-string :- {Keyword String}
   "Simple key = value parser. Like ini, but without hierarchy, multiline
    values, or very many features at all."

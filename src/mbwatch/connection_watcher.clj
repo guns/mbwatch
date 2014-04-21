@@ -45,6 +45,7 @@
             [mbwatch.time :refer [human-duration]]
             [mbwatch.types :as t :refer [ConnectionMap ConnectionMapAtom
                                          MBMap VOID Word tuple]]
+            [mbwatch.util :refer [when-seq]]
             [schema.core :as s :refer [Int either maybe pair pred validate]])
   (:import (clojure.lang IFn)
            (java.util.concurrent.atomic AtomicBoolean)
@@ -349,7 +350,8 @@
                                           :period @(:timer-atom connection-watcher))))
                        command)
     :conn/remove (let [{:keys [connections-atom]} connection-watcher]
-                   (apply swap! connections-atom dissoc (:payload command))
+                   (when-seq [mbchans (:payload command)]
+                     (apply swap! connections-atom dissoc mbchans))
                    command)
     :sync (partition-syncs connection-watcher command)
     command))

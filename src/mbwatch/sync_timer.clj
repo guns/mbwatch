@@ -24,6 +24,7 @@
                                      log-with-timestamp!]]
             [mbwatch.time :refer [human-duration]]
             [mbwatch.types :as t :refer [MBMap MBMapAtom VOID]]
+            [mbwatch.util :refer [when-seq]]
             [schema.core :as s :refer [Int maybe]])
   (:import (clojure.lang IFn)
            (java.util.concurrent.atomic AtomicBoolean)
@@ -51,9 +52,8 @@
                 (sig-wait-timer timer-atom)
                 (when (.get status)
                   (set-alarm! timer-atom)
-                  (let [sync-req @sync-request-atom]
-                    (when (seq sync-req)
-                      (>!! cmd-chan-out (->Command :sync sync-req))))
+                  (when-seq [sync-req @sync-request-atom]
+                    (>!! cmd-chan-out (->Command :sync sync-req)))
                   (recur))))
           c (thread-loop []
               (when (.get status)
