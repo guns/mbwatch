@@ -189,7 +189,7 @@
             (-> [(str (name type) \space v)]
                 (into (mapv (partial string/join \space) (sort-by key kvs)))
                 (conj "")))
-          (sort-by key (get sections type))))
+          (sort-by key (sections type))))
 
 (s/defn ^:private render :- String
   [sections                 :- Sections

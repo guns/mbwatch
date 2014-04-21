@@ -143,7 +143,7 @@
   (log-item [this]
     (->LogItem this (format "%s LoggingService [%s %s]"
                             (if exit-fn "↓ Stopping" "↑ Starting")
-                            (get LOG-LEVELS level)
+                            (LOG-LEVELS level)
                             (class-name logger)))))
 
 (s/defn ->LoggingService :- LoggingService
