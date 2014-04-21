@@ -41,18 +41,19 @@
 
 (s/defn ^:private format-msg :- (maybe String)
   [messages :- [MimeMessage]]
-  (let [n (count messages)
-        ss (vec (senders messages))
-        ss (if (> (count ss) MAX-SENDERS-SHOWN)
+  (let [msg-count (count messages)
+        ss (senders messages)
+        n+ (- (count ss) MAX-SENDERS-SHOWN)
+        ss (if (pos? n+)
              (conj (subvec ss 0 MAX-SENDERS-SHOWN)
                    (format "… and %d other%s"
-                           (- (count ss) MAX-SENDERS-SHOWN)
-                           (if (= n 1) "" \s)))
+                           n+
+                           (if (= n+ 1) "" \s)))
              ss)]
-    (when (pos? n)
+    (when (pos? msg-count)
       (format "%d new message%s from:\n%s"
-              n
-              (if (= n 1) "" \s)
+              msg-count
+              (if (= msg-count 1) "" \s)
               (string/join \newline ss)))))
 
 (s/defn ^:private sync-event->new-messages-by-box :- (maybe {String [MimeMessage]})

@@ -11,18 +11,20 @@
                 (FileInputStream. file)))
 
 (s/defn new-messages :- [MimeMessage]
-  "Seq of new messages in maildir newer than given timestamp."
+  "Vector of new messages in maildir newer than given timestamp. Messages are
+   sorted in reverse order by timestamp."
   [mdir-path :- String
    mtime     :- long]
   (->> (io/file mdir-path "new")
        .listFiles
        (filter (fn [^File f] (and (.isFile f) (> (.lastModified f) mtime))))
+       (sort-by #(- (.lastModified ^File %)))
        (mapv message)))
 
-(s/defn senders :- #{String}
-  "Sorted set of senders in a sequence of MimeMessage objects."
+(s/defn senders :- [String]
+  "Vector of distinct senders in a sequence of MimeMessage objects."
   [messages :- [MimeMessage]]
   (->> messages
        (mapcat #(.getFrom ^MimeMessage %))
-       (mapv #(MimeUtility/decodeText (str %)))
-       (into (sorted-set))))
+       distinct
+       (mapv #(MimeUtility/decodeText (str %)))))

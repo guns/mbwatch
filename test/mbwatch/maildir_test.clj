@@ -13,5 +13,5 @@
 
 (deftest test-senders
   (is (= (senders (new-messages TEST-MDIR 0))
-         #{"Alice <alice@example.com>"
-           "★ ❤ Carol ❤ ★ <carol@example.com>"})))
+         ["★ ❤ Carol ❤ ★ <carol@example.com>"
+          "Alice <alice@example.com>"])))
