@@ -5,18 +5,18 @@
 (deftest test-private-behavior
   (let [tfn #'mbwatch.connection-watcher/merge-pending-syncs]
     (is (= (tfn {"a" {:status false :pending-syncs nil}}
-                {"a" ["INBOX"]})
+                {"a" #{"INBOX"}})
            [{"a" {:status false :pending-syncs #{"INBOX"}}} {}]))
     (is (= (tfn {"a" {:status false :pending-syncs #{"INBOX"}}}
-                {"a" ["work"]})
+                {"a" #{"work"}})
            [{"a" {:status false :pending-syncs #{"INBOX" "work"}}} {}]))
     (is (= (tfn {"a" {:status false :pending-syncs ^:all-mboxes #{}}}
-                {"a" ["work"]})
+                {"a" #{"work"}})
            [{"a" {:status false :pending-syncs ^:all-mboxes #{}}} {}]))
     (is (= (tfn {"a" {:status true :pending-syncs #{"INBOX"}}}
-                {"a" ["work"]})
+                {"a" #{"work"}})
            [{"a" {:status true :pending-syncs #{"INBOX"}}}
-            {"a" ["work"]}])))
+            {"a" #{"work"}}])))
   (let [tfn (fn [& args]
               (-> #'mbwatch.connection-watcher/update-connections-for-sync
                   (apply args)
@@ -28,21 +28,21 @@
         mixed {"a" up "b" down}]
     (is (= (tfn {"a" {:status true :pending-syncs nil}
                  "b" {:status true :pending-syncs nil}}
-                {"a" ["INBOX"]}
+                {"a" #{"INBOX"}}
                 all-down 0)
            [{"a" {:status false :pending-syncs #{"INBOX"}}
              "b" {:status true :pending-syncs nil}}
             {}]))
     (is (= (tfn {"a" {:status false :pending-syncs #{"INBOX"}}
                  "b" {:status true :pending-syncs nil}}
-                {"a" ["work"]}
+                {"a" #{"work"}}
                 all-down 0)
            [{"a" {:status false :pending-syncs #{"INBOX" "work"}}
              "b" {:status true :pending-syncs nil}}
             {}]))
     (is (= (tfn {"a" {:status false :pending-syncs nil}
                  "b" {:status false :pending-syncs nil}}
-                {"a" ["INBOX"] "b" ["INBOX"]}
+                {"a" #{"INBOX"} "b" #{"INBOX"}}
                 all-up 2000)
            [{"a" {:status true :pending-syncs #{"INBOX"}}
              "b" {:status true :pending-syncs #{"INBOX"}}}
@@ -50,8 +50,8 @@
             {}]))
     (is (= (tfn {"a" {:status true :pending-syncs nil}
                  "b" {:status true :pending-syncs nil}}
-                {"a" ["INBOX"] "b" ["INBOX"]}
+                {"a" #{"INBOX"} "b" #{"INBOX"}}
                 mixed 2000)
            [{"a" {:status true :pending-syncs nil}
              "b" {:status false :pending-syncs #{"INBOX"}}}
-            {"a" ["INBOX"]}]))))
+            {"a" #{"INBOX"}}]))))
