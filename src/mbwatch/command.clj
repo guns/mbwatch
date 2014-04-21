@@ -48,4 +48,4 @@
    (->Command opcode nil))
   ([opcode  :- Opcode
     payload :- Any]
-   (Command. opcode payload (.incrementAndGet command-id) (DateTime.))))
+   (Command. opcode payload (.getAndIncrement command-id) (DateTime.))))

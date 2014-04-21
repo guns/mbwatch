@@ -5,11 +5,11 @@
 (def ^InetAddress TEST-SERVER
   (InetAddress/getByAddress (byte-array [127 0xD0 0xC0 0xDE])))
 
-(def ^:private ^AtomicLong next-server-id
+(def ^:private ^AtomicLong server-id
   (AtomicLong. 0))
 
 (defn next-server-port []
-  (+ (rem (.getAndIncrement next-server-id) 0xfc00) 0x400))
+  (+ (rem (.getAndIncrement server-id) 0xfc00) 0x400))
 
 (defn listen
   "Listen on TEST-SERVER:port until a client sends a single zero byte."
