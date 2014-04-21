@@ -7,8 +7,10 @@
 (defmacro catch-print [& body]
   `(try
      ~@body
+     (catch InterruptedException e#
+       (.println System/err e#))
      (catch Throwable e#
-       (.println System/err e#))))
+       (.printStackTrace e#))))
 
 (s/defn parse-kv-string :- {Keyword String}
   "Simple key = value parser. Like ini, but without hierarchy, multiline
