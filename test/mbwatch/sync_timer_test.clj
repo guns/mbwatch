@@ -8,12 +8,12 @@
             [mbwatch.command]
             [mbwatch.concurrent :refer [update-timer!]]
             [mbwatch.sync-timer :refer [->SyncTimer]]
-            [mbwatch.test.common :refer [SYNC-REQUEST-GEN chanv]])
+            [mbwatch.test.common :refer [MBMAP-GEN chanv]])
   (:import (mbwatch.command Command)
            (mbwatch.sync_timer SyncTimer)))
 
 (defspec test-cyclic-timer 10
-  (for-all [sync-req (such-that seq SYNC-REQUEST-GEN)
+  (for-all [sync-req (such-that seq MBMAP-GEN)
             ttl (g/choose 100 1000)]
     (let [sync-timer (->SyncTimer sync-req (chan 0x10000) 0)
           {:keys [cmd-chan-in cmd-chan-out log-chan sync-request-atom timer-atom]} sync-timer
