@@ -37,7 +37,7 @@
                                      WARNING log-with-timestamp!]]
             [mbwatch.process :as process]
             [mbwatch.shellwords :refer [shell-escape]]
-            [mbwatch.types :as t :refer [StringList SyncRequest VOID]]
+            [mbwatch.types :as t :refer [SyncRequest VOID]]
             [mbwatch.util :refer [join-mbargs]]
             [schema.core :as s :refer [Int maybe]])
   (:import (clojure.lang IFn)
@@ -53,7 +53,7 @@
    to avoid temporary files."
   [rc     :- String
    mbchan :- String
-   mboxes :- StringList]
+   mboxes :- #{String}]
   (process/spawn
     "bash" "-c" (str "exec mbsync -c <(cat) " (shell-escape (join-mbargs mbchan mboxes)))
     :in rc))
@@ -101,7 +101,7 @@
 (s/defn ^:private sync-boxes! :- VOID
   [mbsync-worker :- MbsyncWorker
    id            :- Int
-   mboxes        :- StringList]
+   mboxes        :- #{String}]
   (let [{:keys [rc maildir mbchan log-chan status]} mbsync-worker
         ev (strict-map->MbsyncEventStart
              {:id id

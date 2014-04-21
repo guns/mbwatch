@@ -63,15 +63,15 @@
     (when (and maildir (contains? notify-map mbchan))
       (let [nboxes (notify-map mbchan)
             bs (if (empty? mboxes)
-                 nboxes ; [] means full sync
-                 (intersection (set mboxes) nboxes))
+                 nboxes ; #{} means full sync
+                 (intersection mboxes nboxes))
             timestamp (dt->ms start)]
         (reduce
           (fn [m b]
             (let [msgs (new-messages (mdir-path maildir b) timestamp)]
               (cond-> m
                 (seq msgs) (assoc b msgs))))
-          {} (sort bs))))))
+          {} bs)))))
 
 (s/defn ^:private find-new-messages :- (maybe NewMessageNotification)
   [notify-map :- NotifyMap

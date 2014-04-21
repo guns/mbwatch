@@ -1,8 +1,8 @@
 (ns mbwatch.util
   (:require [clojure.set :refer [difference]]
             [clojure.string :as string]
-            [mbwatch.types :refer [MBTuple NotifyMap StringList SyncRequest]]
-            [schema.core :as s :refer [Int pair pred]])
+            [mbwatch.types :refer [MBTuple NotifyMap SyncRequest]]
+            [schema.core :as s :refer [Int pair]])
   (:import (clojure.lang Keyword Symbol)
            (java.net URLEncoder)
            (org.joda.time DateTime Duration Instant ReadableInstant)))
@@ -21,7 +21,7 @@
 
 (s/defn join-mbargs :- String
   [mbchan :- String
-   mboxes :- StringList]
+   mboxes :- #{String}]
   (if (seq mboxes)
     (str mbchan \: (string/join \, mboxes))
     (str mbchan)))
@@ -29,8 +29,7 @@
 (s/defn join-sync-request :- String
   [sync-req :- SyncRequest]
   (->> sync-req
-       sort
-       (mapv (fn [[mbchan mboxes]] (join-mbargs mbchan (sort mboxes))))
+       (mapv (fn [[mbchan mboxes]] (join-mbargs mbchan mboxes)))
        (string/join \space)))
 
 (s/defn schema-params :- [Symbol]

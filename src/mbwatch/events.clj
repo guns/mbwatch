@@ -5,12 +5,11 @@
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [ERR INFO Loggable NOTICE WARNING
                                      defloggable]]
-            [mbwatch.types :as t :refer [NotifyMap StringList SyncRequest]]
+            [mbwatch.types :as t :refer [NotifyMap SyncRequest]]
             [mbwatch.util :refer [human-duration join-mbargs
                                   join-sync-request]]
             [schema.core :refer [Int enum maybe]])
-  (:import (com.sun.mail.imap IMAPStore)
-           (javax.mail.internet MimeMessage)
+  (:import (javax.mail.internet MimeMessage)
            (mbwatch.concurrent Timer)
            (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
@@ -106,7 +105,7 @@
 (t/defrecord MbsyncEventStart
   [id     :- Int
    mbchan :- String
-   mboxes :- StringList
+   mboxes :- #{String}
    start  :- DateTime]
 
   Loggable
@@ -120,7 +119,7 @@
 (t/defrecord MbsyncEventStop
   [id      :- Int
    mbchan  :- String
-   mboxes  :- StringList
+   mboxes  :- #{String}
    start   :- DateTime
    stop    :- DateTime
    level   :- Int

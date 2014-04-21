@@ -1,7 +1,7 @@
 (ns mbwatch.types
   (:require [clojure.core :as cc]
-            [schema.core :as s :refer [Schema both defschema either eq maybe
-                                       one pair pred validate]])
+            [schema.core :as s :refer [Schema both defschema eq maybe one
+                                       pair pred validate]])
   (:import (clojure.lang Atom))
   (:refer-clojure :exclude [defrecord]))
 
@@ -53,11 +53,8 @@
 (defschema PortNumber
   (pred #(and (integer? %) (< 0 % 0x10000)) "PortNumber"))
 
-(defschema StringList
-  (either [String] #{String}))
-
 (defschema SyncRequest
-  {String StringList})
+  {String #{String}})
 
 (defschema NotifyMap
   {String #{String}})

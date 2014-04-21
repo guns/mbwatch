@@ -103,7 +103,7 @@
   [config :- Config]
   (let [connections-atom (atom {})
         ;; Command pipeline
-        sync-timer (->SyncTimer {"self" ["INBOX"]} ; FIXME: Move to config
+        sync-timer (->SyncTimer {"self" #{"INBOX"}} ; FIXME: Move to config
                                 (chan CHAN-SIZE)
                                 (-> config :sync-timer-period))
         cmd-chan-0 (:cmd-chan-in sync-timer)
@@ -144,7 +144,7 @@
                           log-chan-1)]
     ;; Initial sync
     ;; FIXME: This should be a union of the idle-map and the sync-request-map
-    (>!! cmd-chan-0 (->Command :sync {"self" ["INBOX"]}))
+    (>!! cmd-chan-0 (->Command :sync {"self" #{"INBOX"}}))
     (Application. cmd-chan-0
                   logging-service
                   notification-service
