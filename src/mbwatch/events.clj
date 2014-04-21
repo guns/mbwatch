@@ -6,8 +6,7 @@
             [mbwatch.logging :refer [ERR INFO Loggable NOTICE WARNING
                                      defloggable]]
             [mbwatch.types :as t :refer [MBMap]]
-            [mbwatch.util :refer [human-duration join-mbargs
-                                  join-sync-request]]
+            [mbwatch.util :refer [human-duration join-mbentry join-mbmap]]
             [schema.core :refer [Int enum maybe]])
   (:import (javax.mail.internet MimeMessage)
            (mbwatch.concurrent Timer)
@@ -81,7 +80,7 @@
   [action   :- (enum :pool :release)
    sync-req :- MBMap]
   (->> sync-req
-       join-sync-request
+       join-mbmap
        (str (if (= action :pool)
               "Delaying syncs: "
               "Releasing pending syncs: "))))
@@ -113,7 +112,7 @@
   (log-level [_] INFO)
 
   (log-item [_]
-    (let [msg (format "Starting `mbsync %s`" (join-mbargs mbchan mboxes))]
+    (let [msg (format "Starting `mbsync %s`" (join-mbentry mbchan mboxes))]
       (LogItem. INFO start msg))))
 
 (t/defrecord MbsyncEventStop
@@ -132,7 +131,7 @@
   (log-level [_] level)
 
   (log-item [_]
-    (let [mbarg (join-mbargs mbchan mboxes)
+    (let [mbarg (join-mbentry mbchan mboxes)
           Δt (human-duration start stop)
           msg (if (zero? status)
                 (format "Finished `mbsync %s` in %s." mbarg Δt)
@@ -167,7 +166,7 @@
 
 (defloggable NotifyMapChangeEvent INFO
   [notify-map :- MBMap]
-  (let [msg (join-sync-request notify-map)]
+  (let [msg (join-mbmap notify-map)]
     (if (seq msg)
       (str "Now notifying on: " msg)
       "Notifications disabled.")))
@@ -182,5 +181,5 @@
                 "Sync timer disabled."
                 (str "Sync timer period set to: " (human-duration period)))
       :sync-request (if (seq sync-req)
-                      (str "Sync timer request set to: " (join-sync-request sync-req))
+                      (str "Sync timer request set to: " (join-mbmap sync-req))
                       "Sync timer disabled."))))

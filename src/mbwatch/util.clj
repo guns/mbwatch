@@ -9,31 +9,31 @@
 
 (s/defn parse-mbargs :- MBMap
   "Parse mbsync string arguments. The mbox value of an mbchan with no box
-   arguments is set to [\"INBOX\"]."
+   arguments is set to #{\"INBOX\"}."
   [argv :- [String]]
   (reduce
     (fn [m arg]
       (let [[[_ chan bs]] (re-seq #"\A([^:]+)(?=:(.*))?" arg)]
         (assoc m chan (if (and bs (seq bs))
-                        (string/split bs #",")
-                        ["INBOX"]))))
+                        (into #{} (string/split bs #","))
+                        #{"INBOX"}))))
     {} argv))
 
-(s/defn join-mbargs :- String
+(s/defn join-mbentry :- String
   [mbchan :- String
    mboxes :- #{String}]
   (if (seq mboxes)
     (str mbchan \: (string/join \, mboxes))
     (str mbchan)))
 
-(s/defn join-sync-request :- String
-  [sync-req :- MBMap]
-  (->> sync-req
-       (mapv (fn [[mbchan mboxes]] (join-mbargs mbchan mboxes)))
+(s/defn join-mbmap :- String
+  [mbmap :- MBMap]
+  (->> mbmap
+       (mapv (fn [[mbchan mboxes]] (join-mbentry mbchan mboxes)))
        (string/join \space)))
 
 (s/defn schema-params :- [Symbol]
-  "Remove `:- Type` information from a parameter list."
+  "Remove `:- Schema` information from a parameter list."
   [params :- [Object]]
   (loop [v [] params params]
     (if-some [p (first params)]
@@ -155,25 +155,25 @@
        (URLEncoder/encode user "UTF-8") \@
        (URLEncoder/encode host "UTF-8") \: port))
 
-(s/defn map-mbtuples :- #{MBTuple}
-  [notify-map :- MBMap]
+(s/defn mbmap->mbtuples :- #{MBTuple}
+  [mbmap :- MBMap]
   (reduce-kv
     (fn [v mbchan mboxes]
       (reduce
         (fn [v mbox]
           (conj v [mbchan mbox]))
         v mboxes))
-    #{} notify-map))
+    #{} mbmap))
 
-(s/defn reduce-mbtuples :- MBMap
+(s/defn mbtuples->mbmap :- MBMap
   [mbtuples :- #{MBTuple}]
   (reduce
     (fn [m [mbchan mbox]]
       (update-in m [mbchan] #(conj (or % #{}) mbox)))
     {} mbtuples))
 
-(s/defn ^:private notify-map-diff* :- (pair MBMap "removals"
-                                            MBMap "additions")
+(s/defn ^:private mbmap-diff* :- (pair MBMap "removals"
+                                       MBMap "additions")
   [m₁ :- MBMap
    m₂ :- MBMap]
   (reduce
@@ -186,14 +186,14 @@
          (cond-> add (seq Δ+) (assoc mbchan Δ+))]))
     [{} {}] (distinct (mapcat keys [m₁ m₂]))))
 
-(s/defn notify-map-diff :- (pair #{MBTuple} "removals"
-                                 #{MBTuple} "additions")
+(s/defn mbmap-diff :- (pair #{MBTuple} "removals"
+                            #{MBTuple} "additions")
   [m₁ :- MBMap
    m₂ :- MBMap]
-  (->> (notify-map-diff* m₁ m₂)
-       (mapv map-mbtuples)))
+  (->> (mbmap-diff* m₁ m₂)
+       (mapv mbmap->mbtuples)))
 
-(s/defn notify-map-disj :- MBMap
+(s/defn mbmap-disj :- MBMap
   [m₁ :- MBMap
    m₂ :- MBMap]
   (reduce-kv

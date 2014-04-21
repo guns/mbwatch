@@ -38,7 +38,7 @@
             [mbwatch.process :as process]
             [mbwatch.shellwords :refer [shell-escape]]
             [mbwatch.types :as t :refer [MBMap VOID]]
-            [mbwatch.util :refer [join-mbargs]]
+            [mbwatch.util :refer [join-mbentry]]
             [schema.core :as s :refer [Int maybe]])
   (:import (clojure.lang IFn)
            (java.io StringWriter)
@@ -55,7 +55,7 @@
    mbchan :- String
    mboxes :- #{String}]
   (process/spawn
-    "bash" "-c" (str "exec mbsync -c <(cat) " (shell-escape (join-mbargs mbchan mboxes)))
+    "bash" "-c" (str "exec mbsync -c <(cat) " (shell-escape (join-mbentry mbchan mboxes)))
     :in rc))
 
 (declare sync-boxes!)

@@ -28,8 +28,8 @@
                                      log-with-timestamp!]]
             [mbwatch.types :as t :refer [ConnectionMapAtom MBMap MBMapAtom
                                          MBTuple VOID Word]]
-            [mbwatch.util :refer [map-mbtuples notify-map-diff
-                                  notify-map-disj reduce-mbtuples url-for]]
+            [mbwatch.util :refer [mbmap->mbtuples mbmap-diff mbmap-disj
+                                  mbtuples->mbmap url-for]]
             [schema.core :as s :refer [Any Int defschema maybe]])
   (:import (clojure.lang IFn)
            (com.sun.mail.imap IMAPFolder IMAPStore)
@@ -212,7 +212,7 @@
   (start [this]
     (log-with-timestamp! log-chan this)
     (let [c (thread-loop [worker-map (start-workers
-                                       this {} (map-mbtuples @idle-map-atom))]
+                                       this {} (mbmap->mbtuples @idle-map-atom))]
               (if-some [cmd (when (.get status) (<!! cmd-chan-in))]
                 ;; Convey commands ASAP
                 (do (>!! cmd-chan-out cmd)
@@ -300,7 +300,7 @@
             (seq Δ-) (as-> m (apply dissoc m Δ-))
             (seq Δ+) (as-> m (start-workers idle-master m Δ+)))]
     (>!! (:cmd-chan-out idle-master)
-         (->Command :sync (reduce-mbtuples Δ+)))
+         (->Command :sync (mbtuples->mbmap Δ+)))
     @f
     m))
 
@@ -311,7 +311,7 @@
   (let [{:keys [idle-map-atom cmd-chan-out]} idle-master
         imap₀ @idle-map-atom
         imap₁ (f idle-map-atom)
-        [Δ- Δ+] (notify-map-diff imap₀ imap₁)]
+        [Δ- Δ+] (mbmap-diff imap₀ imap₁)]
     (stop-and-start! idle-master worker-map Δ- Δ+)))
 
 (s/defn ^:private process-command :- IDLEWorkerMap
@@ -324,7 +324,7 @@
                 #(swap! % (partial merge-with union) (:payload command)))
     :idle/remove (swap-stop-and-start!
                    idle-master worker-map
-                   #(swap! % notify-map-disj (:payload command)))
+                   #(swap! % mbmap-disj (:payload command)))
     :idle/set (swap-stop-and-start!
                 idle-master worker-map
                 #(reset! % (:payload command)))

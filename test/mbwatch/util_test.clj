@@ -1,32 +1,30 @@
 (ns mbwatch.util-test
   (:require [clojure.java.io :as io]
-            [clojure.java.shell :refer [sh]]
             [clojure.test :refer [is]]
             [mbwatch.util :refer [catch-print chomp class-name dequote dt->ms
-                                  human-duration istr= join-mbargs
-                                  join-sync-request map-mbtuples
-                                  notify-map-diff notify-map-disj
-                                  parse-kv-string parse-mbargs parse-ms
-                                  reduce-mbtuples schema-params
-                                  url-for zero-or-min]]
+                                  human-duration istr= join-mbentry
+                                  join-mbmap mbmap->mbtuples mbmap-diff
+                                  mbmap-disj mbtuples->mbmap parse-kv-string
+                                  parse-mbargs parse-ms schema-params url-for
+                                  zero-or-min]]
             [schema.test :refer [deftest]])
   (:import (org.joda.time DateTime)))
 
 (deftest test-parse-args
   (is (= (parse-mbargs ["foo:bar,baz" "empty" "also-empty:" "quux:INBOX"])
-         {"foo" ["bar" "baz"]
-          "empty" ["INBOX"]
-          "also-empty" ["INBOX"]
-          "quux" ["INBOX"]})))
+         {"foo" #{"bar" "baz"}
+          "empty" #{"INBOX"}
+          "also-empty" #{"INBOX"}
+          "quux" #{"INBOX"}})))
 
-(deftest test-join-mbargs
-  (is (= "foo" (join-mbargs "foo" [])))
-  (is (= "foo:bar" (join-mbargs "foo" ["bar"])))
-  (is (= "foo:bar,baz" (join-mbargs "foo" ["bar" "baz"]))))
+(deftest test-join-mbentry
+  (is (= "foo" (join-mbentry "foo" #{})))
+  (is (= "foo:bar" (join-mbentry "foo" #{"bar"})))
+  (is (= "foo:bar,baz" (join-mbentry "foo" #{"bar" "baz"}))))
 
-(deftest test-join-sync-request
+(deftest test-join-mbmap
   (is (= "bar:a baz:b,c foo"
-         (join-sync-request {"foo" [] "bar" ["a"] "baz" ["c" "b"]}))))
+         (join-mbmap (sorted-map "foo" #{} "bar" #{"a"} "baz" #{"c" "b"})))))
 
 (deftest test-schema-params
   (is (= '[foo bar baz]
@@ -94,19 +92,19 @@
 
 (deftest test-mbtuples
   (let [nmap {"α" #{"a" "b" "c"} "β" #{"a"}}
-        mbts (map-mbtuples nmap)]
+        mbts (mbmap->mbtuples nmap)]
     (is (= mbts #{["α" "a"] ["α" "b"] ["α" "c"] ["β" "a"]}))
-    (is (= (reduce-mbtuples mbts) nmap))))
+    (is (= (mbtuples->mbmap mbts) nmap))))
 
-(deftest test-notify-map-diff
-  (is (= (notify-map-diff {"α" #{"b"} "β" #{"b"} "γ" #{"b"}}
-                          {"α" #{"a" "c"} "β" #{"b" "c"}})
+(deftest test-mbmap-diff
+  (is (= (mbmap-diff {"α" #{"b"} "β" #{"b"} "γ" #{"b"}}
+                     {"α" #{"a" "c"} "β" #{"b" "c"}})
          [#{["α" "b"] ["γ" "b"]}
           #{["α" "a"] ["α" "c"] ["β" "c"]}])))
 
-(deftest test-notify-map-disj
-  (is (= (notify-map-disj {"α" #{"a" "b" "c"} "β" #{"a"}}
-                          {"α" #{"b" "c" "d"} "β" #{"a"}})
+(deftest test-mbmap-disj
+  (is (= (mbmap-disj {"α" #{"a" "b" "c"} "β" #{"a"}}
+                     {"α" #{"b" "c" "d"} "β" #{"a"}})
          {"α" #{"a"}})))
 
 (deftest test-catch-print
