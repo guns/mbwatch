@@ -9,7 +9,7 @@
             [schema.core :as s :refer [defschema either enum eq maybe one
                                        optional-key]]))
 
-(def ^:const DEFAULT-PATH
+(def ^:const DEFAULT-MBSYNCRC-PATH
   "Default path of mbsyncrc."
   (str (System/getProperty "user.home") \/ ".mbsyncrc"))
 
@@ -210,7 +210,7 @@
    mbchan->Maildirstore   :- {Word Maildirstore}
    mbchan->IMAPCredential :- {Word IMAPCredential}])
 
-(s/defn parse :- Mbsyncrc
+(s/defn parse-mbsyncrc :- Mbsyncrc
   [s :- String]
   (let [sections (parse-tokens (tokenize s))
         imapname->IMAPCredential (map-credentials (:imapstore sections))

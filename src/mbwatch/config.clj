@@ -2,13 +2,13 @@
   "Top level options from all configuration sources."
   (:require [clojure.java.io :as io :refer [Coercions]]
             [clojure.string :as string]
-            [mbwatch.config.mbsyncrc :as mbs :refer [Maildirstore]]
+            [mbwatch.config.mbsyncrc :refer [Maildirstore parse-mbsyncrc]]
             [mbwatch.types :as t]
             [mbwatch.util :refer [parse-kv-string parse-ms]]
             [schema.core :as s :refer [Int]])
   (:import (mbwatch.config.mbsyncrc Mbsyncrc)))
 
-(def ^:const DEFAULT-PATH
+(def ^:const DEFAULT-CONFIG-PATH
   (str (System/getProperty "user.home") "/.config/mbwatch/config"))
 
 (def DEFAULT-OPTIONS
@@ -29,7 +29,7 @@
 (s/defn ->Config :- Config
   [mbsyncrc-path       :- Coercions
    mbwatch-config-path :- Coercions]
-  (let [mbsyncrc (mbs/parse (slurp mbsyncrc-path))
+  (let [mbsyncrc (parse-mbsyncrc (slurp mbsyncrc-path))
         mbwatch-config (parse-kv-string (slurp mbwatch-config-path))]
     (strict-map->Config
       (-> {:mbsyncrc mbsyncrc}

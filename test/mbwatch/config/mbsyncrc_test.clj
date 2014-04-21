@@ -1,11 +1,11 @@
 (ns mbwatch.config.mbsyncrc-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer [is]]
-            [mbwatch.config.mbsyncrc :as mbs]
+            [mbwatch.config.mbsyncrc :refer [parse-mbsyncrc]]
             [schema.test :refer [deftest]]))
 
 (deftest test-parse
-  (let [mbsyncrc (mbs/parse (slurp (io/resource "mbsyncrc")))]
+  (let [mbsyncrc (parse-mbsyncrc (slurp (io/resource "mbsyncrc")))]
     (is (= (:text mbsyncrc)
            (slurp (io/resource "mbsyncrc.out"))))
     (is (= (-> mbsyncrc :sections :general)
