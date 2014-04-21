@@ -138,7 +138,7 @@
   [obj :- Object]
   (.getSimpleName (class obj)))
 
-(s/defn zero-or-min :- (pred #(>= % 0))
+(s/defn zero-or-min :- long
   "{n ∈ ℕ : n = 0, n ≥ min}"
   [n   :- long
    min :- long]
@@ -173,7 +173,8 @@
       (update-in m [mbchan] #(conj (or % #{}) mbox)))
     {} mbtuples))
 
-(s/defn ^:private notify-map-diff* :- (pair NotifyMap "removals" NotifyMap "additions")
+(s/defn ^:private notify-map-diff* :- (pair NotifyMap "removals"
+                                            NotifyMap "additions")
   [nm₁ :- NotifyMap
    nm₂ :- NotifyMap]
   (reduce
@@ -186,7 +187,8 @@
          (cond-> add (seq Δ+) (assoc mbchan Δ+))]))
     [{} {}] (distinct (mapcat keys [nm₁ nm₂]))))
 
-(s/defn notify-map-diff :- (pair #{MbTuple} "removals" #{MbTuple} "additions")
+(s/defn notify-map-diff :- (pair #{MbTuple} "removals"
+                                 #{MbTuple} "additions")
   [nm₁ :- NotifyMap
    nm₂ :- NotifyMap]
   (->> (notify-map-diff* nm₁ nm₂)

@@ -39,10 +39,11 @@
 (defschema Word
   (pred #(and (string? %)
               (seq %)
-              (not (re-find #"\s" %)))))
+              (not (re-find #"\s" %)))
+        "Word"))
 
 (defschema LowerCaseWord
-  (both Word (pred #(not (re-find #"\p{Lu}" %)))))
+  (both Word (pred #(not (re-find #"\p{Lu}" %)) "LowerCase")))
 
 (defschema FilteredLine
   (pred #(and (string? %)
@@ -50,7 +51,7 @@
         "single non-comment line with no surrounding whitespace"))
 
 (defschema PortNumber
-  (pred #(and (integer? %) (< 0 % 0x10000))))
+  (pred #(and (integer? %) (< 0 % 0x10000)) "PortNumber"))
 
 (defschema StringList
   (either [String] #{String}))
