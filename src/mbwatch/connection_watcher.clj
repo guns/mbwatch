@@ -42,9 +42,9 @@
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
             [mbwatch.network :refer [reachable?]]
+            [mbwatch.time :refer [human-duration]]
             [mbwatch.types :as t :refer [ConnectionMap ConnectionMapAtom
                                          MBMap VOID Word tuple]]
-            [mbwatch.util :refer [human-duration]]
             [schema.core :as s :refer [Int either maybe pair pred validate]])
   (:import (clojure.lang IFn)
            (java.util.concurrent.atomic AtomicBoolean)

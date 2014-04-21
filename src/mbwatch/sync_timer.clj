@@ -22,8 +22,8 @@
             [mbwatch.events :refer [->SyncTimerPreferenceEvent]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
+            [mbwatch.time :refer [human-duration]]
             [mbwatch.types :as t :refer [MBMap MBMapAtom VOID]]
-            [mbwatch.util :refer [human-duration]]
             [schema.core :as s :refer [Int maybe]])
   (:import (clojure.lang IFn)
            (java.util.concurrent.atomic AtomicBoolean)

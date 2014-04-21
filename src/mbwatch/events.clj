@@ -6,8 +6,8 @@
             [mbwatch.logging :refer [ERR INFO Loggable NOTICE WARNING
                                      defloggable]]
             [mbwatch.mbmap :refer [join-mbentry join-mbmap]]
+            [mbwatch.time :refer [human-duration]]
             [mbwatch.types :as t :refer [MBMap]]
-            [mbwatch.util :refer [human-duration]]
             [schema.core :refer [Int enum maybe]])
   (:import (javax.mail.internet MimeMessage)
            (mbwatch.concurrent Timer)

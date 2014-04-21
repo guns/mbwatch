@@ -3,8 +3,9 @@
   (:require [clojure.java.io :as io :refer [Coercions]]
             [clojure.string :as string]
             [mbwatch.config.mbsyncrc :refer [Maildirstore parse-mbsyncrc]]
+            [mbwatch.time :refer [parse-ms]]
             [mbwatch.types :as t]
-            [mbwatch.util :refer [parse-kv-string parse-ms]]
+            [mbwatch.util :refer [parse-kv-string]]
             [schema.core :as s :refer [Int]])
   (:import (mbwatch.config.mbsyncrc Mbsyncrc)))
 

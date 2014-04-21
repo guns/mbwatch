@@ -24,8 +24,8 @@
                                      log-with-timestamp!]]
             [mbwatch.maildir :refer [new-messages senders]]
             [mbwatch.process :as process]
+            [mbwatch.time :refer [dt->ms]]
             [mbwatch.types :as t :refer [MBMap MBMapAtom VOID]]
-            [mbwatch.util :refer [dt->ms]]
             [schema.core :as s :refer [Int defschema either maybe]])
   (:import (clojure.lang IFn)
            (java.io StringWriter)
