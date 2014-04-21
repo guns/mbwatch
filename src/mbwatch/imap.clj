@@ -127,7 +127,7 @@
                (fn [_ _ _ n]
                  (let [conn (get-in n [mbchan :status])]
                    (when-not (= conn (.get connection))
-                     (.set connection conn)
+                     (.set connection (boolean conn))
                      (sig-notify-all status)
                      ;; Queue a sync when the conn goes _down_; this allows
                      ;; the ConnectionWatcher to pool syncs
