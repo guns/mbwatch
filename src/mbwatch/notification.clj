@@ -26,6 +26,7 @@
             [mbwatch.process :as process]
             [mbwatch.time :refer [dt->ms]]
             [mbwatch.types :as t :refer [MBMap MBMapAtom VOID]]
+            [mbwatch.util :refer [when-seq]]
             [schema.core :as s :refer [Int defschema either maybe]])
   (:import (clojure.lang IFn)
            (java.io StringWriter)
@@ -218,7 +219,8 @@
                                   (deref (:notify-map-atom notify-service))
                                   events)]
                   (put! (:log-chan-out notify-service) note)
-                  (notify! (:notify-command notify-service) note)))
+                  (when-seq [cmd (:notify-command notify-service)]
+                    (notify! cmd note))))
               (dissoc sync-requests id))
           (assoc sync-requests id {:countdown countdown :events events})))
       sync-requests)))
