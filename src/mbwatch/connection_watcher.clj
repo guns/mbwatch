@@ -260,7 +260,7 @@
    the mbchan is false. Returns the new conn-map and the new sync-req with
    merged entries removed.
 
-   An mbox argument of [] resets the :pending-syncs value to #{} with
+   An mbox argument of #{} resets the :pending-syncs value to #{} with
    the :all-mboxes metadata flag set. Correspondingly, additions to a
    :pending-syncs value that has :all-mboxes is ignored since a full mbchan
    sync will be issued once the server is reachable."
