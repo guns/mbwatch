@@ -15,12 +15,12 @@
            (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
-(def ^:private connection-event-map
+(def ^:private CONNECTION-EVENT-MAP
   {true  [NOTICE  " -> reachable"]
    false [WARNING " >! unreachable"]
    nil   [INFO    " -- unregistered"]})
 
-(def ^:private imap-connection-event-map
+(def ^:private IMAP-CONNECTION-EVENT-MAP
   {:start      [INFO    "Connecting "]
    :success    [INFO    "Connected "]
    :badauth    [ERR     "Authentication failed for "]
@@ -37,10 +37,10 @@
   Loggable
 
   (log-level [_]
-    (first (connection-event-map status)))
+    (first (CONNECTION-EVENT-MAP status)))
 
   (log-item [this]
-    (let [[level suffix] (connection-event-map status)]
+    (let [[level suffix] (CONNECTION-EVENT-MAP status)]
       (LogItem. level timestamp (str "Channel " mbchan suffix)))))
 
 (t/defrecord IMAPConnectionEvent
@@ -52,10 +52,10 @@
   Loggable
 
   (log-level [_]
-    (first (imap-connection-event-map type)))
+    (first (IMAP-CONNECTION-EVENT-MAP type)))
 
   (log-item [this]
-    (let [[level prefix] (imap-connection-event-map type)
+    (let [[level prefix] (IMAP-CONNECTION-EVENT-MAP type)
           msg (str prefix imap-url)]
       (LogItem. level timestamp (if error (str msg "\n" error) msg)))))
 

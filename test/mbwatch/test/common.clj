@@ -4,31 +4,31 @@
                                                          return]]
             [mbwatch.command :refer [->Command]]))
 
-(def mbox-gen
+(def MBOX-GEN
   (elements (mapv (comp str char) (range (int \α) (inc (int \ω))))))
 
-(def mbchan-gen
+(def MBCHAN-GEN
   (elements (mapv str '[alpha beta gamma delta epsilon zeta eta theta iota
                         kappa lambda mu nu xi omicron pi rho sigma tau upsilon
                         phi chi psi omega])))
 
-(def sync-request-gen
-  (->> (g/tuple mbchan-gen (g/vector mbox-gen))
+(def SYNC-REQUEST-GEN
+  (->> (g/tuple MBCHAN-GEN (g/vector MBOX-GEN))
        g/vector
        (fmap (partial into {}))))
 
-(def command-gen
-  (one-of [(fmap #(->Command :sync %) sync-request-gen)
+(def COMMAND-GEN
+  (one-of [(fmap #(->Command :sync %) SYNC-REQUEST-GEN)
            (fmap #(->Command :sync/term %) (return nil))
            (fmap #(->Command :conn/trigger %) (return nil))
            (fmap #(->Command :conn/set-period %) g/int)
-           (fmap #(->Command :conn/remove %) (g/vector mbchan-gen))
-           (fmap #(->Command :notify/add %) sync-request-gen)
-           (fmap #(->Command :notify/remove %) sync-request-gen)
-           (fmap #(->Command :notify/set %) sync-request-gen)
+           (fmap #(->Command :conn/remove %) (g/vector MBCHAN-GEN))
+           (fmap #(->Command :notify/add %) SYNC-REQUEST-GEN)
+           (fmap #(->Command :notify/remove %) SYNC-REQUEST-GEN)
+           (fmap #(->Command :notify/set %) SYNC-REQUEST-GEN)
            (fmap #(->Command :timer/trigger %) (return nil))
            (fmap #(->Command :timer/set-period %) g/int)
-           (fmap #(->Command :timer/set-request %) sync-request-gen)]))
+           (fmap #(->Command :timer/set-request %) SYNC-REQUEST-GEN)]))
 
 (defn chanv [ch]
   (into [] (take-while some? (repeatedly #(<!! ch)))))
