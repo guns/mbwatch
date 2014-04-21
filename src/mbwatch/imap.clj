@@ -26,7 +26,7 @@
                                     ->IMAPCommandError]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
-            [mbwatch.types :as t :refer [ConnectionMapAtom MbTuple NotifyMap
+            [mbwatch.types :as t :refer [ConnectionMapAtom MBTuple NotifyMap
                                          NotifyMapAtom VOID Word]]
             [mbwatch.util :refer [map-mbtuples notify-map-diff
                                   notify-map-disj reduce-mbtuples url-for]]
@@ -272,7 +272,7 @@
        :exit-fn nil})))
 
 (defschema ^:private IDLEWorkerMap
-  {MbTuple IDLEWorker})
+  {MBTuple IDLEWorker})
 
 (s/defn ^:private stop-workers! :- VOID
   [workers :- [IDLEWorker]]
@@ -282,7 +282,7 @@
 (s/defn ^:private start-workers :- IDLEWorkerMap
   [idle-master :- IDLEMaster
    worker-map  :- IDLEWorkerMap
-   mbtuples    :- #{MbTuple}]
+   mbtuples    :- #{MBTuple}]
   {:pre [(empty? (intersection mbtuples (set (keys worker-map))))]}
   (reduce
     (fn [m [mbchan mbox]]
@@ -292,8 +292,8 @@
 (s/defn ^:private stop-and-start! :- IDLEWorkerMap
   [idle-master :- IDLEMaster
    worker-map  :- IDLEWorkerMap
-   Δ-          :- #{MbTuple}
-   Δ+          :- #{MbTuple}]
+   Δ-          :- #{MBTuple}
+   Δ+          :- #{MBTuple}]
   {:pre [(subset? Δ- (set (keys worker-map)))]}
   (let [f (future (stop-workers! (vals (select-keys worker-map Δ-))))
         m (cond-> worker-map

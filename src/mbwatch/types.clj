@@ -65,7 +65,7 @@
 (defschema NotifyMapAtom
   (atom-of NotifyMap "NotifyMapAtom"))
 
-(defschema MbTuple
+(defschema MBTuple
   (pair String "mbchan"
         String "mbox"))
 
