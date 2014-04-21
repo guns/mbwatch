@@ -24,7 +24,7 @@
                                      log-with-timestamp!]]
             [mbwatch.maildir :refer [new-messages senders]]
             [mbwatch.process :as process]
-            [mbwatch.types :as t :refer [NotifyMap NotifyMapAtom VOID]]
+            [mbwatch.types :as t :refer [MBMap MBMapAtom VOID]]
             [mbwatch.util :refer [dt->ms]]
             [schema.core :as s :refer [Int defschema either maybe]])
   (:import (clojure.lang IFn)
@@ -57,7 +57,7 @@
               (string/join \newline ss)))))
 
 (s/defn ^:private sync-event->new-messages-by-box :- (maybe {String [MimeMessage]})
-  [notify-map :- NotifyMap
+  [notify-map :- MBMap
    event      :- MbsyncEventStop]
   (let [{:keys [mbchan mboxes maildir start]} event]
     (when (and maildir (contains? notify-map mbchan))
@@ -74,7 +74,7 @@
           {} bs)))))
 
 (s/defn ^:private find-new-messages :- (maybe NewMessageNotification)
-  [notify-map :- NotifyMap
+  [notify-map :- MBMap
    events     :- [MbsyncEventStop]]
   (let [m (reduce
             (fn [m ev]
@@ -119,7 +119,7 @@
 
 (t/defrecord ^:private NewMessageNotificationService
   [notify-command  :- String
-   notify-map-atom :- NotifyMapAtom
+   notify-map-atom :- MBMapAtom
    log-chan-in     :- ReadPort
    log-chan-out    :- WritePort
    status          :- AtomicBoolean
@@ -157,7 +157,7 @@
 
 (s/defn ->NewMessageNotificationService :- NewMessageNotificationService
   [notify-command :- String
-   notify-map     :- NotifyMap
+   notify-map     :- MBMap
    log-chan-in    :- ReadPort]
   (strict-map->NewMessageNotificationService
     {:notify-command notify-command

@@ -26,8 +26,8 @@
                                     ->IMAPCommandError]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
-            [mbwatch.types :as t :refer [ConnectionMapAtom MBTuple NotifyMap
-                                         NotifyMapAtom VOID Word]]
+            [mbwatch.types :as t :refer [ConnectionMapAtom MBMap MBMapAtom
+                                         MBTuple VOID Word]]
             [mbwatch.util :refer [map-mbtuples notify-map-diff
                                   notify-map-disj reduce-mbtuples url-for]]
             [schema.core :as s :refer [Any Int defschema maybe]])
@@ -198,7 +198,7 @@
 
 (t/defrecord IDLEMaster
   [mbchan->IMAPCredential :- {Word IMAPCredential}
-   idle-map-atom          :- NotifyMapAtom
+   idle-map-atom          :- MBMapAtom
    connections-atom       :- ConnectionMapAtom
    timeout                :- Int
    cmd-chan-in            :- ReadPort
@@ -238,7 +238,7 @@
 
 (s/defn ->IDLEMaster :- IDLEMaster
   [mbchan->IMAPCredential :- {Word IMAPCredential}
-   idle-map               :- NotifyMap
+   idle-map               :- MBMap
    connections-atom       :- ConnectionMapAtom ; Read-only!
    timeout                :- Int
    cmd-chan-in            :- ReadPort]

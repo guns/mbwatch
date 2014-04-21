@@ -53,14 +53,11 @@
 (defschema PortNumber
   (pred #(and (integer? %) (< 0 % 0x10000)) "PortNumber"))
 
-(defschema SyncRequest
+(defschema MBMap
   {String #{String}})
 
-(defschema NotifyMap
-  {String #{String}})
-
-(defschema NotifyMapAtom
-  (atom-of NotifyMap "NotifyMapAtom"))
+(defschema MBMapAtom
+  (atom-of MBMap "MBMapAtom"))
 
 (defschema MBTuple
   (pair String "mbchan"

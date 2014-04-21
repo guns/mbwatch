@@ -43,7 +43,7 @@
                                      log-with-timestamp!]]
             [mbwatch.network :refer [reachable?]]
             [mbwatch.types :as t :refer [ConnectionMap ConnectionMapAtom
-                                         SyncRequest VOID Word tuple]]
+                                         MBMap VOID Word tuple]]
             [mbwatch.util :refer [human-duration]]
             [schema.core :as s :refer [Int either maybe pair pred validate]])
   (:import (clojure.lang IFn)
@@ -82,8 +82,8 @@
                  [mbchan m])))
        (into {})))
 
-(s/defn ^:private pending-sync-changes :- (pair SyncRequest "pool"
-                                                SyncRequest "release")
+(s/defn ^:private pending-sync-changes :- (pair MBMap "pool"
+                                                MBMap "release")
   [old-conn-map :- ConnectionMap
    new-conn-map :- ConnectionMap
    log-chan     :- WritePort
@@ -254,7 +254,7 @@
             (set-alarm! timer-atom retry-ms)
             (recur retry)))))))
 
-(s/defn ^:private merge-pending-syncs :- (tuple ConnectionMap SyncRequest)
+(s/defn ^:private merge-pending-syncs :- (tuple ConnectionMap MBMap)
   "Merge sync-req into conn-map as :pending-syncs entries if the :status of
    the mbchan is false. Returns the new conn-map and the new sync-req with
    merged entries removed.
@@ -264,7 +264,7 @@
    :pending-syncs value that has :all-mboxes is ignored since a full mbchan
    sync will be issued once the server is reachable."
   [conn-map :- ConnectionMap
-   sync-req :- SyncRequest]
+   sync-req :- MBMap]
   (reduce-kv
     (fn [[conn-map sync-req] mbchan mboxes]
       (if (false? (:status (conn-map mbchan)))
@@ -278,7 +278,7 @@
     [conn-map sync-req] sync-req))
 
 (s/defn ^:private update-connections-for-sync :- (pred #(and (validate ConnectionMap %)
-                                                             (validate SyncRequest (::sync-req (meta %))))
+                                                             (validate MBMap (::sync-req (meta %))))
                                                        "ConnectionMap with ::sync-req meta")
   "Update the connections in conn-map matching sync-req. New entries are
    created for unknown mbchans in sync-req.
@@ -288,7 +288,7 @@
    output of merge-pending-syncs, except that we are abusing the metadata
    system to avoid external synchronization from within a transaction."
   [conn-map               :- ConnectionMap
-   sync-req               :- SyncRequest
+   sync-req               :- MBMap
    mbchan->IMAPCredential :- {Word IMAPCredential}
    timeout                :- Int]
   (let [mbchans-with-imap (intersection (set (keys sync-req))

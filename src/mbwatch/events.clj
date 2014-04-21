@@ -5,7 +5,7 @@
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [ERR INFO Loggable NOTICE WARNING
                                      defloggable]]
-            [mbwatch.types :as t :refer [NotifyMap SyncRequest]]
+            [mbwatch.types :as t :refer [MBMap]]
             [mbwatch.util :refer [human-duration join-mbargs
                                   join-sync-request]]
             [schema.core :refer [Int enum maybe]])
@@ -79,7 +79,7 @@
 
 (defloggable PendingSyncsEvent INFO
   [action   :- (enum :pool :release)
-   sync-req :- SyncRequest]
+   sync-req :- MBMap]
   (->> sync-req
        join-sync-request
        (str (if (= action :pool)
@@ -166,7 +166,7 @@
       (StringBuilder. "NewMessageNotification:") (sort mbchan->mbox->messages))))
 
 (defloggable NotifyMapChangeEvent INFO
-  [notify-map :- NotifyMap]
+  [notify-map :- MBMap]
   (let [msg (join-sync-request notify-map)]
     (if (seq msg)
       (str "Now notifying on: " msg)
@@ -175,7 +175,7 @@
 (defloggable SyncTimerPreferenceEvent INFO
   [type     :- (enum :period :sync-request)
    timer    :- Timer
-   sync-req :- SyncRequest]
+   sync-req :- MBMap]
   (let [period (:period timer)]
     (case type
       :period (if (zero? period)

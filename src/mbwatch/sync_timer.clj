@@ -22,17 +22,14 @@
             [mbwatch.events :refer [->SyncTimerPreferenceEvent]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
-            [mbwatch.types :as t :refer [SyncRequest VOID atom-of]]
+            [mbwatch.types :as t :refer [MBMap MBMapAtom VOID]]
             [mbwatch.util :refer [human-duration]]
-            [schema.core :as s :refer [Int defschema maybe]])
+            [schema.core :as s :refer [Int maybe]])
   (:import (clojure.lang IFn)
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.command Command)))
 
 (def ^:private ^:const MIN-POS-PERIOD 5000)
-
-(defschema ^:private SyncRequestAtom
-  (atom-of SyncRequest "SyncRequestAtom"))
 
 (declare process-command)
 
@@ -40,7 +37,7 @@
   [cmd-chan-in       :- ReadPort
    cmd-chan-out      :- WritePort
    log-chan          :- WritePort
-   sync-request-atom :- SyncRequestAtom
+   sync-request-atom :- MBMapAtom
    timer-atom        :- TimerAtom
    status            :- AtomicBoolean
    exit-fn           :- (maybe IFn)]
@@ -88,7 +85,7 @@
                             (human-duration (:period @timer-atom))))))
 
 (s/defn ->SyncTimer :- SyncTimer
-  [sync-req    :- SyncRequest
+  [sync-req    :- MBMap
    cmd-chan-in :- ReadPort
    period      :- Int]
   (strict-map->SyncTimer

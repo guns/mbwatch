@@ -37,7 +37,7 @@
                                      WARNING log-with-timestamp!]]
             [mbwatch.process :as process]
             [mbwatch.shellwords :refer [shell-escape]]
-            [mbwatch.types :as t :refer [SyncRequest VOID]]
+            [mbwatch.types :as t :refer [MBMap VOID]]
             [mbwatch.util :refer [join-mbargs]]
             [schema.core :as s :refer [Int maybe]])
   (:import (clojure.lang IFn)
@@ -201,7 +201,7 @@
    if it does not exist."
   [worker-map    :- {String MbsyncWorker}
    id            :- Int
-   sync-req      :- SyncRequest
+   sync-req      :- MBMap
    mbsync-master :- MbsyncMaster]
   (let [mbchans (-> mbsync-master :mbsyncrc :mbchans)]
     (reduce-kv
