@@ -68,7 +68,7 @@
 
 (s/defn ->Timer :- Timer
   "Construct a new Timer with sane values. If trigger-now? is true, the alarm
-   is set set to the current time."
+   is set to the current time."
   [period       :- long
    min-pos      :- long
    trigger-now? :- Boolean]
