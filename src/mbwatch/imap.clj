@@ -26,10 +26,11 @@
                                     ->IMAPCommandError]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
+            [mbwatch.mbmap :refer [mbmap->mbtuples mbmap-diff mbmap-disj
+                                   mbtuples->mbmap]]
             [mbwatch.types :as t :refer [ConnectionMapAtom MBMap MBMapAtom
                                          MBTuple VOID Word]]
-            [mbwatch.util :refer [mbmap->mbtuples mbmap-diff mbmap-disj
-                                  mbtuples->mbmap url-for]]
+            [mbwatch.util :refer [url-for]]
             [schema.core :as s :refer [Any Int defschema maybe]])
   (:import (clojure.lang IFn)
            (com.sun.mail.imap IMAPFolder IMAPStore)

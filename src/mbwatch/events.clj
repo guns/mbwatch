@@ -5,8 +5,9 @@
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [ERR INFO Loggable NOTICE WARNING
                                      defloggable]]
+            [mbwatch.mbmap :refer [join-mbentry join-mbmap]]
             [mbwatch.types :as t :refer [MBMap]]
-            [mbwatch.util :refer [human-duration join-mbentry join-mbmap]]
+            [mbwatch.util :refer [human-duration]]
             [schema.core :refer [Int enum maybe]])
   (:import (javax.mail.internet MimeMessage)
            (mbwatch.concurrent Timer)

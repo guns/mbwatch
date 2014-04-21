@@ -35,10 +35,10 @@
                                     strict-map->MbsyncEventStop]]
             [mbwatch.logging :refer [->LogItem DEBUG ERR Loggable NOTICE
                                      WARNING log-with-timestamp!]]
+            [mbwatch.mbmap :refer [join-mbentry]]
             [mbwatch.process :as process]
             [mbwatch.shellwords :refer [shell-escape]]
             [mbwatch.types :as t :refer [MBMap VOID]]
-            [mbwatch.util :refer [join-mbentry]]
             [schema.core :as s :refer [Int maybe]])
   (:import (clojure.lang IFn)
            (java.io StringWriter)
