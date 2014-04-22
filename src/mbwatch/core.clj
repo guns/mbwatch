@@ -54,6 +54,7 @@
             [clojure.core.async.impl.protocols :refer [WritePort]]
             [com.stuartsierra.component :refer [Lifecycle start-system
                                                 stop-system]]
+            [mbwatch.cli :refer [parse-argv!]]
             [mbwatch.command :refer [->Command]]
             [mbwatch.concurrent :refer [CHAN-SIZE]]
             [mbwatch.config]
@@ -74,7 +75,8 @@
            (mbwatch.logging LoggingService)
            (mbwatch.mbsync MbsyncMaster)
            (mbwatch.notification NewMessageNotificationService)
-           (mbwatch.sync_timer SyncTimer)))
+           (mbwatch.sync_timer SyncTimer))
+  (:gen-class))
 
 (t/defrecord ^:private Application
   [cmd-chan             :- WritePort
@@ -151,3 +153,11 @@
                   connection-watcher
                   idle-master
                   sync-timer)))
+
+(defn -main
+  "Command line entry point."
+  [& argv]
+  (try
+    (parse-argv! argv)
+    (finally
+      (shutdown-agents))))

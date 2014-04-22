@@ -19,11 +19,11 @@
 (def ^:const DEFAULT-CONFIG-PATH
   (str (System/getProperty "user.home") "/.config/mbwatch/config"))
 
-(s/defn ^:private parse-mbline :- Any ; tools.cli will do the validation
+(s/defn ^:private parse-mbline :- MBMap
   [s :- String]
   (parse-mbargs (shell-split s)))
 
-(s/defn cli-options :- [[Any]]
+(s/defn config-options :- [[Any]]
   "Default config options as a tools.cli options vector."
   []
   (let [mbmap? (partial validate MBMap)
@@ -90,7 +90,7 @@
         (-> (slurp mbwatch-config-path)
             parse-kv-string
             (as-> m (mapv (fn [[k v]] (str "--" (name k) \= v)) m))
-            (parse-opts (cli-options)))
+            (parse-opts (config-options)))
         idle (:idle options)
         options (-> options
                     ;; Periodically sync idle channels unless specified
