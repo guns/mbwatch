@@ -1,18 +1,19 @@
 (ns mbwatch.time
-  (:require [mbwatch.util :refer [istr=]]
+  (:require [clojure.string :as string]
+            [mbwatch.util :refer [istr=]]
             [schema.core :as s :refer [Int]])
   (:import (org.joda.time DateTime Duration Instant ReadableInstant)))
 
 (s/defn human-duration :- String
   ([milliseconds :- Int]
-   (let [seconds (Math/round (/ milliseconds 1000.0))
-         h (quot seconds 3600)
-         m (quot (rem seconds 3600) 60)
-         s (rem seconds 60)
+   (let [h (quot milliseconds (* 60 60 1000))
+         m (quot (- milliseconds (* h 60 60 1000)) (* 60 1000))
+         ms (- milliseconds (* h 60 60 1000) (* m 60 1000))
+         s (/ ms 1000.0)
          xs (cond-> []
-              (pos? h) (conj (format "%s hour%s"   h (if (= h 1) "" \s)))
-              (pos? m) (conj (format "%s minute%s" m (if (= m 1) "" \s)))
-              (pos? s) (conj (format "%s second%s" s (if (= s 1) "" \s))))]
+              (pos? h)  (conj (format "%d hour%s"     h (if (= h 1)         "" \s)))
+              (pos? m)  (conj (format "%d minute%s"   m (if (= m 1)         "" \s)))
+              (pos? ms) (conj (format "%.1f second%s" s (if (< 949 ms 1050) "" \s))))]
      (case (count xs)
        0 "0 seconds"
        1 (first xs)

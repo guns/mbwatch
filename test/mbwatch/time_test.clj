@@ -6,12 +6,12 @@
 
 (deftest test-human-duration
   (is (= "0 seconds" (human-duration 0)))
-  (is (= "1 second" (human-duration 1000)))
-  (is (= "59 seconds" (human-duration 59000)))
-  (is (= "5 hours, 1 minute, and 35 seconds"
-         (human-duration (+ (* 5 60 60 1000) (* 1 60 1000) (* 35 1000)))))
+  (is (= "1.0 second" (human-duration 1000)))
+  (is (= "59.0 seconds" (human-duration 59000)))
+  (is (= "5 hours, 1 minute, and 35.0 seconds"
+         (human-duration (+ (* 5 60 60 1000) (* 1 60 1000) (* 35 1000) 1))))
   (let [dt (DateTime.)]
-    (is (= "1 second" (human-duration dt (.plus dt 1000))))))
+    (is (= "1.0 second" (human-duration dt (.plus dt 1000))))))
 
 (deftest test-dt->ms
   (is (= 0 (dt->ms (DateTime. 0)))))
