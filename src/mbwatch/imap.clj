@@ -30,7 +30,7 @@
                                    mbtuples->mbmap]]
             [mbwatch.types :as t :refer [ConnectionMapAtom MBMap MBMapAtom
                                          MBTuple VOID Word]]
-            [mbwatch.util :refer [url-for]]
+            [mbwatch.util :refer [catch-print url-for]]
             [schema.core :as s :refer [Any Int defschema maybe]])
   (:import (clojure.lang IFn)
            (com.sun.mail.imap IMAPFolder IMAPStore)
@@ -125,14 +125,15 @@
     (log-with-timestamp! log-chan this)
     (add-watch connections-atom [mbchan mbox]
                (fn [_ _ _ n]
-                 (let [conn (get-in n [mbchan :status])]
-                   (when-not (= conn (.get connection))
-                     (.set connection (boolean conn))
-                     (sig-notify-all status)
-                     ;; Queue a sync when the conn goes _down_; this allows
-                     ;; the ConnectionWatcher to pool syncs
-                     (when-not conn
-                       (>!! cmd-chan (->Command :sync {mbchan [mbox]})))))))
+                 (catch-print
+                   (let [conn (get-in n [mbchan :status])]
+                     (when-not (= conn (.get connection))
+                       (.set connection (boolean conn))
+                       (sig-notify-all status)
+                       ;; Queue a sync when the conn goes _down_; this allows
+                       ;; the ConnectionWatcher to pool syncs
+                       (when-not conn
+                         (>!! cmd-chan (->Command :sync {mbchan #{mbox}}))))))))
     (let [label (format " [%s/%s]" mbchan mbox)
           f (future-loop []
               (when (.get status)
@@ -174,8 +175,9 @@
         url (str imap-store \/ mbox)
         handler (reify MessageCountListener
                   (messagesAdded [this ev]
-                    (put! log-chan (->IDLENewMessageEvent (count (.getMessages ev)) url))
-                    (>!! cmd-chan (->Command :sync {mbchan [mbox]}))))]
+                    (catch-print
+                      (put! log-chan (->IDLENewMessageEvent (count (.getMessages ev)) url))
+                      (>!! cmd-chan (->Command :sync {mbchan #{mbox}})))))]
     (try
       (.open folder Folder/READ_ONLY)
       (.addMessageCountListener folder handler)

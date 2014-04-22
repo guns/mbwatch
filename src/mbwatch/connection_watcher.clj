@@ -45,7 +45,7 @@
             [mbwatch.time :refer [human-duration]]
             [mbwatch.types :as t :refer [ConnectionMap ConnectionMapAtom
                                          MBMap VOID Word tuple]]
-            [mbwatch.util :refer [when-seq]]
+            [mbwatch.util :refer [catch-print when-seq]]
             [schema.core :as s :refer [Int either maybe pair pred validate]])
   (:import (clojure.lang IFn)
            (java.util.concurrent.atomic AtomicBoolean)
@@ -128,14 +128,15 @@
   [log-chan     :- WritePort
    cmd-chan-out :- WritePort]
   (fn [_ _ old-conn-map new-conn-map]
-    (let [[pool release] (pending-sync-changes old-conn-map new-conn-map
-                                               log-chan cmd-chan-out)]
-      (when (seq pool)
-        (put! log-chan (->PendingSyncsEvent :pool pool)))
-      (when (seq release)
-        (put! log-chan (->PendingSyncsEvent :release release))
-        ;; Commands must be conveyed
-        (>!! cmd-chan-out (->Command :sync release))))))
+    (catch-print
+      (let [[pool release] (pending-sync-changes old-conn-map new-conn-map
+                                                 log-chan cmd-chan-out)]
+        (when (seq pool)
+          (put! log-chan (->PendingSyncsEvent :pool pool)))
+        (when (seq release)
+          (put! log-chan (->PendingSyncsEvent :release release))
+          ;; Commands must be conveyed
+          (>!! cmd-chan-out (->Command :sync release)))))))
 
 (declare filter-command)
 (declare watch-connections!)
