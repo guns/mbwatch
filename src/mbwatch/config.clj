@@ -98,7 +98,7 @@
                                           %
                                           (zipmap (keys idle) (repeat #{}))))
                     ;; Always notify on IDLE mboxes
-                    (update-in [:notify] #(merge-with into % idle)))]
+                    (update-in [:notify] mbmap-merge idle))]
     (if errors
       (throw (IllegalArgumentException.
                (format "The following errors occured while parsing %s:\n%s\n"

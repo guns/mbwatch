@@ -16,7 +16,7 @@
   "
   (:require [clojure.core.async :refer [<!! >!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
-            [clojure.set :refer [intersection subset? union]]
+            [clojure.set :refer [intersection subset?]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
             [mbwatch.command :refer [->Command]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-loop shutdown-future
@@ -27,7 +27,7 @@
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
             [mbwatch.mbmap :refer [mbmap->mbtuples mbmap-diff mbmap-disj
-                                   mbtuples->mbmap]]
+                                   mbmap-merge mbtuples->mbmap]]
             [mbwatch.types :as t :refer [ConnectionMapAtom MBMap MBMapAtom
                                          MBTuple VOID Word]]
             [mbwatch.util :refer [catch-print url-for]]
@@ -324,7 +324,7 @@
   (case (:opcode command)
     :idle/add (swap-stop-and-start!
                 idle-master worker-map
-                #(swap! % (partial merge-with union) (:payload command)))
+                #(swap! % mbmap-merge (:payload command)))
     :idle/remove (swap-stop-and-start!
                    idle-master worker-map
                    #(swap! % mbmap-disj (:payload command)))

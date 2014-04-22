@@ -76,3 +76,22 @@
           m
           (dissoc m mbchan))))
     m₁ m₂))
+
+(s/defn mbmap-merge :- MBMap
+  "Like (merge-with union m₁ m₂), except that missing values from m₁ are
+   always substituted with empty sets. If empty-is-universal? is true, an
+   empty set is treated like a universal set. i.e. (conj #{} :any) -> #{}"
+  ([m₁ m₂]
+   (mbmap-merge m₁ m₂ false))
+  ([m₁                  :- MBMap
+    m₂                  :- MBMap
+    empty-is-universal? :- Boolean]
+   (if empty-is-universal?
+     (reduce-kv
+       (fn [m mbchan mboxes₁]
+         (let [mboxes₀ (m mbchan)]
+           (cond (= mboxes₀ #{}) m
+                 (seq mboxes₁) (assoc m mbchan (into (or mboxes₀ #{}) mboxes₁))
+                 :else (assoc m mbchan #{}))))
+       m₁ m₂)
+     (merge-with (fn [s₁ s₂] (into (or s₁ #{}) s₂)) m₁ m₂))))

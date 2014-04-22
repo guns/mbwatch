@@ -1,8 +1,8 @@
 (ns mbwatch.mbmap-test
   (:require [clojure.test :refer [is]]
             [mbwatch.mbmap :refer [join-mbentry join-mbmap mbmap->mbtuples
-                                   mbmap-diff mbmap-disj mbtuples->mbmap
-                                   parse-mbargs]]
+                                   mbmap-diff mbmap-disj mbmap-merge
+                                   mbtuples->mbmap parse-mbargs]]
             [schema.test :refer [deftest]]))
 
 (deftest test-parse-mbargs
@@ -37,3 +37,8 @@
   (is (= (mbmap-disj {"α" #{"a" "b" "c"} "β" #{"a"}}
                      {"α" #{"b" "c" "d"} "β" #{"a"}})
          {"α" #{"a"}})))
+
+(deftest test-mbmap-merge
+  (is (= (mbmap-merge {"α" #{"a"} "β" #{} "γ" #{"a"}}
+                      {"α" #{} "β" #{"a"} "γ" #{"a" "b"} "Δ" #{"a"}})
+         {"α" #{} "β" #{} "γ" #{"a" "b"} "Δ" #{"a"}})))
