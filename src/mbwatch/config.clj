@@ -17,7 +17,7 @@
            (mbwatch.config.mbsyncrc Mbsyncrc)))
 
 (def ^:const DEFAULT-CONFIG-PATH
-  (str (System/getProperty "user.home") "/.config/mbwatch/config"))
+  (str (System/getProperty "user.home") "/.mbwatchrc"))
 
 (s/defn ^:private parse-mbline :- MBMap
   [s :- String]

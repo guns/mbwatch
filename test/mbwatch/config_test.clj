@@ -10,7 +10,7 @@
 (deftest test-Config
   (let [{:keys [mbsyncrc idle sync notify notify-cmd conn-period sync-period
                 conn-timeout imap-timeout]}
-        (->Config {} (io/resource "mbsyncrc") (io/resource "config"))]
+        (->Config {} (io/resource "mbsyncrc") (io/resource "mbwatchrc"))]
     (is (validate Mbsyncrc mbsyncrc))
     (is (= idle {"home" #{"INBOX"} "work" #{"INBOX"}}))
     (is (= sync {"home" #{} "work" #{}}))
