@@ -28,8 +28,14 @@
 (def ^:const INFO    6) ; /* informational */
 (def ^:const DEBUG   7) ; /* debug-level messages */
 
-(def ^:private LOG-LEVELS
+(def LOG-LEVELS
   (mapv str '[EMERG ALERT CRIT ERR WARNING NOTICE INFO DEBUG]))
+
+(def NAME->LOG-LEVEL
+  (->> LOG-LEVELS
+       (map-indexed (fn [i lvl] [lvl i]))
+       (apply concat)
+       (apply hash-map)))
 
 (defprotocol Loggable
   (log-level [this] "Returns this object's logging level")

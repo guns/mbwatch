@@ -61,9 +61,11 @@
             [mbwatch.connection-watcher :refer [->ConnectionWatcher]]
             [mbwatch.console-logger :refer [->ConsoleLogger
                                             MILLIS-TIMESTAMP-FORMAT
+                                            TIMESTAMP-FORMAT
                                             get-default-colors]]
             [mbwatch.imap :refer [->IDLEMaster]]
-            [mbwatch.logging :refer [->LoggingService DEBUG]]
+            [mbwatch.logging :refer [->LogItem ->LoggingService DEBUG
+                                     Loggable log-with-timestamp!]]
             [mbwatch.mbsync :refer [->MbsyncMaster]]
             [mbwatch.notification :refer [->NewMessageNotificationService]]
             [mbwatch.sync-timer :refer [->SyncTimer]]
@@ -141,8 +143,12 @@
         log-chan-1 (:log-chan-out notification-service)
         ;; ->
         logging-service (->LoggingService
-                          DEBUG
-                          (->ConsoleLogger System/out (get-default-colors) MILLIS-TIMESTAMP-FORMAT)
+                          (-> config :log-level)
+                          (->ConsoleLogger System/out
+                                           (get-default-colors)
+                                           (if (>= (-> config :log-level) DEBUG)
+                                             MILLIS-TIMESTAMP-FORMAT
+                                             TIMESTAMP-FORMAT))
                           log-chan-1)]
     ;; Initial sync
     (>!! cmd-chan-0 (->Command :sync (-> config :sync)))

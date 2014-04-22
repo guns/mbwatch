@@ -7,6 +7,8 @@
             [mbwatch.config.mbsyncrc :refer [DEFAULT-MBSYNCRC-PATH
                                              Maildirstore parse-mbsyncrc]]
             [mbwatch.connection-watcher :as cw]
+            [mbwatch.logging :refer [DEBUG EMERG INFO LOG-LEVELS
+                                     NAME->LOG-LEVEL]]
             [mbwatch.mbmap :refer [mbmap-merge parse-mbargs]]
             [mbwatch.shellwords :refer [shell-split]]
             [mbwatch.sync-timer :as st]
@@ -30,7 +32,9 @@
   (let [mbmap? (partial validate MBMap)
         notify-cmd (if (zero? (:exit (sh "sh" "-c" "command -v notify-send")))
                      "notify-send \"$(cat)\""
-                     "")]
+                     "")
+        log-level-desc (format "%d-%d or one of %s"
+                               EMERG DEBUG (string/join ", " LOG-LEVELS))]
     [["-i" "--idle MBSYNC-ARGS" "Mailboxes to watch with IMAP IDLE"
       :default {}
       :default-desc ""
@@ -51,6 +55,11 @@
       :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge v))
       :validate [mbmap? "Bad mbsync argument format"
                  #(every? seq (vals %)) "No mailboxes specified"]]
+     ["-l" "--log-level LEVEL" log-level-desc
+      :default INFO
+      :default-desc "INFO"
+      :parse-fn #(or (NAME->LOG-LEVEL %) (Long/parseLong %))
+      :validate [#(<= EMERG % DEBUG) log-level-desc]]
      ["-c" "--config PATH" "Path to mbsyncrc"
       :default DEFAULT-MBSYNCRC-PATH
       :default-desc "~/.mbsyncrc"
@@ -90,9 +99,10 @@
    idle           :- MBMap
    sync           :- MBMap
    notify         :- MBMap
-   notify-cmd     :- String
+   log-level      :- Int
    config         :- String
    mbwatch-config :- String
+   notify-cmd     :- String
    conn-period    :- Int
    sync-period    :- Int
    conn-timeout   :- Int
