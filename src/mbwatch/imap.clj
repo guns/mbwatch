@@ -46,7 +46,6 @@
 
 (def ^:private ^:const CONNECTION-POOL-SIZE "16")
 (def ^:private ^:const IDLE-PERIOD (* 20 60 1000))
-(def ^:private ^:const IMAP-SHUTDOWN-TIMEOUT 5000)
 
 (s/defn ^:private ->IMAPProperties :- Properties
   "Return a copy of system properties with mail.imap(s) entries."
@@ -147,7 +146,7 @@
                   (remove-watch connections-atom [mbchan mbox])
                   (.set connection false) ; Mark connection as down
                   (sig-notify-all status) ; Stop IMAP connection
-                  (shutdown-future f IMAP-SHUTDOWN-TIMEOUT)))))
+                  (shutdown-future f timeout)))))
 
   (stop [this]
     (log-with-timestamp! log-chan this)
