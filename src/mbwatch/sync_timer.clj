@@ -13,7 +13,7 @@
   (:require [clojure.core.async :refer [<!! >!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
-            [mbwatch.command :refer [->Command]]
+            [mbwatch.command :refer [->Command CommandSchema]]
             [mbwatch.concurrent :refer [->Timer CHAN-SIZE TimerAtom
                                         future-loop set-alarm!
                                         shutdown-future sig-notify-all
@@ -27,8 +27,7 @@
             [mbwatch.util :refer [when-seq]]
             [schema.core :as s :refer [Int maybe]])
   (:import (clojure.lang IFn)
-           (java.util.concurrent.atomic AtomicBoolean)
-           (mbwatch.command Command)))
+           (java.util.concurrent.atomic AtomicBoolean)))
 
 (def ^:const MIN-POS-PERIOD 5000)
 
@@ -99,7 +98,7 @@
 
 (s/defn ^:private process-command :- VOID
   [sync-timer :- SyncTimer
-   command    :- Command]
+   command    :- CommandSchema]
   (case (:opcode command)
     :sync/trigger (sig-notify-all (:timer-atom sync-timer))
     :sync/period (let [{:keys [sync-request-atom timer-atom log-chan]} sync-timer

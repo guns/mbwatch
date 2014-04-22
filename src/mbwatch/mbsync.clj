@@ -27,7 +27,7 @@
   (:require [clojure.core.async :refer [<!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
-            [mbwatch.command]
+            [mbwatch.command :refer [CommandSchema]]
             [mbwatch.concurrent :refer [CHAN-SIZE sig-notify-all thread-loop]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.events :refer [->MbsyncUnknownChannelError
@@ -43,7 +43,6 @@
   (:import (clojure.lang IFn)
            (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
-           (mbwatch.command Command)
            (mbwatch.config.mbsyncrc Mbsyncrc)
            (org.joda.time DateTime)))
 
@@ -222,7 +221,7 @@
 (s/defn ^:private process-command :- {String MbsyncWorker}
   [mbsync-master :- MbsyncMaster
    worker-map    :- {String MbsyncWorker}
-   cmd           :- (maybe Command)]
+   cmd           :- (maybe CommandSchema)]
   (case (:opcode cmd)
     :sync (dispatch-syncs
             worker-map (:id cmd) (:payload cmd) mbsync-master)

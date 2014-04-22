@@ -18,7 +18,7 @@
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [clojure.set :refer [intersection subset?]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
-            [mbwatch.command :refer [->Command]]
+            [mbwatch.command :refer [->Command CommandSchema]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-loop shutdown-future
                                         sig-notify-all sig-wait thread-loop]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
@@ -40,7 +40,6 @@
            (javax.mail AuthenticationFailedException Folder
                        FolderNotFoundException MessagingException Session)
            (javax.mail.event MessageCountListener)
-           (mbwatch.command Command)
            (mbwatch.events IMAPConnectionEvent)
            (org.joda.time DateTime)))
 
@@ -320,7 +319,7 @@
 (s/defn ^:private process-command :- IDLEWorkerMap
   [idle-master :- IDLEMaster
    worker-map  :- IDLEWorkerMap
-   command     :- Command]
+   command     :- CommandSchema]
   (case (:opcode command)
     :idle/add (swap-stop-and-start!
                 idle-master worker-map

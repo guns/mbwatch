@@ -58,7 +58,7 @@
   (log-level [_] DEBUG)
   (log-item [this] (LogItem. DEBUG timestamp (str "Command: " opcode " " payload))))
 
-(defschema ^:private CommandSchema
+(defschema CommandSchema
   (both Command
         (pred #(do (validate (OPCODE->PAYLOAD (:opcode %))
                              (:payload %))

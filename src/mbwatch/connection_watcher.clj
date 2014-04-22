@@ -30,7 +30,7 @@
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [clojure.set :refer [intersection]]
             [com.stuartsierra.component :refer [Lifecycle]]
-            [mbwatch.command :refer [->Command]]
+            [mbwatch.command :refer [->Command CommandSchema]]
             [mbwatch.concurrent :refer [->Timer CHAN-SIZE TimerAtom
                                         future-catch-print set-alarm!
                                         shutdown-future sig-notify-all
@@ -49,7 +49,6 @@
             [schema.core :as s :refer [Int either maybe pair pred validate]])
   (:import (clojure.lang IFn)
            (java.util.concurrent.atomic AtomicBoolean)
-           (mbwatch.command Command)
            (mbwatch.events ConnectionEvent)
            (org.joda.time DateTime)))
 
@@ -303,7 +302,7 @@
         (merge sync-map)
         (with-meta {::sync-req sync-req}))))
 
-(s/defn ^:private partition-syncs :- (maybe Command)
+(s/defn ^:private partition-syncs :- (maybe CommandSchema)
   "Take a :sync Command and check its mbchan IMAP servers. If all servers are
    reachable, then return the Command as is.
 
@@ -316,7 +315,7 @@
    This function always updates the connection map with new connection
    statuses."
   [connection-watcher :- ConnectionWatcher
-   sync-command       :- Command]
+   sync-command       :- CommandSchema]
   (let [{:keys [mbchan->IMAPCredential timeout]} connection-watcher
         sync-req (:payload sync-command)
         ;; Most of the work needs to be done in the transaction; note that
@@ -331,9 +330,9 @@
       (= sync-req sync-req') sync-command
       :else (assoc sync-command :payload sync-req'))))
 
-(s/defn ^:private filter-command :- (maybe Command)
+(s/defn ^:private filter-command :- (maybe CommandSchema)
   [connection-watcher :- ConnectionWatcher
-   command            :- Command]
+   command            :- CommandSchema]
   (case (:opcode command)
     :conn/trigger (do (sig-notify-all (:timer-atom connection-watcher))
                       command)

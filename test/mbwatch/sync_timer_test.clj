@@ -5,12 +5,12 @@
             [clojure.test.check.generators :as g :refer [such-that]]
             [clojure.test.check.properties :refer [for-all]]
             [com.stuartsierra.component :as comp]
-            [mbwatch.command]
+            [mbwatch.command :refer [CommandSchema]]
             [mbwatch.concurrent :refer [update-timer!]]
             [mbwatch.sync-timer :refer [->SyncTimer]]
-            [mbwatch.test.common :refer [MBMAP-GEN chanv]])
-  (:import (mbwatch.command Command)
-           (mbwatch.sync_timer SyncTimer)))
+            [mbwatch.test.common :refer [MBMAP-GEN chanv]]
+            [schema.core :refer [validate]])
+  (:import (mbwatch.sync_timer SyncTimer)))
 
 (defspec test-cyclic-timer 10
   (for-all [sync-req (such-that seq MBMAP-GEN)
@@ -26,7 +26,7 @@
       (let [cmds (chanv cmd-chan-out)
             n (count cmds)]
         (.println System/err (format "ttl %3d │ n %2d" ttl n))
-        (and (is (every? #(and (instance? Command %)
+        (and (is (every? #(and (validate CommandSchema %)
                                (= ((juxt :opcode :payload) %)
                                   [:sync @sync-request-atom]))
                          cmds)

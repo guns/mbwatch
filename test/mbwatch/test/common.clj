@@ -1,8 +1,6 @@
 (ns mbwatch.test.common
   (:require [clojure.core.async :refer [<!!]]
-            [clojure.test.check.generators :as g :refer [elements fmap one-of
-                                                         return]]
-            [mbwatch.command :refer [->Command]]))
+            [clojure.test.check.generators :as g :refer [elements fmap]]))
 
 (defn set-of [gen]
   (fmap (partial into #{}) (g/vector gen)))

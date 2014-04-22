@@ -14,7 +14,7 @@
             [clojure.set :refer [difference intersection]]
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
-            [mbwatch.command]
+            [mbwatch.command :refer [CommandSchema]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
                                         thread-loop]]
             [mbwatch.config :refer [mdir-path]]
@@ -179,7 +179,7 @@
          (put! (:log-chan-out ~notify-service) (->NotifyMapChangeEvent new-map#))))))
 
 (s/defn ^:private process-command :- SyncRequestMap
-  [command        :- Command
+  [command        :- CommandSchema
    sync-requests  :- SyncRequestMap
    notify-service :- NewMessageNotificationService]
   (case+ (:opcode command)
