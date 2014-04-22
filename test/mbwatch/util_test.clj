@@ -1,12 +1,16 @@
 (ns mbwatch.util-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer [is]]
-            [mbwatch.util :refer [catch-print chomp class-name dequote istr=
-                                  parse-kv-string url-for zero-or-min]]
+            [mbwatch.util :refer [case+ catch-print chomp class-name dequote
+                                  istr= parse-kv-string url-for when-seq
+                                  zero-or-min]]
             [schema.test :refer [deftest]]))
 
-(deftest test-catch-print
-  (is (nil? (catch-print (throw (RuntimeException. "TESTING catch-print"))))))
+(deftest test-macros
+  (is (nil? (catch-print (throw (RuntimeException. "TESTING catch-print")))))
+  (is (nil? (when-seq [x []] x)))
+  (is (= [1] (when-seq [x [1]] x)))
+  (is (= :BINGO (case+ :foo [:foo :bar] :BINGO))))
 
 (deftest test-parse-kv-string
   (is (= (parse-kv-string (slurp (io/resource "test-parse-kv-string.in")))

@@ -18,6 +18,17 @@
        (let [~sym x#]
          ~@body))))
 
+(defmacro case+
+  "The case macro, except literal vector test constants are unpacked as
+   multiple constants to the same result expr."
+  [e & clauses]
+  `(case ~e
+     ~@(loop [[t expr & more] clauses cs []]
+         (cond (nil? t) cs
+               (nil? expr) (conj cs t)
+               (vector? t) (recur more (into cs (interleave t (repeat expr))))
+               :else (recur more (conj cs t expr))))))
+
 (s/defn parse-kv-string :- {Keyword String}
   "Simple key = value parser. Like ini, but without hierarchy, multiline
    values, or very many features at all."

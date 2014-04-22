@@ -23,10 +23,11 @@
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
             [mbwatch.maildir :refer [new-messages senders]]
+            [mbwatch.mbmap :refer [mbmap-diff mbtuples->mbmap]]
             [mbwatch.process :as process]
             [mbwatch.time :refer [dt->ms]]
             [mbwatch.types :as t :refer [MBMap MBMapAtom VOID]]
-            [mbwatch.util :refer [when-seq]]
+            [mbwatch.util :refer [case+ when-seq]]
             [schema.core :as s :refer [Int defschema either maybe]])
   (:import (clojure.lang IFn)
            (java.io StringWriter)
@@ -181,12 +182,19 @@
   [command        :- Command
    sync-requests  :- SyncRequestMap
    notify-service :- NewMessageNotificationService]
-  (case (:opcode command)
+  (case+ (:opcode command)
     :sync (let [{:keys [id payload]} command]
             (assoc sync-requests id {:countdown (count payload) :events []}))
-    :notify/add (do (with-handler-context notify-service command
-                      (swap! (partial merge-with union)))
-                    sync-requests)
+    :idle/set (let [[_ Δ+] (mbmap-diff @(:notify-map-atom notify-service)
+                             (:payload command))
+                    m (mbtuples->mbmap Δ+)]
+                (with-handler-context notify-service (assoc command :payload m)
+                  (swap! (partial merge-with union)))
+                sync-requests)
+    [:idle/add
+     :notify/add] (do (with-handler-context notify-service command
+                        (swap! (partial merge-with union)))
+                      sync-requests)
     :notify/remove (do (with-handler-context notify-service command
                          (swap! (fn [notify-map payload]
                                   (reduce-kv
