@@ -4,12 +4,13 @@
             [clojure.java.shell :refer [sh]]
             [clojure.string :as string]
             [clojure.tools.cli :refer [parse-opts]]
-            [mbwatch.config.mbsyncrc :refer [Maildirstore parse-mbsyncrc]]
+            [mbwatch.config.mbsyncrc :refer [DEFAULT-MBSYNCRC-PATH
+                                             Maildirstore parse-mbsyncrc]]
             [mbwatch.connection-watcher :as cw]
-            [mbwatch.mbmap :refer [parse-mbargs]]
+            [mbwatch.mbmap :refer [mbmap-merge parse-mbargs]]
             [mbwatch.shellwords :refer [shell-split]]
             [mbwatch.sync-timer :as st]
-            [mbwatch.time :refer [parse-ms]]
+            [mbwatch.time :refer [human-duration parse-ms]]
             [mbwatch.types :as t :refer [MBMap]]
             [mbwatch.util :refer [parse-kv-string zero-or-min]]
             [schema.core :as s :refer [Any Int validate]])
@@ -34,32 +35,47 @@
       :default {}
       :default-desc ""
       :parse-fn parse-mbline
+      :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge v))
       :validate [mbmap? "Bad mbsync argument format"
                  #(every? seq (vals %)) "No mailboxes specified"]]
      ["-s" "--sync MBSYNC-ARGS" "Channels to periodically sync"
       :default {}
       :default-desc ""
       :parse-fn parse-mbline
+      :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge v true))
       :validate [mbmap? "Bad mbsync argument format"]]
      ["-n" "--notify MBSYNC-ARGS" "Mailboxes to notify on"
       :default {}
       :default-desc ""
       :parse-fn parse-mbline
+      :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge v))
       :validate [mbmap? "Bad mbsync argument format"
                  #(every? seq (vals %)) "No mailboxes specified"]]
-     ["-c" "--notify-cmd SHELL-CMD" "Command that receives notification text on stdin"
+     ["-c" "--config PATH" "Path to mbsyncrc"
+      :default DEFAULT-MBSYNCRC-PATH
+      :default-desc "~/.mbsyncrc"
+      :validate [#(.exists (io/file %)) "File does not exist"
+                 #(.canRead (io/file %)) "File is unreadable"]]
+     ["-C" "--mbwatch-config PATH" "Path to mbwatch configuration file"
+      :default DEFAULT-CONFIG-PATH
+      :default-desc "~/.mbwatchrc"
+      :validate [#(.exists (io/file %)) "File does not exist"
+                 #(.canRead (io/file %)) "File is unreadable"]]
+     ["-N" "--notify-cmd SHELL-CMD" "Notification command; receives text on stdin"
       :default notify-cmd
       :default-desc ""]
-     ["-C" "--conn-period TIME" "Time between connection checks"
-      :default (parse-ms "5m")
-      :default-desc "5m"
-      :parse-fn parse-ms
-      :validate [#(zero-or-min % cw/MIN-POS-PERIOD) (str "Must be zero or >= " cw/MIN-POS-PERIOD)]]
      ["-S" "--sync-period TIME" "Time between periodic syncs"
       :default (parse-ms "15m")
       :default-desc "15m"
       :parse-fn parse-ms
-      :validate [#(zero-or-min % st/MIN-POS-PERIOD) (str "Must be zero or >= " st/MIN-POS-PERIOD)]]
+      :validate [#(zero-or-min % st/MIN-POS-PERIOD)
+                 (str "Must be zero or >= " (human-duration st/MIN-POS-PERIOD))]]
+     [nil "--conn-period TIME" "Time between connection checks"
+      :default (parse-ms "5m")
+      :default-desc "5m"
+      :parse-fn parse-ms
+      :validate [#(zero-or-min % cw/MIN-POS-PERIOD)
+                 (str "Must be zero or >= " (human-duration cw/MIN-POS-PERIOD))]]
      [nil "--conn-timeout TIME" "Timeout for DNS queries and connection checks"
       :default (parse-ms "2s")
       :default-desc "2s"
@@ -70,18 +86,20 @@
       :parse-fn parse-ms]]))
 
 (t/defrecord ^:private Config
-  [mbsyncrc     :- Mbsyncrc
-   idle         :- MBMap
-   sync         :- MBMap
-   notify       :- MBMap
-   notify-cmd   :- String
-   conn-period  :- Int
-   sync-period  :- Int
-   conn-timeout :- Int
-   imap-timeout :- Int])
+  [mbsyncrc       :- Mbsyncrc
+   idle           :- MBMap
+   sync           :- MBMap
+   notify         :- MBMap
+   notify-cmd     :- String
+   config         :- String
+   mbwatch-config :- String
+   conn-period    :- Int
+   sync-period    :- Int
+   conn-timeout   :- Int
+   imap-timeout   :- Int])
 
 (s/defn ->Config :- Config
-  [user-options        :- {Keyword Any}
+  [cli-options         :- {Keyword Any}
    mbsyncrc-path       :- Coercions
    mbwatch-config-path :- Coercions]
   (let [mbsyncrc (parse-mbsyncrc (slurp mbsyncrc-path))
@@ -105,7 +123,7 @@
                        mbwatch-config-path
                        (string/join "\n" errors))))
       (strict-map->Config
-        (merge {:mbsyncrc mbsyncrc} options user-options)))))
+        (merge {:mbsyncrc mbsyncrc} options cli-options)))))
 
 (s/defn mdir-path :- String
   [maildir :- Maildirstore
