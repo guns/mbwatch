@@ -15,21 +15,31 @@
   (AtomicLong. 0))
 
 (def ^:private OPCODE->PAYLOAD
-  {:sync              MBMap     ; Synchronize mailboxes
-   :sync/term         VOID      ; Terminate any running mbsync processes
-   :conn/trigger      VOID      ; Re-check connections
-   :conn/set-period   Int       ; Set connection watcher's period
-   :conn/remove       #{String} ; Remove from watched connections
-   :idle/add          MBMap     ; Add to watched mboxes
-   :idle/remove       MBMap     ; Remove from watched mboxes
-   :idle/set          MBMap     ; Set watched mboxes
-   :idle/restart      VOID      ; Restart IMAP connections
-   :notify/add        MBMap     ; Add to notification mboxes
-   :notify/remove     MBMap     ; Remove from notification mboxes
-   :notify/set        MBMap     ; Set notification mboxes
-   :timer/trigger     VOID      ; Trigger the sync timer
-   :timer/set-period  Int       ; Set sync timer's period
-   :timer/set-request MBMap     ; Set sync timer's request
+  {:app/reload       VOID      ; Reload configuration
+   :app/restart      VOID      ; Restart application
+   :app/stop         VOID      ; Stop application
+
+   :timer/trigger    VOID      ; Trigger the sync timer
+   :timer/set-period Int       ; Set sync timer's period
+   :timer/add        MBMap     ; Add to sync timer request
+   :timer/remove     MBMap     ; Remove from sync timer request
+   :timer/set        MBMap     ; Set sync timer request
+
+   :idle/restart     VOID      ; Restart IMAP connections
+   :idle/add         MBMap     ; Add to watched mboxes
+   :idle/remove      MBMap     ; Remove from watched mboxes
+   :idle/set         MBMap     ; Set watched mboxes
+
+   :conn/trigger     VOID      ; Re-check connections
+   :conn/set-period  Int       ; Set connection watcher's period
+   :conn/remove      #{String} ; Remove from watched connections
+
+   :sync             MBMap     ; Synchronize mailboxes
+   :sync/term        VOID      ; Terminate any running mbsync processes
+
+   :notify/add       MBMap     ; Add to notification mboxes
+   :notify/remove    MBMap     ; Remove from notification mboxes
+   :notify/set       MBMap     ; Set notification mboxes
    })
 
 (defschema ^:private Opcode
