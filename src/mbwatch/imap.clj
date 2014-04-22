@@ -23,7 +23,7 @@
                                         sig-notify-all sig-wait thread-loop]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
             [mbwatch.events :refer [->IDLEEvent ->IDLENewMessageEvent
-                                    ->IMAPCommandError]]
+                                    ->IMAPCommandError ->IMAPShutdownEvent]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
             [mbwatch.mbmap :refer [mbmap->mbtuples mbmap-diff mbmap-disj
@@ -219,7 +219,8 @@
                 ;; Convey commands ASAP
                 (do (>!! cmd-chan-out cmd)
                     (recur (process-command this worker-map cmd)))
-                (stop-workers! (vals worker-map))))]
+                (do (put! log-chan (->IMAPShutdownEvent timeout))
+                    (stop-workers! (vals worker-map)))))]
       (assoc this :exit-fn
              #(do (.set status false)   ; Stop after current iteration
                   (<!! c)

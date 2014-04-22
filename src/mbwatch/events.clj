@@ -77,6 +77,10 @@
     :folder-not-found (let [msg (format "IMAP folder %s does not exist!" imap-url)]
                         (if error (str msg "\n" error) msg))))
 
+(defloggable IMAPShutdownEvent INFO
+  [timeout :- Int]
+  (format "Waiting %s for IMAP disconnection" (human-duration timeout)))
+
 (defloggable PendingSyncsEvent INFO
   [action   :- (enum :pool :release)
    sync-req :- MBMap]
