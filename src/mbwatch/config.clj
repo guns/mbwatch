@@ -58,7 +58,9 @@
      ["-l" "--log-level LEVEL" log-level-desc
       :default INFO
       :default-desc "INFO"
-      :parse-fn #(or (NAME->LOG-LEVEL %) (Long/parseLong %))
+      :parse-fn #(or (NAME->LOG-LEVEL %)
+                     (when (re-find #"\A\d+\z" %)
+                       (Long/parseLong %)))
       :validate [#(<= EMERG % DEBUG) log-level-desc]]
      ["-c" "--config PATH" "Path to mbsyncrc"
       :default DEFAULT-MBSYNCRC-PATH
