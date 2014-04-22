@@ -18,7 +18,7 @@
   (->> (io/file mdir-path "new")
        .listFiles
        (filter (fn [^File f] (and (.isFile f) (> (.lastModified f) mtime))))
-       (sort-by #(- (.lastModified ^File %)))
+       (sort-by #(- Long/MAX_VALUE (.lastModified ^File %)))
        (mapv message)))
 
 (s/defn senders :- [String]
