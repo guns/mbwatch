@@ -331,7 +331,7 @@
     :idle/set (swap-stop-and-start!
                 idle-master worker-map
                 #(reset! % (:payload command)))
-    :idle/restart (let [mbtuples (set (keys worker-map))]
+    :idle/Restart (let [mbtuples (set (keys worker-map))]
                     (stop-workers! (vals worker-map))
                     (stop-and-start! idle-master {} #{} mbtuples))
     worker-map))

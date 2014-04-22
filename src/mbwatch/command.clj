@@ -15,32 +15,34 @@
   (AtomicLong. 0))
 
 (def ^:private OPCODE->PAYLOAD
-  {:app/reload       VOID      ; Reload configuration
-   :app/restart      VOID      ; Restart application
-   :app/stop         VOID      ; Stop application
+  (->> [[:help          VOID      "This help menu"]
+        [:reload        VOID      "Reload configuration"]
+        [:Restart       VOID      "Restart application"]
+        [:quit          VOID      "Quit application"]
 
-   :timer/trigger    VOID      ; Trigger the sync timer
-   :timer/set-period Int       ; Set sync timer's period
-   :timer/add        MBMap     ; Add to sync timer request
-   :timer/remove     MBMap     ; Remove from sync timer request
-   :timer/set        MBMap     ; Set sync timer request
+        [:idle/add      MBMap     "Add to watched mboxes"]
+        [:idle/remove   MBMap     "Remove from watched mboxes"]
+        [:idle/set      MBMap     "Set watched mboxes"]
+        [:idle/Restart  VOID      "Restart IMAP connections"]
 
-   :idle/restart     VOID      ; Restart IMAP connections
-   :idle/add         MBMap     ; Add to watched mboxes
-   :idle/remove      MBMap     ; Remove from watched mboxes
-   :idle/set         MBMap     ; Set watched mboxes
+        [:sync          MBMap     "Synchronize given mailboxes"]
+        [:sync/add      MBMap     "Add to periodic sync request"]
+        [:sync/remove   MBMap     "Remove from periodic sync request"]
+        [:sync/set      MBMap     "Set periodic sync request"]
+        [:sync/kill     VOID      "Terminate running mbsync processes"]
+        [:sync/period   Int       "Set sync period"]
+        [:sync/trigger  VOID      "Trigger periodic sync"]
 
-   :conn/trigger     VOID      ; Re-check connections
-   :conn/set-period  Int       ; Set connection watcher's period
-   :conn/remove      #{String} ; Remove from watched connections
+        [:conn/remove   #{String} "Remove from registered connections"]
+        [:conn/period   Int       "Set connection check period"]
+        [:conn/trigger  VOID      "Re-check connections"]
 
-   :sync             MBMap     ; Synchronize mailboxes
-   :sync/term        VOID      ; Terminate any running mbsync processes
-
-   :notify/add       MBMap     ; Add to notification mboxes
-   :notify/remove    MBMap     ; Remove from notification mboxes
-   :notify/set       MBMap     ; Set notification mboxes
-   })
+        [:notify/add    MBMap     "Add to notification mboxes"]
+        [:notify/remove MBMap     "Remove from notification mboxes"]
+        [:notify/set    MBMap     "Set notification mboxes"]]
+       (mapcat (fn [[kw schema help]]
+                 [kw (with-meta schema {:help help})]))
+       (apply hash-map)))
 
 (defschema ^:private Opcode
   (apply enum (keys OPCODE->PAYLOAD)))

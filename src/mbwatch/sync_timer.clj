@@ -101,18 +101,18 @@
   [sync-timer :- SyncTimer
    command    :- Command]
   (case (:opcode command)
-    :timer/trigger (sig-notify-all (:timer-atom sync-timer))
-    :timer/set-period (let [{:keys [sync-request-atom timer-atom log-chan]} sync-timer
-                            new-period ^long (:payload command)]
-                        (when (update-timer! timer-atom new-period MIN-POS-PERIOD)
-                          (sig-notify-all timer-atom)
-                          (put! log-chan (->SyncTimerPreferenceEvent
-                                           :period @timer-atom @sync-request-atom))))
-    :timer/set-request (let [{:keys [sync-request-atom timer-atom log-chan]} sync-timer
-                             old-req @sync-request-atom
-                             new-req (reset! sync-request-atom (:payload command))]
-                         (when-not (= old-req new-req)
-                           (put! log-chan (->SyncTimerPreferenceEvent
-                                            :sync-request @timer-atom @sync-request-atom))))
+    :sync/trigger (sig-notify-all (:timer-atom sync-timer))
+    :sync/period (let [{:keys [sync-request-atom timer-atom log-chan]} sync-timer
+                       new-period ^long (:payload command)]
+                   (when (update-timer! timer-atom new-period MIN-POS-PERIOD)
+                     (sig-notify-all timer-atom)
+                     (put! log-chan (->SyncTimerPreferenceEvent
+                                      :period @timer-atom @sync-request-atom))))
+    :sync/set (let [{:keys [sync-request-atom timer-atom log-chan]} sync-timer
+                    old-req @sync-request-atom
+                    new-req (reset! sync-request-atom (:payload command))]
+                (when-not (= old-req new-req)
+                  (put! log-chan (->SyncTimerPreferenceEvent
+                                   :sync-request @timer-atom @sync-request-atom))))
     nil)
   nil)

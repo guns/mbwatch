@@ -5,5 +5,5 @@
 
 (deftest test-command-ids-are-unique
   (is (distinct? (->> (range 1000)
-                      (pmap (fn [_] (:id (->Command :sync/term nil))))
+                      (pmap (fn [_] (:id (->Command :sync/kill nil))))
                       doall))))

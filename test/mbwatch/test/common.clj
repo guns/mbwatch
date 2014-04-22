@@ -21,21 +21,8 @@
        (fmap (partial into {}))))
 
 (def COMMAND-GEN
-  (one-of [(fmap #(->Command :sync %) MBMAP-GEN)
-           (fmap #(->Command :sync/term %) (return nil))
-           (fmap #(->Command :conn/trigger %) (return nil))
-           (fmap #(->Command :conn/set-period %) g/int)
-           (fmap #(->Command :conn/remove %) (set-of MBCHAN-GEN))
-           (fmap #(->Command :idle/add %) MBMAP-GEN)
-           (fmap #(->Command :idle/remove %) MBMAP-GEN)
-           (fmap #(->Command :idle/set %) MBMAP-GEN)
-           (fmap #(->Command :idle/restart %) (return nil))
-           (fmap #(->Command :notify/add %) MBMAP-GEN)
-           (fmap #(->Command :notify/remove %) MBMAP-GEN)
-           (fmap #(->Command :notify/set %) MBMAP-GEN)
-           (fmap #(->Command :timer/trigger %) (return nil))
-           (fmap #(->Command :timer/set-period %) g/int)
-           (fmap #(->Command :timer/set-request %) MBMAP-GEN)]))
+  ;; FIXME
+  )
 
 (defn chanv [ch]
   (into [] (take-while some? (repeatedly #(<!! ch)))))

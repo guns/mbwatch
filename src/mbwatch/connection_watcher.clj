@@ -337,13 +337,13 @@
   (case (:opcode command)
     :conn/trigger (do (sig-notify-all (:timer-atom connection-watcher))
                       command)
-    :conn/set-period (let [{:keys [timer-atom log-chan]} connection-watcher
-                           new-period ^long (:payload command)]
-                       (when (update-timer! timer-atom new-period MIN-POS-PERIOD)
-                         (sig-notify-all timer-atom)
-                         (put! log-chan (->ConnectionWatcherPreferenceEvent
-                                          :period @(:timer-atom connection-watcher))))
-                       command)
+    :conn/period (let [{:keys [timer-atom log-chan]} connection-watcher
+                       new-period ^long (:payload command)]
+                   (when (update-timer! timer-atom new-period MIN-POS-PERIOD)
+                     (sig-notify-all timer-atom)
+                     (put! log-chan (->ConnectionWatcherPreferenceEvent
+                                      :period @(:timer-atom connection-watcher))))
+                   command)
     :conn/remove (let [{:keys [connections-atom]} connection-watcher]
                    (when-seq [mbchans (:payload command)]
                      (apply swap! connections-atom dissoc mbchans))
