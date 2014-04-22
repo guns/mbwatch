@@ -6,15 +6,13 @@
             [schema.core :as s :refer [pair]]))
 
 (s/defn parse-mbargs :- MBMap
-  "Parse mbsync string arguments. The mbox value of an mbchan with no box
-   arguments is set to #{\"INBOX\"}."
   [argv :- [String]]
   (reduce
     (fn [m arg]
       (let [[[_ chan bs]] (re-seq #"\A([^:]+)(?=:(.*))?" arg)]
         (assoc m chan (if (and bs (seq bs))
                         (into #{} (string/split bs #","))
-                        #{"INBOX"}))))
+                        #{}))))
     {} argv))
 
 (s/defn join-mbentry :- String

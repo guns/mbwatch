@@ -103,28 +103,28 @@
   [config :- Config]
   (let [connections-atom (atom {})
         ;; Command pipeline
-        sync-timer (->SyncTimer {"self" #{"INBOX"}} ; FIXME: Move to config
+        sync-timer (->SyncTimer (-> config :sync)
                                 (chan CHAN-SIZE)
-                                (-> config :sync-timer-period))
+                                (-> config :sync-period))
         cmd-chan-0 (:cmd-chan-in sync-timer)
         cmd-chan-1 (:cmd-chan-out sync-timer)
         ;; ->
         idle-master (->IDLEMaster (-> config :mbsyncrc :mbchan->IMAPCredential)
-                                  {"self" #{"INBOX"}} ; FIXME: Move to config
+                                  (-> config :idle)
                                   connections-atom
-                                  (-> config :imap-socket-timeout)
+                                  (-> config :imap-timeout)
                                   cmd-chan-1)
         cmd-chan-2 (:cmd-chan-out idle-master)
         ;; ->
         connection-watcher (->ConnectionWatcher
                              connections-atom
                              (-> config :mbsyncrc :mbchan->IMAPCredential)
-                             (-> config :connection-period)
-                             (-> config :connection-timeout)
+                             (-> config :conn-period)
+                             (-> config :conn-timeout)
                              cmd-chan-2)
         cmd-chan-3 (:cmd-chan-out connection-watcher)
         ;; ->
-        mbsync-master (->MbsyncMaster (:mbsyncrc config)
+        mbsync-master (->MbsyncMaster (-> config :mbsyncrc)
                                       cmd-chan-3)
         ;; Logging pipeline
         log-chan-0 (-> (mapv :log-chan [sync-timer
@@ -133,8 +133,8 @@
                                         mbsync-master])
                        (async/merge CHAN-SIZE))
         notification-service (->NewMessageNotificationService
-                               (-> config :notify-command)
-                               {"self" #{"INBOX"}} ; FIXME: Move to config
+                               (-> config :notify-cmd)
+                               (-> config :notify)
                                log-chan-0)
         log-chan-1 (:log-chan-out notification-service)
         ;; ->
@@ -143,8 +143,7 @@
                           (->ConsoleLogger System/out (get-default-colors) MILLIS-TIMESTAMP-FORMAT)
                           log-chan-1)]
     ;; Initial sync
-    ;; FIXME: This should be a union of the idle-map and the sync-request-map
-    (>!! cmd-chan-0 (->Command :sync {"self" #{"INBOX"}}))
+    (>!! cmd-chan-0 (->Command :sync (-> config :sync)))
     (Application. cmd-chan-0
                   logging-service
                   notification-service

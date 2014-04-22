@@ -1,11 +1,10 @@
-;
-; Mbwatch configuration
-;
-
-notify-command = notify - --audio="/home/guns/.sounds/new-message.mp3"
-sync-timer-period = 5m
-connection-period = 15m
-connection-timeout = 2s
-imap-socket-timeout = 5s
+idle = home:INBOX work:INBOX
+; sync = home work
+notify = work:clojure school:INBOX
+notify-cmd = notify - --audio="/home/guns/.sounds/new-message.mp3"
+conn-period = 0
+sync-period = 10m
+conn-timeout = 5s
+imap-timeout = 20s
 
 ; vim:ft=dosini:

@@ -8,8 +8,8 @@
 (deftest test-parse-mbargs
   (is (= (parse-mbargs ["foo:bar,baz" "empty" "also-empty:" "quux:INBOX"])
          {"foo" #{"bar" "baz"}
-          "empty" #{"INBOX"}
-          "also-empty" #{"INBOX"}
+          "empty" #{}
+          "also-empty" #{}
           "quux" #{"INBOX"}})))
 
 (deftest test-join-mbentry

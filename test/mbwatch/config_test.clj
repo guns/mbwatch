@@ -3,17 +3,23 @@
             [clojure.test :refer [is]]
             [mbwatch.config :refer [->Config mdir-path]]
             [mbwatch.config.mbsyncrc]
+            [schema.core :refer [validate]]
             [schema.test :refer [deftest]])
   (:import (mbwatch.config.mbsyncrc Mbsyncrc)))
 
 (deftest test-Config
-  (let [c (->Config (io/resource "mbsyncrc") (io/resource "config"))]
-    (is (instance? Mbsyncrc (:mbsyncrc c)))
-    (is (= (:notify-command c) "notify - --audio=\"/home/guns/.sounds/new-message.mp3\""))
-    (is (= (:sync-timer-period c) (* 5 60 1000)))
-    (is (= (:connection-period c) (* 15 60 1000)))
-    (is (= (:connection-timeout c) 2000))
-    (is (= (:imap-socket-timeout c) 5000))))
+  (let [{:keys [mbsyncrc idle sync notify notify-cmd conn-period sync-period
+                conn-timeout imap-timeout]}
+        (->Config {} (io/resource "mbsyncrc") (io/resource "config"))]
+    (is (validate Mbsyncrc mbsyncrc))
+    (is (= idle {"home" #{"INBOX"} "work" #{"INBOX"}}))
+    (is (= sync {"home" #{} "work" #{}}))
+    (is (= notify {"home" #{"INBOX"} "work" #{"INBOX" "clojure"} "school" #{"INBOX"}}))
+    (is (= notify-cmd "notify - --audio=\"/home/guns/.sounds/new-message.mp3\""))
+    (is (= conn-period 0))
+    (is (= sync-period (* 10 60 1000)))
+    (is (= conn-timeout 5000))
+    (is (= imap-timeout 20000))))
 
 (deftest test-mdir-path
   (let [maildir {:inbox "/home/user/Mail/INBOX"

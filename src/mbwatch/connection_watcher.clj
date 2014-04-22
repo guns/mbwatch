@@ -53,7 +53,7 @@
            (mbwatch.events ConnectionEvent)
            (org.joda.time DateTime)))
 
-(def ^:private ^:const MIN-POS-PERIOD 5000)
+(def ^:const MIN-POS-PERIOD 5000)
 (def ^:private ^:const RETRY-INTERVAL 15000)
 (def ^:private ^:const TIME-JUMP-INTERVAL 60000)
 

@@ -30,7 +30,7 @@
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.command Command)))
 
-(def ^:private ^:const MIN-POS-PERIOD 5000)
+(def ^:const MIN-POS-PERIOD 5000)
 
 (declare process-command)
 

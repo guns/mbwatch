@@ -5,7 +5,7 @@
             :url "http://opensource.org/licenses/MIT"}
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/core.async "0.1.278.0-76b25b-alpha"]
-                 [org.clojure/tools.cli "0.3.1"]
+                 [org.clojure/tools.cli "0.3.2-SNAPSHOT"]
                  [com.sun.mail/imap "1.5.1"]
                  [com.sun.mail/mailapi "1.5.1"]
                  [prismatic/schema "0.2.1"]
