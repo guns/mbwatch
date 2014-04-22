@@ -10,9 +10,9 @@
     (is (= (tfn {"a" {:status false :pending-syncs #{"INBOX"}}}
                 {"a" #{"work"}})
            [{"a" {:status false :pending-syncs #{"INBOX" "work"}}} {}]))
-    (is (= (tfn {"a" {:status false :pending-syncs ^:all-mboxes #{}}}
+    (is (= (tfn {"a" {:status false :pending-syncs #{}}}
                 {"a" #{"work"}})
-           [{"a" {:status false :pending-syncs ^:all-mboxes #{}}} {}]))
+           [{"a" {:status false :pending-syncs #{}}} {}]))
     (is (= (tfn {"a" {:status true :pending-syncs #{"INBOX"}}}
                 {"a" #{"work"}})
            [{"a" {:status true :pending-syncs #{"INBOX"}}}

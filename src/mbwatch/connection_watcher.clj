@@ -258,22 +258,16 @@
 (s/defn ^:private merge-pending-syncs :- (tuple ConnectionMap MBMap)
   "Merge sync-req into conn-map as :pending-syncs entries if the :status of
    the mbchan is false. Returns the new conn-map and the new sync-req with
-   merged entries removed.
-
-   An mbox argument of #{} resets the :pending-syncs value to #{} with
-   the :all-mboxes metadata flag set. Correspondingly, additions to a
-   :pending-syncs value that has :all-mboxes is ignored since a full mbchan
-   sync will be issued once the server is reachable."
+   merged entries removed."
   [conn-map :- ConnectionMap
    sync-req :- MBMap]
   (reduce-kv
     (fn [[conn-map sync-req] mbchan mboxes]
       (if (false? (:status (conn-map mbchan)))
         [(update-in conn-map [mbchan :pending-syncs]
-                    #(cond
-                       (:all-mboxes (meta %)) %
-                       (seq mboxes) (into (or % #{}) mboxes)
-                       :else ^:all-mboxes #{}))
+                    #(cond (= % #{}) %
+                           (seq mboxes) (into (or % #{}) mboxes)
+                           :else #{}))
          (dissoc sync-req mbchan)]
         [conn-map sync-req]))
     [conn-map sync-req] sync-req))
