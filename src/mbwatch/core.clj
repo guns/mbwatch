@@ -59,10 +59,8 @@
             [mbwatch.concurrent :refer [CHAN-SIZE]]
             [mbwatch.config]
             [mbwatch.connection-watcher :refer [->ConnectionWatcher]]
-            [mbwatch.console-logger :refer [->ConsoleLogger
-                                            MILLIS-TIMESTAMP-FORMAT
-                                            TIMESTAMP-FORMAT
-                                            get-default-colors]]
+            [mbwatch.console :refer [->ConsoleLogger MILLIS-TIMESTAMP-FORMAT
+                                     TIMESTAMP-FORMAT get-default-colors]]
             [mbwatch.imap :refer [->IDLEMaster]]
             [mbwatch.logging :refer [->LogItem ->LoggingService DEBUG
                                      Loggable log-with-timestamp!]]

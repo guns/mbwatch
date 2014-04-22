@@ -1,10 +1,10 @@
-(ns mbwatch.console-logger
-  "Contains ConsoleLogger, an implementation of mbwatch.logging.IItemLogger."
+(ns mbwatch.console
   (:require [clojure.java.shell :refer [sh]]
             [clojure.string :as string]
             [mbwatch.logging :refer [IItemLogger]]
             [schema.core :as s :refer [Any Int either maybe]])
   (:import (clojure.lang Keyword)
+           (java.io BufferedReader InputStreamReader)
            (org.joda.time DateTime)
            (org.joda.time.format DateTimeFormat DateTimeFormatter)))
 
@@ -13,10 +13,6 @@
 
 (def ^DateTimeFormatter MILLIS-TIMESTAMP-FORMAT
   (DateTimeFormat/forPattern "HH:mm:ss.SSS"))
-
-;;
-;; TTY helpers
-;;
 
 (def SGR
   "ANSI SGR codes.
@@ -114,3 +110,20 @@
     colors       :- [Any]
     dt-formatter :- DateTimeFormatter]
    (ConsoleLogger. stream (mapv sgr-join colors) dt-formatter)))
+
+(s/defn console-reader :- (maybe BufferedReader)
+  "Returns System/in as a BufferedReader if it is attached to a console."
+  []
+  (when tty?
+    (BufferedReader. (InputStreamReader. System/in "UTF-8"))))
+
+(defmacro with-console-input
+  "Execute body repeatedly with input line bound to line-sym. Returns
+   immediately if System/in is not a console."
+  {:requires [BufferedReader console-reader]}
+  [line-sym & body]
+  `(when-some [rdr# ^BufferedReader (console-reader)]
+     (loop []
+       (when-some [~line-sym (.readLine rdr#)]
+         ~@body
+         (recur)))))

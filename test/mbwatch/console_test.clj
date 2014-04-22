@@ -1,7 +1,6 @@
-(ns mbwatch.console-logger-test
+(ns mbwatch.console-test
   (:require [clojure.test :refer [is]]
-            [mbwatch.console-logger :refer [->ConsoleLogger SGR
-                                            get-default-colors]]
+            [mbwatch.console :refer [->ConsoleLogger SGR get-default-colors]]
             [mbwatch.logging :refer [log log-item]]
             [schema.core :refer [validate]]
             [schema.test :refer [deftest]])
