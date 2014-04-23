@@ -62,8 +62,7 @@
             [mbwatch.console :refer [->ConsoleLogger MILLIS-TIMESTAMP-FORMAT
                                      TIMESTAMP-FORMAT get-default-colors]]
             [mbwatch.imap :refer [->IDLEMaster]]
-            [mbwatch.logging :refer [->LogItem ->LoggingService DEBUG
-                                     Loggable log-with-timestamp!]]
+            [mbwatch.logging :refer [->LoggingService DEBUG]]
             [mbwatch.mbsync :refer [->MbsyncMaster]]
             [mbwatch.notification :refer [->NewMessageNotificationService]]
             [mbwatch.sync-timer :refer [->SyncTimer]]

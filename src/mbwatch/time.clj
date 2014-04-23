@@ -1,6 +1,5 @@
 (ns mbwatch.time
-  (:require [clojure.string :as string]
-            [mbwatch.util :refer [istr=]]
+  (:require [mbwatch.util :refer [istr=]]
             [schema.core :as s :refer [Int]])
   (:import (org.joda.time DateTime Duration Instant ReadableInstant)))
 
