@@ -2,8 +2,8 @@
   "Mbwatch components are configured and controlled via Commands."
   (:require [mbwatch.logging :refer [DEBUG Loggable]]
             [mbwatch.types :as t :refer [MBMap VOID]]
-            [schema.core :as s :refer [Any Int both defschema enum pred
-                                       validate]])
+            [schema.core :as s :refer [Any Int both defschema either enum
+                                       pred validate]])
   (:import (java.util.concurrent.atomic AtomicLong)
            (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
@@ -14,34 +14,41 @@
    global var."
   (AtomicLong. 0))
 
+(def ^:private OPCODE-TABLE
+  [[:app/help      VOID      "This help menu"]
+   [:app/reload    VOID      "Reload configuration"]
+   [:app/restart   VOID      "Restart application"]
+   [:app/quit      VOID      "Quit application"]
+
+   [:conn/remove   #{String} "Remove from registered connections"]
+   [:conn/period   Int       "Set connection check period"]
+   [:conn/trigger  VOID      "Re-check connections"]
+
+   [:idle/add      MBMap     "Add to watched mboxes"]
+   [:idle/remove   MBMap     "Remove from watched mboxes"]
+   [:idle/set      MBMap     "Set watched mboxes"]
+   [:idle/restart  VOID      "Restart IMAP connections"]
+
+   [:notify/add    MBMap     "Add to notification mboxes"]
+   [:notify/remove MBMap     "Remove from notification mboxes"]
+   [:notify/set    MBMap     "Set notification mboxes"]
+
+   [:sync          MBMap     "Synchronize given mailboxes"]
+   [:sync/add      MBMap     "Add to periodic sync request"]
+   [:sync/remove   MBMap     "Remove from periodic sync request"]
+   [:sync/set      MBMap     "Set periodic sync request"]
+   [:sync/period   Int       "Set sync period"]
+   [:sync/term     VOID      "Terminate running mbsync processes"]
+   [:sync/trigger  VOID      "Trigger periodic sync"]])
+
 (def ^:private OPCODE->PAYLOAD
-  (->> [[:help          VOID      "This help menu"]
-        [:reload        VOID      "Reload configuration"]
-        [:Restart       VOID      "Restart application"]
-        [:quit          VOID      "Quit application"]
+  (->> OPCODE-TABLE
+       (mapcat (partial take 2))
+       (apply hash-map)))
 
-        [:idle/add      MBMap     "Add to watched mboxes"]
-        [:idle/remove   MBMap     "Remove from watched mboxes"]
-        [:idle/set      MBMap     "Set watched mboxes"]
-        [:idle/Restart  VOID      "Restart IMAP connections"]
-
-        [:sync          MBMap     "Synchronize given mailboxes"]
-        [:sync/add      MBMap     "Add to periodic sync request"]
-        [:sync/remove   MBMap     "Remove from periodic sync request"]
-        [:sync/set      MBMap     "Set periodic sync request"]
-        [:sync/kill     VOID      "Terminate running mbsync processes"]
-        [:sync/period   Int       "Set sync period"]
-        [:sync/trigger  VOID      "Trigger periodic sync"]
-
-        [:conn/remove   #{String} "Remove from registered connections"]
-        [:conn/period   Int       "Set connection check period"]
-        [:conn/trigger  VOID      "Re-check connections"]
-
-        [:notify/add    MBMap     "Add to notification mboxes"]
-        [:notify/remove MBMap     "Remove from notification mboxes"]
-        [:notify/set    MBMap     "Set notification mboxes"]]
-       (mapcat (fn [[kw schema help]]
-                 [kw (with-meta schema {:help help})]))
+(def ^:private OPCODE->HELP
+  (->> OPCODE-TABLE
+       (mapcat (fn [[kw _ help]] [kw help]))
        (apply hash-map)))
 
 (defschema ^:private Opcode
@@ -63,7 +70,7 @@
         (pred #(do (validate (OPCODE->PAYLOAD (:opcode %))
                              (:payload %))
                    true)
-              "Valid command payload for opcode")))
+              "Payload")))
 
 (s/defn ->Command :- CommandSchema
   ([opcode]
@@ -71,3 +78,8 @@
   ([opcode  :- Opcode
     payload :- Any]
    (Command. opcode payload (.getAndIncrement command-id) (DateTime.))))
+
+(s/defn parse-command-input :- (either CommandSchema String)
+  "Try to parse user input as a Command, else return a help message."
+  [s :- String]
+  )

@@ -6,7 +6,7 @@
 
    The workers shell out to `mbsync`, passing a parsed configuration string
    via `bash -c 'mbsync -c <(cat)'`. These child processes can be terminated
-   by MbsyncMaster on receipt of a :sync/kill Command.
+   by MbsyncMaster on receipt of a :sync/term Command.
 
    Stopping the MbsyncMaster also stops all spawned MbsyncWorkers.
 
@@ -225,7 +225,7 @@
   (case (:opcode cmd)
     :sync (dispatch-syncs
             worker-map (:id cmd) (:payload cmd) mbsync-master)
-    :sync/kill (do (doseq [w (vals worker-map)]
+    :sync/term (do (doseq [w (vals worker-map)]
                      (sig-notify-all (:status w)))
                    worker-map)
     worker-map))
