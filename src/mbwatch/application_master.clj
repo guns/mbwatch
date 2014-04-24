@@ -1,5 +1,11 @@
 (ns mbwatch.application-master
   "
+                  ┌─────────┐
+                  │ Console │
+                  └────┬────┘
+                       │
+                       │ Input
+                       ▼
              ┌───────────────────┐
              │ ApplicationMaster │
              └───────┬───┬───────┘
@@ -12,18 +18,19 @@
   "
   (:require [clojure.core.async :refer [>!! put!]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
-            [mbwatch.command :refer [parse-command-input]]
-            [mbwatch.config :refer [->Config]]
+            [mbwatch.application :refer [->Application]]
+            [mbwatch.command :refer [OPCODE-HELP parse-command-input]]
+            [mbwatch.config]
             [mbwatch.console :refer [tty? with-console-input]]
-            [mbwatch.core :refer [->Application]]
             [mbwatch.events :refer [->UserCommandError]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
             [mbwatch.types :as t :refer [atom-of]]
-            [schema.core :as s :refer [Any maybe]])
-  (:import (clojure.lang IFn Keyword)
+            [schema.core :as s :refer [maybe]])
+  (:import (clojure.lang IFn)
            (java.util.concurrent.atomic AtomicBoolean)
-           (mbwatch.core Application)))
+           (mbwatch.application Application)
+           (mbwatch.config Config)))
 
 (t/defrecord ^:private ApplicationMaster
   [application :- (atom-of Application "ApplicationAtom")
@@ -35,24 +42,29 @@
   (start [this]
     (log-with-timestamp! (:log-chan @application) this)
     (reset! application (comp/start @application))
-    (let [{:keys [cmd-chan log-chan]} @application
+    (let [
           f (future
               (when (tty?)
                 (with-console-input line
-                  (let [cmd (parse-command-input line)]
+                  (let [{:keys [cmd-chan log-chan]} @application
+                        cmd (parse-command-input line)]
                     (if (string? cmd)
                       (put! log-chan (->UserCommandError cmd))
                       (case (:opcode cmd)
-                        ; :app/help
+                        :app/help (.println System/err OPCODE-HELP)
                         ; :app/status
                         ; :app/reload
                         ; :app/restart
-                        ; :app/quit
-                        (>!! cmd-chan cmd))))))
-              (when (.get status)
-                (comp/stop this)))]
+                        :app/quit (when (.get status) (comp/stop this))
+                        (>!! cmd-chan cmd)))))
+                (when (.get status)
+                  ;; User closed input stream
+                  (.println System/err "Goodbye!")
+                  (comp/stop this))))]
       (assoc this :exit-fn
-             #(do (comp/stop @application)))))
+             #(do (.set status false)
+                  (future-cancel f)
+                  (comp/stop @application)))))
 
   (stop [this]
     (log-with-timestamp! (:log-chan @application) this)
@@ -68,9 +80,8 @@
                             (if exit-fn "↓ Stopping" "↑ Starting")))))
 
 (s/defn ->ApplicationMaster :- ApplicationMaster
-  [options :- {Keyword Any}]
-  (let [{:keys [config mbwatch-config]} options]
-    (strict-map->ApplicationMaster
-      {:application (atom (->Application (->Config options config mbwatch-config)))
-       :status (AtomicBoolean. true)
-       :exit-fn nil})))
+  [config :- Config]
+  (strict-map->ApplicationMaster
+    {:application (atom (->Application config))
+     :status (AtomicBoolean. true)
+     :exit-fn nil}))
