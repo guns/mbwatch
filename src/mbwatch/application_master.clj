@@ -17,11 +17,11 @@
                 └─────────────┘
   "
   (:require [clojure.core.async :refer [>!! chan close! put!]]
-            [clojure.core.async.impl.protocols :refer [WritePort]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
             [mbwatch.application :refer [->Application]]
             [mbwatch.command :refer [OPCODE-HELP parse-command-input]]
-            [mbwatch.concurrent :refer [CHAN-SIZE shutdown-future]]
+            [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
+                                        shutdown-future]]
             [mbwatch.config :refer [->Config DEFAULT-CONFIG-PATH]]
             [mbwatch.config.mbsyncrc :refer [DEFAULT-MBSYNCRC-PATH]]
             [mbwatch.console :refer [tty? with-console-input]]
@@ -44,7 +44,7 @@
   (start [this]
     (log-with-timestamp! (:log-chan @application) this)
     (reset! application (comp/start @application))
-    (let [f (future
+    (let [f (future-catch-print
               (when (tty?)
                 (with-console-input line
                   (let [cmd (parse-command-input line)]
@@ -62,7 +62,7 @@
                         (>!! (:cmd-chan @application) cmd)))))
                 (when (.get status)
                   ;; User closed input stream
-                  (when (.get status) (comp/stop this)))))]
+                  (comp/stop this))))]
       (assoc this :exit-fn
              #(do (.set status false)               ; Stop after current iteration
                   (close! (:cmd-chan @application)) ; Close outgoing channels
@@ -87,11 +87,11 @@
   "Construct an ApplicationMaster instance from an option-map as produced by
    mbwatch.cli/parse-argv!"
   [options :- {Keyword Any}]
-  (let [mbs (or :config DEFAULT-MBSYNCRC-PATH)
-        mbw (or :mbwatch-config DEFAULT-CONFIG-PATH)
+  (let [mbs (:config options DEFAULT-MBSYNCRC-PATH)
+        mbw (:mbwatch-config options DEFAULT-CONFIG-PATH)
+        config (->Config options mbs mbw)
         cmd-chan (chan CHAN-SIZE)
-        log-chan (chan CHAN-SIZE)
-        config (->Config options mbs mbw)]
+        log-chan (chan CHAN-SIZE)]
     (strict-map->ApplicationMaster
       {:application (atom (->Application config cmd-chan log-chan))
        :status (AtomicBoolean. true)
