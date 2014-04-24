@@ -1,12 +1,7 @@
 (ns mbwatch.console
-  (:require [clojure.core.async :refer [>!! put!]]
-            [clojure.core.async.impl.protocols :refer [WritePort]]
-            [clojure.java.shell :refer [sh]]
+  (:require [clojure.java.shell :refer [sh]]
             [clojure.string :as string]
-            [mbwatch.command :refer [parse-command-input]]
-            [mbwatch.events :refer [->UserCommandError]]
             [mbwatch.logging :refer [IItemLogger]]
-            [mbwatch.types :refer [VOID]]
             [schema.core :as s :refer [Any Int either maybe]])
   (:import (clojure.lang Keyword)
            (java.io BufferedReader InputStreamReader)
@@ -116,13 +111,13 @@
     dt-formatter :- DateTimeFormatter]
    (ConsoleLogger. stream (mapv sgr-join colors) dt-formatter)))
 
-(s/defn ^:private console-reader :- (maybe BufferedReader)
+(s/defn console-reader :- (maybe BufferedReader)
   "Returns System/in as a BufferedReader if it is attached to a console."
   []
   (when tty?
     (BufferedReader. (InputStreamReader. System/in "UTF-8"))))
 
-(defmacro ^:private with-console-input
+(defmacro with-console-input
   "Execute body repeatedly with input line bound to line-sym. Returns
    immediately if System/in is not a console."
   {:requires [BufferedReader console-reader]}
@@ -132,12 +127,3 @@
        (when-some [~line-sym (.readLine rdr#)]
          ~@body
          (recur)))))
-
-(s/defn read-console-commands! :- VOID
-  [cmd-chan :- WritePort
-   log-chan :- WritePort]
-  (with-console-input line
-    (let [cmd-or-help (parse-command-input line)]
-      (if (string? cmd-or-help)
-        (put! log-chan cmd-or-help)
-        (>!! cmd-chan (->UserCommandError cmd-or-help))))))
