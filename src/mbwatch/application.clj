@@ -1,26 +1,28 @@
 (ns mbwatch.application
   "
-              ────── Command ─────────┐
-                                      │
-                                      │ 0
-                                      ▼                     ──┐
-                                ┌───────────┐                 │
-                                │ SyncTimer │                 │
-                                └─────┬─────┘                 │
-                                      │                       │
-                                      │ 1                     │
-                                      ▼                       │
-                                ┌────────────┐                │
-             ┌┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄▷ │ IDLEMaster │                │
-             ┊                  └─────┬──────┘                │
-             ┊                        │                       │
-             ┊             ┌──────────┴──────────┐            │
-             ┊             ▼                     ▼            │
-             ┊      ┌────────────┐         ┌────────────┐     │
-             ┊      │ IDLEWorker │    …    │ IDLEWorker │     │
-             ┊      └──────┬─────┘         └─────┬──────┘     │
-             ┊             └──────────┬──────────┘            │
-             ┊                        │ 2                     ├── Loggable ──┐
+   ───────────────── Loggable ───────────────────────────────────────────────┐
+                                                                             │
+   ───────────────── Command ─────────┐                                      │
+                                      │                                      │
+                                      │ 0                                    │
+                                      ▼                     ──┐              │
+                                ┌───────────┐                 │              │
+                                │ SyncTimer │                 │              │
+                                └─────┬─────┘                 │              │
+                                      │                       │              │
+                                      │ 1                     │              │
+                                      ▼                       │              │
+                                ┌────────────┐                │              │
+             ┌┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄▷ │ IDLEMaster │                │              │
+             ┊                  └─────┬──────┘                │              │
+             ┊                        │                       │              │
+             ┊             ┌──────────┴──────────┐            │              │
+             ┊             ▼                     ▼            │              │
+             ┊      ┌────────────┐         ┌────────────┐     │              │
+             ┊      │ IDLEWorker │    …    │ IDLEWorker │     │              │
+             ┊      └──────┬─────┘         └─────┬──────┘     │              │
+             ┊             └──────────┬──────────┘            │              │
+             ┊                        │ 2                     ├── Loggable ──┤
              ┊                        ▼                       │              │
    ┌┄┄┄┄┄┄┄┄┄┴┄┄┄┄┄┄┄┄┄┐    ┌───────────────────┐             │              │
    ┊ ConnectionMapAtom ┊ ◁┄┄┤ ConnectionWatcher │             │              │
@@ -50,7 +52,7 @@
                               │ LoggingService │
                               └────────────────┘
   "
-  (:require [clojure.core.async :as async :refer [>!! chan close!]]
+  (:require [clojure.core.async :as async :refer [>!!]]
             [clojure.core.async.impl.protocols :refer [WritePort]]
             [com.stuartsierra.component :refer [Lifecycle start-system
                                                 stop-system]]
@@ -93,18 +95,19 @@
   ;; (keys a-record) to start and stop the components in FILO order.
 
   (start [this]
-    (start-system this (rest (keys this))))
+    (start-system this (drop 2 (keys this))))
 
   (stop [this]
-    (close! cmd-chan)
-    (stop-system this (rest (keys this)))))
+    (stop-system this (drop 2 (keys this)))))
 
 (s/defn ->Application :- Application
-  [config :- Config]
+  [config   :- Config
+   cmd-chan :- WritePort
+   log-chan :- WritePort]
   (let [connections-atom (atom {})
         ;; Command pipeline
         sync-timer (->SyncTimer (-> config :sync)
-                                (chan CHAN-SIZE)
+                                cmd-chan
                                 (-> config :sync-period))
         cmd-chan-0 (:cmd-chan-in sync-timer)
         cmd-chan-1 (:cmd-chan-out sync-timer)
@@ -131,6 +134,7 @@
                                         idle-master
                                         connection-watcher
                                         mbsync-master])
+                       (conj log-chan)
                        (async/merge CHAN-SIZE))
         notification-service (->NewMessageNotificationService
                                (-> config :notify-cmd)
@@ -148,8 +152,8 @@
                           log-chan-1)]
     ;; Initial sync
     (>!! cmd-chan-0 (->Command :sync (-> config :sync)))
-    (Application. cmd-chan-0
-                  log-chan-0
+    (Application. cmd-chan
+                  log-chan
                   logging-service
                   notification-service
                   mbsync-master
