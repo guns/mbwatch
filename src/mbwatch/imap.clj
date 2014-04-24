@@ -288,7 +288,7 @@
   {:pre [(empty? (intersection mbtuples (set (keys worker-map))))]}
   (reduce
     (fn [m [mbchan mbox]]
-      (assoc m [mbchan mbox] (.start (->IDLEWorker idle-master mbchan mbox))))
+      (assoc m [mbchan mbox] (comp/start (->IDLEWorker idle-master mbchan mbox))))
     worker-map mbtuples))
 
 (s/defn ^:private stop-and-start! :- IDLEWorkerMap
