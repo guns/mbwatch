@@ -2,6 +2,7 @@
   "Tools for working with MBMap structures: {String #{String}}"
   (:require [clojure.set :refer [difference]]
             [clojure.string :as string]
+            [mbwatch.shellwords :refer [shell-split]]
             [mbwatch.types :refer [MBMap MBTuple]]
             [schema.core :as s :refer [pair]]))
 
@@ -14,6 +15,10 @@
                         (into #{} (string/split bs #","))
                         #{}))))
     {} argv))
+
+(s/defn parse-mbline :- MBMap
+  [s :- String]
+  (parse-mbargs (shell-split s)))
 
 (s/defn join-mbentry :- String
   [mbchan :- String

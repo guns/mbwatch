@@ -9,8 +9,7 @@
             [mbwatch.connection-watcher :as cw]
             [mbwatch.logging :refer [DEBUG EMERG INFO LOG-LEVELS
                                      NAME->LOG-LEVEL]]
-            [mbwatch.mbmap :refer [mbmap-merge parse-mbargs]]
-            [mbwatch.shellwords :refer [shell-split]]
+            [mbwatch.mbmap :refer [mbmap-merge parse-mbline]]
             [mbwatch.sync-timer :as st]
             [mbwatch.time :refer [human-duration parse-ms]]
             [mbwatch.types :as t :refer [MBMap]]
@@ -21,10 +20,6 @@
 
 (def ^:const DEFAULT-CONFIG-PATH
   (str (System/getProperty "user.home") "/.mbwatchrc"))
-
-(s/defn ^:private parse-mbline :- MBMap
-  [s :- String]
-  (parse-mbargs (shell-split s)))
 
 (s/defn config-options :- [[Any]]
   "Default config options as a tools.cli options vector."

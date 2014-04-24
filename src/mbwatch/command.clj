@@ -1,9 +1,13 @@
 (ns mbwatch.command
   "Mbwatch components are configured and controlled via Commands."
-  (:require [mbwatch.logging :refer [DEBUG Loggable]]
-            [mbwatch.types :as t :refer [MBMap VOID]]
-            [schema.core :as s :refer [Any Int both defschema either enum
-                                       pred validate]])
+  (:require [clojure.string :as string]
+            [mbwatch.logging :refer [DEBUG Loggable]]
+            [mbwatch.mbmap :refer [parse-mbline]]
+            [mbwatch.trie :refer [EMPTY-TRIE-NODE add-substring-aliases
+                                  lookup]]
+            [mbwatch.types :as t :refer [MBMap VOID tuple]]
+            [schema.core :as s :refer [Any Int Schema both defschema either
+                                       enum maybe pred validate]])
   (:import (java.util.concurrent.atomic AtomicLong)
            (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
@@ -14,45 +18,48 @@
    global var."
   (AtomicLong. 0))
 
+(t/defrecord ^:private OpcodeMeta
+  [payload-type :- Schema
+   user-command :- String
+   help         :- String])
+
 (def ^:private OPCODE-TABLE
-  [[:app/help      VOID      "This help menu"]
-   [:app/reload    VOID      "Reload configuration"]
-   [:app/restart   VOID      "Restart application"]
-   [:app/quit      VOID      "Quit application"]
+  {:app/help      (OpcodeMeta. VOID      "help"               "This help menu")
+   :app/status    (OpcodeMeta. VOID      "info"               "Query info of application")
+   :app/reload    (OpcodeMeta. VOID      "reload"             "Reload configuration")
+   :app/restart   (OpcodeMeta. VOID      "RESTART"            "Restart application")
+   :app/quit      (OpcodeMeta. VOID      "quit"               "Quit application")
 
-   [:conn/remove   #{String} "Remove from registered connections"]
-   [:conn/period   Int       "Set connection check period"]
-   [:conn/trigger  VOID      "Re-check connections"]
+   :conn/remove   (OpcodeMeta. #{String} "connection remove"  "Remove from registered connections")
+   :conn/period   (OpcodeMeta. Int       "connection period"  "Set connection check period")
+   :conn/trigger  (OpcodeMeta. VOID      "connection trigger" "Re-check connections")
 
-   [:idle/add      MBMap     "Add to watched mboxes"]
-   [:idle/remove   MBMap     "Remove from watched mboxes"]
-   [:idle/set      MBMap     "Set watched mboxes"]
-   [:idle/restart  VOID      "Restart IMAP connections"]
+   :idle/add      (OpcodeMeta. MBMap     "idle add"           "Add to watched mboxes")
+   :idle/remove   (OpcodeMeta. MBMap     "idle remove"        "Remove from watched mboxes")
+   :idle/set      (OpcodeMeta. MBMap     "idle set"           "Set watched mboxes")
+   :idle/restart  (OpcodeMeta. VOID      "idle RESTART"       "Restart IMAP connections")
 
-   [:notify/add    MBMap     "Add to notification mboxes"]
-   [:notify/remove MBMap     "Remove from notification mboxes"]
-   [:notify/set    MBMap     "Set notification mboxes"]
+   :notify/add    (OpcodeMeta. MBMap     "notify add"         "Add to notification mboxes")
+   :notify/remove (OpcodeMeta. MBMap     "notify remove"      "Remove from notification mboxes")
+   :notify/set    (OpcodeMeta. MBMap     "notify set"         "Set notification mboxes")
 
-   [:sync          MBMap     "Synchronize given mailboxes"]
-   [:sync/add      MBMap     "Add to periodic sync request"]
-   [:sync/remove   MBMap     "Remove from periodic sync request"]
-   [:sync/set      MBMap     "Set periodic sync request"]
-   [:sync/period   Int       "Set sync period"]
-   [:sync/term     VOID      "Terminate running mbsync processes"]
-   [:sync/trigger  VOID      "Trigger periodic sync"]])
+   :sync          (OpcodeMeta. MBMap     "SYNC"               "Synchronize given mailboxes")
+   :sync/add      (OpcodeMeta. MBMap     "sync add"           "Add to periodic sync request")
+   :sync/remove   (OpcodeMeta. MBMap     "sync remove"        "Remove from periodic sync request")
+   :sync/set      (OpcodeMeta. MBMap     "sync set"           "Set periodic sync request")
+   :sync/period   (OpcodeMeta. Int       "sync period"        "Set sync period")
+   :sync/term     (OpcodeMeta. VOID      "TERMINATE"          "Terminate running mbsync processes")
+   :sync/trigger  (OpcodeMeta. VOID      "trigger"            "Trigger periodic sync")})
 
-(def ^:private OPCODE->PAYLOAD
-  (->> OPCODE-TABLE
-       (mapcat (partial take 2))
-       (apply hash-map)))
-
-(def ^:private OPCODE->HELP
-  (->> OPCODE-TABLE
-       (mapcat (fn [[kw _ help]] [kw help]))
-       (apply hash-map)))
+(def ^:private USER-COMMAND-TRIE
+  (reduce-kv
+    (fn [node op opmeta]
+      (let [cmd (:user-command opmeta)]
+        (add-substring-aliases node cmd op)))
+    EMPTY-TRIE-NODE OPCODE-TABLE))
 
 (defschema ^:private Opcode
-  (apply enum (keys OPCODE->PAYLOAD)))
+  (apply enum (keys OPCODE-TABLE)))
 
 (t/defrecord ^:private Command
   [opcode    :- Opcode
@@ -67,7 +74,7 @@
 
 (defschema CommandSchema
   (both Command
-        (pred #(do (validate (OPCODE->PAYLOAD (:opcode %))
+        (pred #(do (validate (:payload-type (OPCODE-TABLE (:opcode %)))
                              (:payload %))
                    true)
               "Payload")))
@@ -79,7 +86,42 @@
     payload :- Any]
    (Command. opcode payload (.getAndIncrement command-id) (DateTime.))))
 
+(s/defn ^:private parse-command-input* :- (maybe (tuple #{Opcode} [String]))
+  [input :- String]
+  (let [words (string/split input #"\s+")]
+    (let [ops (lookup USER-COMMAND-TRIE (first words))
+          nops (count ops)
+          nwords (count words)]
+      (if (nil? ops)
+        nil
+        (if (and (> nwords 1) (> nops 1))
+          (when-let [ops (lookup USER-COMMAND-TRIE (string/join " " (take 2 words)))]
+            [ops (drop 2 words)])
+          [ops (rest words)])))))
+
 (s/defn parse-command-input :- (either CommandSchema String)
   "Try to parse user input as a Command, else return a help message."
-  [s :- String]
-  )
+  [input :- String]
+  (let [[ops args] (parse-command-input* input)
+        nops (count ops)]
+    (cond (= nops 0) (str "Command unrecognized: " (pr-str input))
+          (> nops 1) (str "Ambiguous command: One of "
+                          (string/join
+                            ", "
+                            (mapv (comp pr-str :user-command OPCODE-TABLE) ops)))
+          :else
+          (let [op (first ops)
+                op-str (pr-str op)
+                {:keys [payload-type]} (OPCODE-TABLE op)]
+            (condp = payload-type
+              VOID (if (seq args)
+                     (str op-str " takes no arguments")
+                     (->Command op nil))
+              #{String} (->Command op (set args))
+              Int (if (or (not= (count args) 1)
+                          (not (re-find #"\A\d+\z" (first args))))
+                    (str op-str " expects a single integer argument")
+                    (->Command op (first args)))
+              MBMap (if (empty? args)
+                      (str op-str " expects arguments of the form channel:box,…")
+                      (->Command op (parse-mbline (string/join \space args)))))))))
