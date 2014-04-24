@@ -29,6 +29,24 @@
                (vector? t) (recur more (into cs (interleave t (repeat expr))))
                :else (recur more (conj cs t expr))))))
 
+(s/defn make-table :- String
+  [headings :- [String]
+   rows     :- [[String]]]
+  (let [widths (->> rows
+                    (cons headings)
+                    (apply mapv vector)
+                    (mapv #(apply max (mapv count %))))
+        fmt (->> widths
+                 (mapv #(format "%%-%ds" %))
+                 (string/join " | "))
+        sep (->> widths
+                 (mapv #(apply str (repeat % \-)))
+                 (string/join "-+-"))]
+    (->> (concat [(apply format fmt headings)
+                  sep]
+                 (mapv #(apply format fmt %) rows))
+         (string/join \newline))))
+
 (s/defn parse-kv-string :- {Keyword String}
   "Simple key = value parser. Like ini, but without hierarchy, multiline
    values, or very many features at all."
