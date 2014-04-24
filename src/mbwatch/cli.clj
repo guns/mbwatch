@@ -16,12 +16,12 @@
        (string/join \newline errors)))
 
 (s/defn parse-argv! :- (either Boolean {Keyword Any})
-  "Parses command line arguments, returning an options map. Prints a usage
-   banner and returns true on `--help`. If there are errors, they are printed
-   to stderr and false is returned."
+  "Parses command line arguments, returning an options map for only the
+   supplied options. Prints a usage banner and returns true on `--help`. If
+   there are errors, they are printed to stderr and false is returned."
   [argv :- [String]]
   (let [opts (conj (config-options) ["-h" "--help"])
-        {:keys [options arguments errors summary]} (parse-opts argv opts)]
+        {:keys [options arguments errors summary]} (parse-opts argv opts :no-defaults true)]
     (cond
       (or (:help options)
           (seq arguments)) (do (println (usage summary)) true)
