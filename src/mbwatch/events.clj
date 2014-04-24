@@ -188,3 +188,7 @@
       :sync-request (if (seq sync-req)
                       (str "Sync timer request set to: " (join-mbmap sync-req))
                       "Sync timer disabled."))))
+
+(defloggable UserCommandError WARNING
+  [msg :- String]
+  msg)
