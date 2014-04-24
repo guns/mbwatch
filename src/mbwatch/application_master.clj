@@ -80,8 +80,14 @@
                             (if exit-fn "↓ Stopping" "↑ Starting")))))
 
 (s/defn ->ApplicationMaster :- ApplicationMaster
-  [config :- Config]
-  (strict-map->ApplicationMaster
-    {:application (atom (->Application config))
-     :status (AtomicBoolean. true)
-     :exit-fn nil}))
+  "Construct an ApplicationMaster instance from an option-map as produced by
+   mbwatch.cli/parse-argv!"
+  [options :- {Keyword Any}]
+  (let [mbs (or :config DEFAULT-MBSYNCRC-PATH)
+        mbw (or :mbwatch-config DEFAULT-CONFIG-PATH)
+        config (->Config options mbs mbw)]
+    (strict-map->ApplicationMaster
+      {:application (atom (->Application config))
+       :cmd-chan (chan CHAN-SIZE)
+       :status (AtomicBoolean. true)
+       :exit-fn nil})))

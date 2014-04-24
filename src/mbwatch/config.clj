@@ -91,6 +91,22 @@
       :default-desc "10s"
       :parse-fn parse-ms]]))
 
+(s/defn ^:private parse-config-file :- {Keyword Any}
+  "Parse mbwatch-config-path, returning an option map with defaults. Throws an
+   exception if there are any errors."
+  [mbwatch-config-path :- Coercions]
+  (let [{:keys [options errors]}
+        (-> (slurp mbwatch-config-path)
+            parse-kv-string
+            (as-> m (mapv (fn [[k v]] (str "--" (name k) \= v)) m))
+            (parse-opts (config-options)))]
+    (if errors
+      (throw (IllegalArgumentException.
+               (format "The following errors occured while parsing %s:\n\n%s\n"
+                       mbwatch-config-path
+                       (string/join "\n" errors))))
+      options)))
+
 (t/defrecord ^:private Config
   [mbsyncrc       :- Mbsyncrc
    idle           :- MBMap
@@ -111,11 +127,8 @@
    mbwatch-config-path :- Coercions]
   (let [mbsyncrc (parse-mbsyncrc (slurp mbsyncrc-path))
         ;; Parse the config file as if it were an command line argument vector
-        {:keys [options errors]}
-        (-> (slurp mbwatch-config-path)
-            parse-kv-string
-            (as-> m (mapv (fn [[k v]] (str "--" (name k) \= v)) m))
-            (parse-opts (config-options)))
+        options (merge (parse-config-file mbwatch-config-path)
+                       cli-options)
         idle (:idle options)
         options (-> options
                     ;; Periodically sync idle channels unless specified
@@ -124,13 +137,8 @@
                                           (zipmap (keys idle) (repeat #{}))))
                     ;; Always notify on IDLE mboxes
                     (update-in [:notify] mbmap-merge idle))]
-    (if errors
-      (throw (IllegalArgumentException.
-               (format "The following errors occured while parsing %s:\n%s\n"
-                       mbwatch-config-path
-                       (string/join "\n" errors))))
-      (strict-map->Config
-        (merge {:mbsyncrc mbsyncrc} options cli-options)))))
+    (strict-map->Config
+      (assoc options :mbsyncrc mbsyncrc))))
 
 (s/defn mdir-path :- String
   [maildir :- Maildirstore
