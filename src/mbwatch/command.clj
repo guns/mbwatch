@@ -101,16 +101,19 @@
 
 (s/defn ^:private parse-command-input* :- (maybe (tuple #{Opcode} [String]))
   [input :- String]
-  (let [words (string/split input #"\s+")]
-    (let [ops (lookup USER-COMMAND-TRIE (first words))
-          nops (count ops)
-          nwords (count words)]
-      (if (nil? ops)
-        nil
-        (if (and (> nwords 1) (> nops 1))
-          (when-let [ops (lookup USER-COMMAND-TRIE (string/join " " (take 2 words)))]
-            [ops (drop 2 words)])
-          [ops (rest words)])))))
+  (let [words (string/split input #"\s+")
+        first-word (first words)]
+    (if (empty? first-word)
+      [#{:app/help} nil]
+      (let [ops (lookup USER-COMMAND-TRIE first-word)
+            nops (count ops)
+            nwords (count words)]
+        (if (nil? ops)
+          nil
+          (if (and (> nwords 1) (> nops 1))
+            (when-let [ops (lookup USER-COMMAND-TRIE (string/join " " (take 2 words)))]
+              [ops (drop 2 words)])
+            [ops (rest words)]))))))
 
 (s/defn parse-command-input :- (either CommandSchema String)
   "Try to parse user input as a Command, else return a help message."
