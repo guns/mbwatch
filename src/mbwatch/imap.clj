@@ -218,8 +218,9 @@
                 ;; Convey commands ASAP
                 (do (>!! cmd-chan-out cmd)
                     (recur (process-command this worker-map cmd)))
-                (do (put! log-chan (->IMAPShutdownEvent timeout))
-                    (stop-workers! (vals worker-map)))))]
+                (when (seq worker-map)
+                  (put! log-chan (->IMAPShutdownEvent timeout))
+                  (stop-workers! (vals worker-map)))))]
       (assoc this :exit-fn
              #(do (.set status false)   ; Stop after current iteration
                   (<!! c)
