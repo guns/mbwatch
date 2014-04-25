@@ -107,6 +107,9 @@
                      (sig-notify-all timer-atom)
                      (put! log-chan (->SyncTimerPreferenceEvent
                                       :period @timer-atom @sync-request-atom))))
+    ;; TODO
+    ; :sync/add
+    ; :sync/remove
     :sync/set (let [{:keys [sync-request-atom timer-atom log-chan]} sync-timer
                     old-req @sync-request-atom
                     new-req (reset! sync-request-atom (:payload command))]
