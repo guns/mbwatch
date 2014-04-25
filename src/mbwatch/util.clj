@@ -40,7 +40,7 @@
                  (mapv #(format "%%-%ds" %))
                  (string/join " | "))
         sep (->> widths
-                 (mapv #(apply str (repeat % \-)))
+                 (mapv #(string/join (repeat % \-)))
                  (string/join "-+-"))]
     (->> (concat [(apply format fmt headings)
                   sep]

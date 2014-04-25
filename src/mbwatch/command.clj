@@ -109,8 +109,7 @@
       (let [ops (lookup USER-COMMAND-TRIE first-word)
             nops (count ops)
             nwords (count words)]
-        (if (nil? ops)
-          nil
+        (when (some? ops)
           (if (and (> nwords 1) (> nops 1))
             (when-let [ops (lookup USER-COMMAND-TRIE (string/join " " (take 2 words)))]
               [ops (drop 2 words)])

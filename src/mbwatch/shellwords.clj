@@ -118,8 +118,8 @@
 ;;   words
 ;; end
 (s/defn shell-split :- [String]
-  [line :- String]
   "Ported from Ruby's Shellwords#shellsplit()"
+  [line :- String]
   ;; Note that the Pattern is in DOTALL mode
   (let [ms (re-seq #"(?s)\G\s*(?>([^\s\\\'\"]+)|'([^\']*)'|\"((?:[^\"\\]|\\.)*)\"|(\\.?)|(\S))(\s|\z)?" line)]
     (first

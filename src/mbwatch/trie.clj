@@ -43,8 +43,7 @@
    input :- String]
   (loop [node node [ch & more] input]
     (when ch
-      (if-let [node (node ch)]
+      (when-some [node (node ch)]
         (if more
           (recur node more)
-          (::values (meta node)))
-        nil))))
+          (::values (meta node)))))))
