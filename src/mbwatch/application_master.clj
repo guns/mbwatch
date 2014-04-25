@@ -21,7 +21,7 @@
             [mbwatch.application :refer [->Application]]
             [mbwatch.command :refer [OPCODE-HELP parse-command-input]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
-                                        shutdown-future]]
+                                        shutdown-future sig-notify-all]]
             [mbwatch.config :refer [->Config DEFAULT-CONFIG-PATH]]
             [mbwatch.config.mbsyncrc :refer [DEFAULT-MBSYNCRC-PATH]]
             [mbwatch.console :refer [tty? with-console-input]]
@@ -53,18 +53,21 @@
                       ;; TODO: Export to function
                       (case (:opcode cmd)
                         ;; Handle top-level commands directly
-                        :app/help (.println System/err OPCODE-HELP)
+                        :app/help (do (.println System/err OPCODE-HELP) true)
                         ; :app/status
                         ; :app/reload
                         ; :app/restart
-                        :app/quit (when (.get status) (comp/stop this))
+                        :app/quit nil
                         ;; Convey everything else
                         (>!! (:cmd-chan @application) cmd)))))
                 (when (.get status)
-                  ;; User closed input stream
-                  (comp/stop this))))]
+                  ;; User closed input stream; let the main thread know that
+                  ;; we are done
+                  (.println System/err "Goodbye!")
+                  (.set status false)
+                  (sig-notify-all status))))]
       (assoc this :exit-fn
-             #(do (.set status false)               ; Stop after current iteration
+             #(do (.set status false)
                   (close! (:cmd-chan @application)) ; Close outgoing channels
                   (close! (:log-chan @application))
                   (shutdown-future f 100)

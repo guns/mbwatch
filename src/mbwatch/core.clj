@@ -1,7 +1,9 @@
 (ns mbwatch.core
   (:require [com.stuartsierra.component :as comp]
             [mbwatch.application-master :refer [->ApplicationMaster]]
-            [mbwatch.cli :refer [parse-argv!]])
+            [mbwatch.cli :refer [parse-argv!]]
+            [mbwatch.concurrent :refer [sig-wait]])
+  (:import (java.util.concurrent.atomic AtomicBoolean))
   (:gen-class))
 
 (defn -main
@@ -12,6 +14,14 @@
       (case options
         true (System/exit 0)
         false (System/exit 1)
-        :else (comp/start (->ApplicationMaster options))))
+        :else
+        (let [master (comp/start (->ApplicationMaster options))
+              status ^AtomicBoolean (:status master)]
+          (try
+            (loop []
+              (sig-wait status)
+              (when (.get status)
+                (recur)))
+            (finally (comp/stop master))))))
     (finally
       (shutdown-agents))))

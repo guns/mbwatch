@@ -119,11 +119,12 @@
 
 (defmacro with-console-input
   "Execute body repeatedly with input line bound to line-sym. Returns
-   immediately if System/in is not a console."
+   immediately if System/in is not a console. Exits if input line is nil
+   (stream closed) or if the body returns nil."
   {:requires [BufferedReader console-reader]}
   [line-sym & body]
   `(when-some [rdr# ^BufferedReader (console-reader)]
      (loop []
        (when-some [~line-sym (.readLine rdr#)]
-         ~@body
-         (recur)))))
+         (when (some? (do ~@body))
+           (recur))))))
