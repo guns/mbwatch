@@ -138,10 +138,12 @@
           MBMap (if (empty? args)
                   (str op-str " expects arguments of the form channel:box,…")
                   (->Command op (parse-mbline (string/join \space args))))
-          Int (if (or (not= (count args) 1)
-                      (not (re-find #"\A\d+\z" (first args))))
-                (str op-str " expects a single integer argument")
-                (->Command op (parse-ms (first args))))
+          Int (if (or (not= (count args) 1))
+                (str op-str " expects a single time argument")
+                (try
+                  (->Command op (parse-ms (first args)))
+                  (catch Throwable e
+                    (str e))))
           #{String} (if (empty? args)
                       (str op-str " expects a list of channels")
                       (->Command op (set args))))))))
