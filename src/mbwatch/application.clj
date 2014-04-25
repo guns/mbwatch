@@ -151,7 +151,7 @@
                                              TIMESTAMP-FORMAT))
                           log-chan-1)]
     ;; Initial sync
-    (>!! cmd-chan-0 (->Command :sync (-> config :sync)))
+    (>!! cmd-chan (->Command :sync (-> config :sync)))
     (Application. cmd-chan
                   log-chan
                   logging-service
