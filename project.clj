@@ -16,5 +16,10 @@
                    :plugins [[jonase/eastwood "RELEASE"]]
                    :jvm-opts ["-Djavax.net.ssl.trustStore=test-resources/gmail.ks"]
                    :source-paths ["dev"]
-                   :resource-paths ["test-resources"]}}
-  :eastwood {:exclude-linters [:redefd-vars]})
+                   :resource-paths ["test-resources"]
+                   :eastwood {:exclude-linters [:redefd-vars]}}
+             :build {:aot [mbwatch.core]
+                     :plugins [[lein-bin "0.3.4"]]
+                     :bin {:name "mbwatch"
+                           :bootclasspath true}}}
+  :aliases {"BUILD" ["with-profile" "build" "bin"]})
