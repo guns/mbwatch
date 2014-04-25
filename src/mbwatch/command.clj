@@ -102,7 +102,7 @@
 
 (s/defn ^:private parse-command-input* :- (maybe (tuple #{Opcode} [String]))
   [input :- String]
-  (let [words (string/split input #"\s+")
+  (let [words (string/split (string/trim input) #"\s+")
         first-word (first words)]
     (if (empty? first-word)
       [#{:app/help} nil]
