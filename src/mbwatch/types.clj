@@ -18,8 +18,8 @@
     `(do ~(if schema?
             `(s/defrecord ~name ~@body)
             `(cc/defrecord ~name ~@body))
-         (ns-unmap *ns* '~(sym "->"))
-         (ns-unmap *ns* '~(sym "map->"))
+         (alter-meta! ~(get-var "->") assoc :private true)
+         (alter-meta! ~(get-var "map->") assoc :private true)
          ~(when (and schema? (-> name meta :private))
             `(alter-meta! ~(get-var "strict-map->") assoc :private true)))))
 
