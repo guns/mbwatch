@@ -111,20 +111,34 @@
     dt-formatter :- DateTimeFormatter]
    (ConsoleLogger. stream (mapv sgr-join colors) dt-formatter)))
 
-(s/defn console-reader :- (maybe BufferedReader)
-  "Returns System/in as a BufferedReader if it is attached to a console."
+(s/defn console-reader :- BufferedReader
+  "Returns System/in as a buffered character reader."
   []
-  (when tty?
-    (BufferedReader. (InputStreamReader. System/in "UTF-8"))))
+  (BufferedReader. (InputStreamReader. System/in "UTF-8")))
+
+(defmacro with-read-line
+  "Execute body with input line from rdr-sym bound to line-sym. Reading from a
+   BufferedReader is uninterruptible; this macro wraps the .readLine call in a
+   future and ensures it is interrupted before exiting."
+  [rdr-sym line-sym & body]
+  `(let [f# (future (.readLine ~rdr-sym))]
+     (try
+       (let [~line-sym @f#]
+         ~@body)
+       (catch InterruptedException _#) ; We are expecting this
+       (finally
+         (future-cancel f#)))))
 
 (defmacro with-console-input
   "Execute body repeatedly with input line bound to line-sym. Returns
    immediately if System/in is not a console. Exits if input line is nil
    (stream closed) or if the body returns nil."
-  {:requires [BufferedReader console-reader]}
+  {:requires [BufferedReader console-reader tty?]}
   [line-sym & body]
-  `(when-some [rdr# ^BufferedReader (console-reader)]
-     (loop []
-       (when-some [~line-sym (.readLine rdr#)]
-         (when (some? (do ~@body))
+  `(when (tty?)
+     (let [rdr# ^BufferedReader (console-reader)]
+       (loop []
+         (when (some? (with-read-line rdr# ~line-sym
+                        (when (some? ~line-sym)
+                          (do ~@body))))
            (recur))))))
