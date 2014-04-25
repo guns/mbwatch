@@ -1,8 +1,8 @@
 (ns mbwatch.mbmap-test
   (:require [clojure.test :refer [is]]
             [mbwatch.mbmap :refer [join-mbentry join-mbmap mbmap->mbtuples
-                                   mbmap-diff mbmap-disj mbmap-merge
-                                   mbtuples->mbmap parse-mbargs]]
+                                   mbmap-diff mbmap-disj mbmap-intersection
+                                   mbmap-merge mbtuples->mbmap parse-mbargs]]
             [schema.test :refer [deftest]]))
 
 (deftest test-parse-mbargs
@@ -38,7 +38,16 @@
                      {"α" #{"b" "c" "d"} "β" #{"a"}})
          {"α" #{"a"}})))
 
+(deftest test-mbmap-intersection
+  (is (= (mbmap-intersection {"α" #{"a" "b"} "β" #{"c" "d"}}
+                             {"α" #{"a" "c"} "γ" #{"c" "d"}})
+         {"α" #{"a"}})))
+
 (deftest test-mbmap-merge
   (is (= (mbmap-merge {"α" #{"a"} "β" #{} "γ" #{"a"}}
+                      {"α" #{} "β" #{"a"} "γ" #{"a" "b"} "Δ" #{"a"}}
+                      true)
+         {"α" #{} "β" #{} "γ" #{"a" "b"} "Δ" #{"a"}}))
+  (is (= (mbmap-merge {"α" #{"a"} "β" #{} "γ" #{"a"}}
                       {"α" #{} "β" #{"a"} "γ" #{"a" "b"} "Δ" #{"a"}})
-         {"α" #{} "β" #{} "γ" #{"a" "b"} "Δ" #{"a"}})))
+         {"α" #{"a"} "β" #{"a"} "γ" #{"a" "b"} "Δ" #{"a"}})))

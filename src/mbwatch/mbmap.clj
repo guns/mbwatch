@@ -1,6 +1,6 @@
 (ns mbwatch.mbmap
   "Tools for working with MBMap structures: {String #{String}}"
-  (:require [clojure.set :refer [difference]]
+  (:require [clojure.set :refer [difference intersection]]
             [clojure.string :as string]
             [mbwatch.shellwords :refer [shell-split]]
             [mbwatch.types :refer [MBMap MBTuple]]
@@ -68,8 +68,7 @@
                             #{MBTuple} "additions")
   [m₁ :- MBMap
    m₂ :- MBMap]
-  (->> (mbmap-diff* m₁ m₂)
-       (mapv mbmap->mbtuples)))
+  (mapv mbmap->mbtuples (mbmap-diff* m₁ m₂)))
 
 (s/defn mbmap-disj :- MBMap
   [m₁ :- MBMap
@@ -81,6 +80,16 @@
           m
           (dissoc m mbchan))))
     m₁ m₂))
+
+(s/defn mbmap-intersection :- MBMap
+  [m₁ :- MBMap
+   m₂ :- MBMap]
+  (reduce
+    (fn [m k]
+      (if (and (contains? m₁ k) (contains? m₂ k))
+        (assoc m k (intersection (m₁ k) (m₂ k)))
+        m))
+    {} (mapcat keys [m₁ m₂])))
 
 (s/defn mbmap-merge :- MBMap
   "Like (merge-with union m₁ m₂), except that missing values from m₁ are
