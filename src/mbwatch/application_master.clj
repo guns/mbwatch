@@ -19,7 +19,8 @@
   (:require [clojure.core.async :refer [>!! chan close! put!]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
             [mbwatch.application :refer [->Application]]
-            [mbwatch.command :refer [OPCODE-HELP parse-command-input]]
+            [mbwatch.command :refer [CommandSchema OPCODE-HELP
+                                     parse-command-input]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
                                         shutdown-future sig-notify-all]]
             [mbwatch.config :refer [->Config DEFAULT-CONFIG-PATH]]
@@ -33,6 +34,8 @@
   (:import (clojure.lang IFn Keyword)
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.application Application)))
+
+(declare process-command)
 
 (t/defrecord ^:private ApplicationMaster
   [application :- (atom-of Application "ApplicationAtom")
@@ -50,16 +53,7 @@
                   (let [cmd (parse-command-input line)]
                     (if (string? cmd)
                       (put! (:log-chan @application) (->UserCommandError cmd))
-                      ;; TODO: Export to function
-                      (case (:opcode cmd)
-                        ;; Handle top-level commands directly
-                        :app/help (do (.println System/err OPCODE-HELP) true)
-                        ; :app/status
-                        ; :app/reload
-                        ; :app/restart
-                        :app/quit nil
-                        ;; Convey everything else
-                        (>!! (:cmd-chan @application) cmd)))))
+                      (process-command this cmd))))
                 (when (.get status)
                   ;; User closed input stream; let the main thread know that
                   ;; we are done
@@ -99,3 +93,16 @@
       {:application (atom (->Application config cmd-chan log-chan))
        :status (AtomicBoolean. true)
        :exit-fn nil})))
+
+(s/defn ^:private process-command :- Any
+  [application-master :- ApplicationMaster
+   command            :- CommandSchema]
+  (case (:opcode command)
+    ;; Handle top-level commands directly
+    :app/help (do (.println System/err OPCODE-HELP) true)
+    ; :app/status
+    ; :app/reload
+    ; :app/restart
+    :app/quit nil
+    ;; Convey everything else
+    (>!! (-> application-master :application deref :cmd-chan) command)))
