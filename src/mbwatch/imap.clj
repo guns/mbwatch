@@ -111,6 +111,7 @@
    imap-credential  :- IMAPCredential
    connections-atom :- ConnectionMapAtom
    timeout          :- Int
+   master-cmd-chan  :- WritePort
    cmd-chan         :- WritePort
    log-chan         :- WritePort
    connection       :- AtomicBoolean
@@ -164,7 +165,9 @@
 (s/defn ^:private idle! :- VOID
   "IDLE on mbchan/mbox and queue :sync Commands on new messages. Blocks thread
    indefinitely. Signal :status to restart. Set :status to false then signal
-   it to exit. Also exits when :connection is false."
+   it to exit. Also exits when :connection is false.
+
+   Will return false on IMAP errors."
   [idle-worker :- IDLEWorker
    imap-store  :- IMAPStore]
   (let [{:keys [mbchan ^String mbox ^AtomicBoolean status ^AtomicBoolean connection
@@ -192,6 +195,9 @@
               (recur)))))
       (catch FolderNotFoundException e
         (put! log-chan (->IMAPCommandError :folder-not-found url))
+        ;; We don't want to spam the server with requests to a folder that
+        ;; does not exist, so tell the IDLEMaster to remove this worker
+        (put! (:master-cmd-chan idle-worker) (->Command :idle/remove {mbchan #{mbox}}))
         nil))))
 
 (declare process-command)
@@ -261,14 +267,15 @@
   [idle-master :- IDLEMaster
    mbchan      :- String
    mbox        :- String]
-  (let [{:keys [mbchan->IMAPCredential connections-atom timeout cmd-chan-out
-                log-chan]} idle-master]
+  (let [{:keys [mbchan->IMAPCredential connections-atom timeout cmd-chan-in
+                cmd-chan-out log-chan]} idle-master]
     (strict-map->IDLEWorker
       {:mbchan mbchan
        :mbox mbox
        :imap-credential (mbchan->IMAPCredential mbchan)
        :connections-atom connections-atom
        :timeout timeout
+       :master-cmd-chan cmd-chan-in
        :cmd-chan cmd-chan-out
        :log-chan log-chan
        :connection (AtomicBoolean. false)
