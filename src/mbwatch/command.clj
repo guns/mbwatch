@@ -3,6 +3,7 @@
   (:require [clojure.string :as string]
             [mbwatch.logging :refer [DEBUG Loggable]]
             [mbwatch.mbmap :refer [parse-mbline]]
+            [mbwatch.time :refer [parse-ms]]
             [mbwatch.trie :refer [EMPTY-TRIE-NODE add-substring-aliases
                                   lookup]]
             [mbwatch.types :as t :refer [MBMap VOID tuple]]
@@ -140,7 +141,7 @@
           Int (if (or (not= (count args) 1)
                       (not (re-find #"\A\d+\z" (first args))))
                 (str op-str " expects a single integer argument")
-                (->Command op (first args)))
+                (->Command op (parse-ms (first args))))
           #{String} (if (empty? args)
                       (str op-str " expects a list of channels")
                       (->Command op (set args))))))))
