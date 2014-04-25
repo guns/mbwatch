@@ -191,7 +191,8 @@
             (when (.get connection)
               (recur)))))
       (catch FolderNotFoundException e
-        (put! log-chan (->IMAPCommandError :folder-not-found url (str e)))))))
+        (put! log-chan (->IMAPCommandError :folder-not-found url))
+        nil))))
 
 (declare process-command)
 (declare start-workers)

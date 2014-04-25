@@ -71,11 +71,9 @@
 
 (defloggable IMAPCommandError ERR
   [type     :- (enum :folder-not-found)
-   imap-url :- String
-   error    :- (maybe String)]
+   imap-url :- String]
   (case type
-    :folder-not-found (let [msg (format "IMAP folder %s does not exist!" imap-url)]
-                        (if error (str msg "\n" error) msg))))
+    :folder-not-found (format "IMAP folder %s does not exist!" imap-url)))
 
 (defloggable IMAPShutdownEvent INFO
   [timeout :- Int]
