@@ -11,10 +11,9 @@
   [& argv]
   (try
     (let [options (parse-argv! argv)]
-      (case options
+      (condp = options
         true (System/exit 0)
         false (System/exit 1)
-        :else
         (let [master (comp/start (->ApplicationMaster options))
               status ^AtomicBoolean (:status master)]
           (try
