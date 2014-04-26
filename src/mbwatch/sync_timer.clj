@@ -10,7 +10,7 @@
                             │
                             └──────── Loggable ──▶
   "
-  (:require [clojure.core.async :refer [<!! >!! chan close! put!]]
+  (:require [clojure.core.async :refer [<!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command :refer [->Command CommandSchema]]
@@ -52,13 +52,12 @@
                 (when (.get status)
                   (set-alarm! timer-atom)
                   (when-seq [sync-req @sync-req-atom]
-                    (>!! cmd-chan-out (->Command :sync sync-req)))
+                    (put! cmd-chan-out (->Command :sync sync-req)))
                   (recur))))
           c (thread-loop []
               (when (.get status)
                 (when-some [cmd (<!! cmd-chan-in)]
-                  ;; Convey commands ASAP
-                  (>!! cmd-chan-out cmd)
+                  (put! cmd-chan-out cmd)
                   (process-command this cmd)
                   (recur))))]
       (assoc this :exit-fn

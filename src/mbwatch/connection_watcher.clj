@@ -26,7 +26,7 @@
                                   │
                                   └──────────── Loggable ──▶
   "
-  (:require [clojure.core.async :refer [<!! >!! chan close! put!]]
+  (:require [clojure.core.async :refer [<!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [clojure.set :refer [intersection]]
             [com.stuartsierra.component :refer [Lifecycle]]
@@ -134,8 +134,7 @@
           (put! log-chan (->PendingSyncsEvent :pool pool)))
         (when (seq release)
           (put! log-chan (->PendingSyncsEvent :release release))
-          ;; Commands must be conveyed
-          (>!! cmd-chan-out (->Command :sync release)))))))
+          (put! cmd-chan-out (->Command :sync release)))))))
 
 (declare filter-command)
 (declare watch-connections!)
@@ -164,8 +163,7 @@
               (when (.get status)
                 (when-some [cmd (<!! cmd-chan-in)]
                   (when-some [cmd' (filter-command this cmd)]
-                    ;; Commands must be conveyed
-                    (>!! cmd-chan-out cmd'))
+                    (put! cmd-chan-out cmd'))
                   (recur))))]
       (assoc this :exit-fn
              #(do (.set status false)         ; Stop after current iteration

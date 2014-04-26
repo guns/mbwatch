@@ -16,7 +16,7 @@
                 │ Application │
                 └─────────────┘
   "
-  (:require [clojure.core.async :refer [>!! chan close! put!]]
+  (:require [clojure.core.async :refer [chan close! put!]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
             [mbwatch.application :refer [->Application]]
             [mbwatch.command :refer [CommandSchema OPCODE-HELP
@@ -108,4 +108,6 @@
     ; :app/restart
     :app/quit nil
     ;; Convey everything else
-    (>!! (-> application-master :application deref :cmd-chan) command)))
+    (do
+      (put! (-> application-master :application deref :cmd-chan) command)
+      true)))

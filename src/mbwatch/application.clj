@@ -52,7 +52,7 @@
                               │ LoggingService │
                               └────────────────┘
   "
-  (:require [clojure.core.async :as async :refer [>!!]]
+  (:require [clojure.core.async :as async :refer [put!]]
             [clojure.core.async.impl.protocols :refer [WritePort]]
             [com.stuartsierra.component :refer [Lifecycle start-system
                                                 stop-system]]
@@ -155,7 +155,7 @@
                                              TIMESTAMP-FORMAT))
                           log-chan-1)]
     ;; Initial sync
-    (>!! cmd-chan (->Command :sync (-> config :sync)))
+    (put! cmd-chan (->Command :sync (-> config :sync)))
     (Application. cmd-chan
                   log-chan
                   cache-atom

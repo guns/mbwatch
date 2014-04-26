@@ -14,7 +14,7 @@
                    └────────────┘         └────────────┘     │
                                                             ─┘
   "
-  (:require [clojure.core.async :refer [<!! >!! chan close! put!]]
+  (:require [clojure.core.async :refer [<!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [clojure.set :refer [intersection subset?]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
@@ -105,7 +105,7 @@
                        ;; Queue a sync when the conn goes _down_; this allows
                        ;; the ConnectionWatcher to pool syncs
                        (when-not conn
-                         (>!! cmd-chan (->Command :sync {mbchan #{mbox}}))))))))
+                         (put! cmd-chan (->Command :sync {mbchan #{mbox}}))))))))
     (let [label (format " [%s/%s]" mbchan mbox)
           f (future-loop []
               (when (.get status)
@@ -153,7 +153,7 @@
   "Tell the IDLEMaster to remove this worker."
   [idle-worker :- IDLEWorker]
   (let [{:keys [master-cmd-chan mbchan mbox]} idle-worker]
-    (>!! master-cmd-chan (->Command :idle/remove {mbchan #{mbox}}))))
+    (put! master-cmd-chan (->Command :idle/remove {mbchan #{mbox}}))))
 
 (s/defn ^:private with-imap-connection :- Any
   [idle-worker :- IDLEWorker
@@ -207,7 +207,7 @@
                   (messagesAdded [this ev]
                     (catch-print
                       (put! log-chan (->IDLENewMessageEvent (count (.getMessages ev)) url))
-                      (>!! cmd-chan (->Command :sync {mbchan #{mbox}})))))]
+                      (put! cmd-chan (->Command :sync {mbchan #{mbox}})))))]
     (try
       (.open folder Folder/READ_ONLY)
       (.addMessageCountListener folder handler)
@@ -252,8 +252,7 @@
     (let [c (thread-loop [worker-map (start-workers
                                        this {} (mbmap->mbtuples @idle-map-atom))]
               (if-some [cmd (when (.get status) (<!! cmd-chan-in))]
-                ;; Convey commands ASAP
-                (do (>!! cmd-chan-out cmd)
+                (do (put! cmd-chan-out cmd)
                     (recur (process-command this worker-map cmd)))
                 (when (seq worker-map)
                   (put! log-chan (->IMAPShutdownEvent timeout))
@@ -344,8 +343,8 @@
         m (cond-> worker-map
             (seq Δ-) (as-> m (apply dissoc m Δ-))
             (seq Δ+) (as-> m (start-workers idle-master m Δ+)))]
-    (>!! (:cmd-chan-out idle-master)
-         (->Command :sync (mbtuples->mbmap Δ+)))
+    (put! (:cmd-chan-out idle-master)
+          (->Command :sync (mbtuples->mbmap Δ+)))
     @f
     m))
 
