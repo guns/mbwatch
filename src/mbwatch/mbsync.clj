@@ -39,12 +39,13 @@
             [mbwatch.mbmap :refer [join-mbentry]]
             [mbwatch.process :as process]
             [mbwatch.shellwords :refer [shell-escape]]
-            [mbwatch.types :as t :refer [MapAtom MBMap VOID]]
-            [schema.core :as s :refer [Int maybe]])
+            [mbwatch.types :as t :refer [MBMap MapAtom VOID atom-of]]
+            [schema.core :as s :refer [Int defschema maybe]])
   (:import (clojure.lang IFn)
            (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.config.mbsyncrc Mbsyncrc)
+           (mbwatch.events MbsyncEventStart)
            (org.joda.time DateTime)))
 
 (s/defn ^:private spawn-sync :- Process
@@ -58,17 +59,21 @@
     "bash" "-c" (str "exec mbsync -c <(cat) " (shell-escape (join-mbentry mbchan mboxes)))
     :in rc))
 
+(defschema ^:private CurrentEventsAtom
+  (atom-of #{MbsyncEventStart} "CurrentEventsAtom"))
+
 (declare sync-boxes!)
 
 (t/defrecord ^:private MbsyncWorker
-  [render-fn  :- IFn
-   cache-atom :- (maybe MapAtom)
-   maildir    :- Maildirstore
-   mbchan     :- String
-   req-chan   :- ReadPort
-   log-chan   :- WritePort
-   status     :- AtomicBoolean
-   exit-fn    :- (maybe IFn)]
+  [render-fn   :- IFn
+   events-atom :- CurrentEventsAtom
+   cache-atom  :- (maybe MapAtom)
+   maildir     :- Maildirstore
+   mbchan      :- String
+   req-chan    :- ReadPort
+   log-chan    :- WritePort
+   status      :- AtomicBoolean
+   exit-fn     :- (maybe IFn)]
 
   Lifecycle
 
@@ -114,16 +119,21 @@
   [mbsync-worker :- MbsyncWorker
    id            :- Int
    mboxes        :- #{String}]
-  (let [{:keys [render-fn cache-atom maildir mbchan log-chan status]} mbsync-worker
+  (let [{:keys [render-fn events-atom cache-atom maildir mbchan log-chan
+                status]} mbsync-worker
         ev (strict-map->MbsyncEventStart
              {:id id
               :mbchan mbchan
               :mboxes mboxes
               :start (DateTime.)})
         proc (spawn-sync (get-rc cache-atom render-fn) mbchan mboxes)
-        _ (put! log-chan ev)
+
+        _ (do (put! log-chan ev)
+              (swap! events-atom conj ev))
 
         graceful? (process/interruptible-wait status proc)
+
+        _ (swap! events-atom disj ev)
 
         v (.exitValue proc)
         ev' (strict-map->MbsyncEventStop
@@ -149,12 +159,13 @@
 (declare process-command)
 
 (t/defrecord ^:private MbsyncMaster
-  [mbsyncrc   :- Mbsyncrc
-   cache-atom :- (maybe MapAtom)
-   cmd-chan   :- ReadPort
-   log-chan   :- WritePort
-   status     :- AtomicBoolean
-   exit-fn    :- (maybe IFn)]
+  [mbsyncrc    :- Mbsyncrc
+   events-atom :- CurrentEventsAtom
+   cache-atom  :- (maybe MapAtom)
+   cmd-chan    :- ReadPort
+   log-chan    :- WritePort
+   status      :- AtomicBoolean
+   exit-fn     :- (maybe IFn)]
 
   Lifecycle
 
@@ -191,6 +202,7 @@
    cmd-chan   :- ReadPort]
   (strict-map->MbsyncMaster
     {:mbsyncrc mbsyncrc
+     :events-atom (atom #{})
      :cache-atom cache-atom
      :cmd-chan cmd-chan
      :log-chan (chan CHAN-SIZE) ; OPEN log-chan
@@ -200,9 +212,10 @@
 (s/defn ^:private ->MbsyncWorker :- MbsyncWorker
   [mbchan        :- String
    mbsync-master :- MbsyncMaster]
-  (let [{:keys [mbsyncrc cache-atom log-chan]} mbsync-master]
+  (let [{:keys [mbsyncrc events-atom cache-atom log-chan]} mbsync-master]
     (strict-map->MbsyncWorker
       {:render-fn (-> mbsyncrc :render-fn)
+       :events-atom events-atom
        :cache-atom cache-atom
        :maildir (get-in mbsyncrc [:mbchan->Maildirstore mbchan])
        :mbchan mbchan
