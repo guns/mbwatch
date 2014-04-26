@@ -168,14 +168,20 @@
      :status (AtomicBoolean. true)
      :exit-fn nil}))
 
-(defmacro ^:private with-handler-context
-  {:requires [->NotifyMapChangeEvent]}
-  [notify-service command expr]
-  (let [[f & args] expr]
-    `(let [old-map# (deref (:notify-map-atom ~notify-service))
-           new-map# (~f (:notify-map-atom ~notify-service) ~@args (:payload ~command))]
-       (when-not (= old-map# new-map#)
-         (put! (:log-chan-out ~notify-service) (->NotifyMapChangeEvent new-map#))))))
+(s/defn ^:private alter-notify-map-atom! :- VOID
+  [alter-fn       :- IFn
+   notify-service :- NewMessageNotificationService
+   merge-fn       :- (maybe IFn)
+   command        :- CommandSchema]
+  (let [{:keys [notify-map-atom log-chan-out]} notify-service
+        {:keys [payload]} command
+        old-map @notify-map-atom
+        new-map (if merge-fn
+                  (alter-fn notify-map-atom merge-fn payload)
+                  (alter-fn notify-map-atom payload))]
+    (when-not (= old-map new-map)
+      (put! log-chan-out (->NotifyMapChangeEvent new-map)))
+    nil))
 
 (s/defn ^:private process-command :- SyncRequestMap
   [command        :- CommandSchema
@@ -184,28 +190,28 @@
   (case+ (:opcode command)
     :sync (let [{:keys [id payload]} command]
             (assoc sync-req-map id {:countdown (count payload) :events []}))
-    :idle/set (let [[_ Δ+] (mbmap-diff @(:notify-map-atom notify-service)
-                             (:payload command))
+    :idle/set (let [[_ Δ+] (mbmap-diff @(:notify-map-atom notify-service) (:payload command))
                     m (mbtuples->mbmap Δ+)]
-                (with-handler-context notify-service (assoc command :payload m)
-                  (swap! mbmap-merge))
+                (alter-notify-map-atom!
+                  swap! notify-service mbmap-merge (assoc command :payload m))
                 sync-req-map)
     [:idle/add
-     :notify/add] (do (with-handler-context notify-service command
-                        (swap! mbmap-merge))
+     :notify/add] (do (alter-notify-map-atom!
+                        swap! notify-service mbmap-merge command)
                       sync-req-map)
-    :notify/remove (do (with-handler-context notify-service command
-                         (swap! (fn [notify-map payload]
-                                  (reduce-kv
-                                    (fn [nmap mbchan mboxes]
-                                      (let [bs (difference (nmap mbchan) mboxes)]
-                                        (if (seq bs)
-                                          (assoc nmap mbchan bs)
-                                          (dissoc nmap mbchan))))
-                                    notify-map payload))))
+    :notify/remove (do (alter-notify-map-atom!
+                         swap! notify-service
+                         (fn [notify-map payload]
+                           (reduce-kv
+                             (fn [nmap mbchan mboxes]
+                               (let [bs (difference (nmap mbchan) mboxes)]
+                                 (if (seq bs)
+                                   (assoc nmap mbchan bs)
+                                   (dissoc nmap mbchan))))
+                             notify-map payload))
+                         command)
                        sync-req-map)
-    :notify/set (do (with-handler-context notify-service command
-                      (reset!))
+    :notify/set (do (alter-notify-map-atom! reset! notify-service nil command)
                     sync-req-map)
     sync-req-map))
 
