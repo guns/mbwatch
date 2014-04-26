@@ -41,6 +41,7 @@
            (javax.mail AuthenticationFailedException Folder
                        FolderNotFoundException MessagingException Session)
            (javax.mail.event MessageCountListener)
+           (javax.net.ssl SSLException)
            (mbwatch.events IMAPConnectionEvent)
            (org.joda.time DateTime)))
 
@@ -148,6 +149,12 @@
                  (String. ^bytes bs))
     :else (get-password pass)))
 
+(s/defn ^:private remove-worker! :- VOID
+  "Tell the IDLEMaster to remove this worker."
+  [idle-worker :- IDLEWorker]
+  (let [{:keys [master-cmd-chan mbchan mbox]} idle-worker]
+    (>!! master-cmd-chan (->Command :idle/remove {mbchan #{mbox}}))))
+
 (s/defn ^:private with-imap-connection :- Any
   [idle-worker :- IDLEWorker
    label       :- Any
@@ -168,12 +175,13 @@
       (.connect store host port user (get-imap-password pass cache-atom mbchan))
       (log :success)
       (f store)
+      ;; We will enter a failure loop if the connection fails to start, so
+      ;; remove the worker in these cases
       (catch AuthenticationFailedException _
-        (let [{:keys [mbchan mbox master-cmd-chan]} idle-worker]
-          (log :badauth)
-          ;; We will enter a failure loop if the auth credentials are
-          ;; incorrect, so remove this worker
-          (>!! master-cmd-chan (->Command :idle/remove {mbchan #{mbox}}))))
+        (log :badauth)
+        (remove-worker! idle-worker))
+      (catch SSLException _
+        (remove-worker! idle-worker))
       (catch MailConnectException e (log :failure (str e))) ;; TODO: Do we want this?
       (catch MessagingException e (log :failure (str e)))
       (finally
@@ -218,7 +226,7 @@
         (put! log-chan (->IMAPCommandError :folder-not-found url))
         ;; We don't want to spam the server with requests to a folder that
         ;; does not exist, so tell the IDLEMaster to remove this worker
-        (put! (:master-cmd-chan idle-worker) (->Command :idle/remove {mbchan #{mbox}}))
+        (remove-worker! idle-worker)
         nil))))
 
 (declare process-command)
