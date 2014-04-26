@@ -22,6 +22,7 @@
             [mbwatch.events :refer [->SyncTimerPreferenceEvent]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
+            [mbwatch.mbmap :refer [mbmap-disj mbmap-merge]]
             [mbwatch.time :refer [human-duration]]
             [mbwatch.types :as t :refer [MBMap MBMapAtom VOID]]
             [mbwatch.util :refer [when-seq]]
@@ -95,6 +96,22 @@
      :status (AtomicBoolean. true)
      :exit-fn nil}))
 
+(s/defn ^:private alter-sync-req-atom! :- VOID
+  [alter-fn   :- IFn
+   sync-timer :- SyncTimer
+   merge-fn   :- (maybe IFn)
+   command    :- CommandSchema]
+  (let [{:keys [sync-req-atom timer-atom log-chan]} sync-timer
+        {:keys [payload]} command
+        old-req @sync-req-atom
+        new-req (if merge-fn
+                  (alter-fn sync-req-atom merge-fn payload)
+                  (alter-fn sync-req-atom payload))]
+    (when-not (= old-req new-req)
+      (put! log-chan (->SyncTimerPreferenceEvent
+                       :sync-req @timer-atom @sync-req-atom)))
+    nil))
+
 (s/defn ^:private process-command :- VOID
   [sync-timer :- SyncTimer
    command    :- CommandSchema]
@@ -106,14 +123,11 @@
                      (sig-notify-all timer-atom)
                      (put! log-chan (->SyncTimerPreferenceEvent
                                       :period @timer-atom @sync-req-atom))))
-    ;; TODO
-    ; :sync/add
-    ; :sync/remove
-    :sync/set (let [{:keys [sync-req-atom timer-atom log-chan]} sync-timer
-                    old-req @sync-req-atom
-                    new-req (reset! sync-req-atom (:payload command))]
-                (when-not (= old-req new-req)
-                  (put! log-chan (->SyncTimerPreferenceEvent
-                                   :sync-req @timer-atom @sync-req-atom))))
+    :sync/add (alter-sync-req-atom!
+                swap! sync-timer #(mbmap-merge %1 %2 true) command)
+    :sync/remove (alter-sync-req-atom!
+                   swap! sync-timer #(mbmap-disj %1 %2 true) command)
+    :sync/set (alter-sync-req-atom!
+                reset! sync-timer nil command)
     nil)
   nil)

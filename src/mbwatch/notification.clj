@@ -203,7 +203,8 @@
     :notify/remove (do (alter-notify-map-atom!
                          swap! notify-service mbmap-disj command)
                        sync-req-map)
-    :notify/set (do (alter-notify-map-atom! reset! notify-service nil command)
+    :notify/set (do (alter-notify-map-atom!
+                      reset! notify-service nil command)
                     sync-req-map)
     sync-req-map))
 
