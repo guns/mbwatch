@@ -6,9 +6,10 @@
   (:refer-clojure :exclude [defrecord]))
 
 (defmacro defrecord
-  "Same as clojure.core/defrecord or schema.core/defrecord, except that the
-   ->name and map->name constructors are unmapped. The strict-map->name
-   constructor remains if the schema version is used."
+  "Same as clojure.core/defrecord or schema.core/defrecord, except that
+   the ->name and map->name constructors are set to ^:private. The
+   strict-map->name constructor remains public if the schema version is used,
+   unless the name symbol is also marked ^:private."
   {:requires [#'cc/defrecord #'s/defrecord]}
   [name & body]
   (let [fields (first body)
