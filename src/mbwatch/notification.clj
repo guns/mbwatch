@@ -115,9 +115,9 @@
 
 (defprotocol ^:private INotification
   (^:private
-    process-event [this sync-requests notify-service]
-    "Returns a new version of the sync-requests map, adding or removing self
-     from it as necessary."))
+    process-event [this sync-req-map notify-service]
+    "Returns a new version of sync-req-map, adding or removing self from it as
+     necessary."))
 
 (t/defrecord ^:private NewMessageNotificationService
   [notify-command  :- String
@@ -131,12 +131,12 @@
 
   (start [this]
     (log-with-timestamp! log-chan-out this)
-    (let [c (thread-loop [sync-requests {}]
+    (let [c (thread-loop [sync-req-map {}]
               (when (.get status)
                 (when-some [obj (<!! log-chan-in)]
                   ;; Pass through ASAP
                   (put! log-chan-out obj)
-                  (recur (process-event obj sync-requests this)))))]
+                  (recur (process-event obj sync-req-map this)))))]
       (assoc this :exit-fn
              #(do (.set status false)       ; Stop after current iteration
                   (<!! c)
@@ -179,21 +179,21 @@
 
 (s/defn ^:private process-command :- SyncRequestMap
   [command        :- CommandSchema
-   sync-requests  :- SyncRequestMap
+   sync-req-map   :- SyncRequestMap
    notify-service :- NewMessageNotificationService]
   (case+ (:opcode command)
     :sync (let [{:keys [id payload]} command]
-            (assoc sync-requests id {:countdown (count payload) :events []}))
+            (assoc sync-req-map id {:countdown (count payload) :events []}))
     :idle/set (let [[_ Δ+] (mbmap-diff @(:notify-map-atom notify-service)
                              (:payload command))
                     m (mbtuples->mbmap Δ+)]
                 (with-handler-context notify-service (assoc command :payload m)
                   (swap! mbmap-merge))
-                sync-requests)
+                sync-req-map)
     [:idle/add
      :notify/add] (do (with-handler-context notify-service command
                         (swap! mbmap-merge))
-                      sync-requests)
+                      sync-req-map)
     :notify/remove (do (with-handler-context notify-service command
                          (swap! (fn [notify-map payload]
                                   (reduce-kv
@@ -203,19 +203,19 @@
                                           (assoc nmap mbchan bs)
                                           (dissoc nmap mbchan))))
                                     notify-map payload))))
-                       sync-requests)
+                       sync-req-map)
     :notify/set (do (with-handler-context notify-service command
                       (reset!))
-                    sync-requests)
-    sync-requests))
+                    sync-req-map)
+    sync-req-map))
 
 (s/defn ^:private process-stop-event :- SyncRequestMap
   [event          :- (either MbsyncEventStop MbsyncUnknownChannelError)
-   sync-requests  :- SyncRequestMap
+   sync-req-map   :- SyncRequestMap
    notify-service :- NewMessageNotificationService
    conj-event?    :- Boolean]
   (let [{:keys [id mbchan]} event]
-    (if-let [req (sync-requests id)]
+    (if-let [req (sync-req-map id)]
       (let [{:keys [countdown events]} req
             countdown (dec countdown)
             events (cond-> events
@@ -228,27 +228,27 @@
                   (put! (:log-chan-out notify-service) note)
                   (when-seq [cmd (:notify-command notify-service)]
                     (notify! cmd note))))
-              (dissoc sync-requests id))
-          (assoc sync-requests id {:countdown countdown :events events})))
-      sync-requests)))
+              (dissoc sync-req-map id))
+          (assoc sync-req-map id {:countdown countdown :events events})))
+      sync-req-map)))
 
 (extend-protocol INotification
 
   Command
 
-  (process-event [this sync-requests notify-service]
-    (process-command this sync-requests notify-service))
+  (process-event [this sync-req-map notify-service]
+    (process-command this sync-req-map notify-service))
 
   MbsyncEventStop
 
-  (process-event [this sync-requests notify-service]
-    (process-stop-event this sync-requests notify-service true))
+  (process-event [this sync-req-map notify-service]
+    (process-stop-event this sync-req-map notify-service true))
 
   MbsyncUnknownChannelError
 
-  (process-event [this sync-requests notify-service]
-    (process-stop-event this sync-requests notify-service false))
+  (process-event [this sync-req-map notify-service]
+    (process-stop-event this sync-req-map notify-service false))
 
   Object
 
-  (process-event [_ sync-requests _] sync-requests))
+  (process-event [_ sync-req-map _] sync-req-map))
