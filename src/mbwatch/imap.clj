@@ -153,7 +153,8 @@
   "Tell the IDLEMaster to remove this worker."
   [idle-worker :- IDLEWorker]
   (let [{:keys [master-cmd-chan mbchan mbox]} idle-worker]
-    (put! master-cmd-chan (->Command :idle/remove {mbchan #{mbox}}))))
+    (put! master-cmd-chan (->Command :idle/remove {mbchan #{mbox}}))
+    nil))
 
 (s/defn ^:private with-imap-connection :- Any
   [idle-worker :- IDLEWorker
