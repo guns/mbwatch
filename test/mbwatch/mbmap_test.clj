@@ -33,14 +33,18 @@
          [#{["α" "b"] ["γ" "b"]}
           #{["α" "a"] ["α" "c"] ["β" "c"]}])))
 
-(deftest test-mbmap-disj
-  (is (= (mbmap-disj {"α" #{"a" "b" "c"} "β" #{"a"}}
-                     {"α" #{"b" "c" "d"} "β" #{"a"}})
-         {"α" #{"a"}})))
-
 (deftest test-mbmap-intersection
   (is (= (mbmap-intersection {"α" #{"a" "b"} "β" #{"c" "d"}}
                              {"α" #{"a" "c"} "γ" #{"c" "d"}})
+         {"α" #{"a"}})))
+
+(deftest test-mbmap-disj
+  (is (= (mbmap-disj {"α" #{"a" "b" "c"} "β" #{"a"} "γ" #{}}
+                     {"α" #{"b" "c" "d"} "β" #{} "γ" #{"a"}}
+                     true)
+         {"α" #{"a"} "γ" #{}}))
+  (is (= (mbmap-disj {"α" #{"a" "b" "c"} "β" #{"a"}}
+                     {"α" #{"b" "c" "d"} "β" #{"a"}})
          {"α" #{"a"}})))
 
 (deftest test-mbmap-merge

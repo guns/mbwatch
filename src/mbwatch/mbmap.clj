@@ -70,17 +70,6 @@
    m₂ :- MBMap]
   (mapv mbmap->mbtuples (mbmap-diff* m₁ m₂)))
 
-(s/defn mbmap-disj :- MBMap
-  [m₁ :- MBMap
-   m₂ :- MBMap]
-  (reduce-kv
-    (fn [m mbchan mboxes]
-      (let [m (update-in m [mbchan] difference mboxes)]
-        (if (seq (m mbchan))
-          m
-          (dissoc m mbchan))))
-    m₁ m₂))
-
 (s/defn mbmap-intersection :- MBMap
   [m₁ :- MBMap
    m₂ :- MBMap]
@@ -90,6 +79,33 @@
         (assoc m k (intersection (m₁ k) (m₂ k)))
         m))
     {} (mapcat keys [m₁ m₂])))
+
+(s/defn ^:private mbmap-disj* :- MBMap
+  [mbmap  :- MBMap
+   mbchan :- String
+   mboxes :- #{String}]
+  (let [mboxes' (difference (mbmap mbchan) mboxes)]
+    (if (seq mboxes')
+      (assoc mbmap mbchan mboxes')
+      (dissoc mbmap mbchan))))
+
+(s/defn mbmap-disj :- MBMap
+  "Disjoin mboxes and mbchans from m₁. If empty-is-universal? is true, an
+   empty set is treated like a universal set."
+  ([m₁ m₂]
+   (mbmap-disj m₁ m₂ false))
+  ([m₁                  :- MBMap
+    m₂                  :- MBMap
+    empty-is-universal? :- Boolean]
+   (if empty-is-universal?
+     (reduce-kv
+       (fn [m mbchan mboxes₁]
+         (let [mboxes₀ (m mbchan)]
+           (cond (empty? mboxes₁) (dissoc m mbchan)
+                 (empty? mboxes₀) m
+                 :else (mbmap-disj* m mbchan mboxes₁))))
+       m₁ m₂)
+     (reduce-kv mbmap-disj* m₁ m₂))))
 
 (s/defn mbmap-merge :- MBMap
   "Like (merge-with union m₁ m₂), except that missing values from m₁ are
