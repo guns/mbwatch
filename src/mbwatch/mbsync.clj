@@ -142,7 +142,7 @@
 (s/defn ^:private stop-workers! :- VOID
   [workers :- [MbsyncWorker]]
   (pmapv #(do (close! (:req-chan %))
-              (comp/stop %))
+              (comp/stop %)) ; STOP MbsyncWorker
          workers)
   nil)
 
@@ -226,7 +226,7 @@
           (let [ws (if (contains? ws ch)
                      ws
                      (->> (->MbsyncWorker ch mbsync-master)
-                          comp/start
+                          comp/start ; START MbsyncWorker
                           (assoc ws ch)))]
             (put! (get-in ws [ch :req-chan]) [id bs])
             ws)

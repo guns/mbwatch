@@ -46,7 +46,7 @@
 
   (start [this]
     (log-with-timestamp! (:log-chan @application) this)
-    (reset! application (comp/start @application))
+    (reset! application (comp/start @application)) ; START Application
     (let [f (future-catch-print
               (when (tty?)
                 (with-console-input line
@@ -65,7 +65,7 @@
                   (close! (:cmd-chan @application)) ; Close outgoing channels
                   (close! (:log-chan @application))
                   (shutdown-future f 100)
-                  (comp/stop @application)))))
+                  (comp/stop @application))))) ; STOP Application
 
   (stop [this]
     (log-with-timestamp! (:log-chan @application) this)

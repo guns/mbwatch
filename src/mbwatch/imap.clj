@@ -312,7 +312,7 @@
 
 (s/defn ^:private stop-workers! :- VOID
   [workers :- [IDLEWorker]]
-  (pmapv comp/stop workers)
+  (pmapv comp/stop workers) ; STOP IDLEWorker
   nil)
 
 (s/defn ^:private start-workers :- IDLEWorkerMap
@@ -322,7 +322,8 @@
   {:pre [(empty? (intersection mbtuples (set (keys worker-map))))]}
   (reduce
     (fn [m [mbchan mbox]]
-      (assoc m [mbchan mbox] (comp/start (->IDLEWorker idle-master mbchan mbox))))
+      (assoc m [mbchan mbox]
+             (comp/start (->IDLEWorker idle-master mbchan mbox)))) ; START IDLEWorker
     worker-map mbtuples))
 
 (s/defn ^:private stop-and-start! :- IDLEWorkerMap

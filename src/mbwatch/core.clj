@@ -14,13 +14,13 @@
       (condp = options
         true (System/exit 0)
         false (System/exit 1)
-        (let [master (comp/start (->ApplicationMaster options))
+        (let [master (comp/start (->ApplicationMaster options)) ; START ApplicationMaster
               status ^AtomicBoolean (:status master)]
           (try
             (loop []
               (sig-wait status)
               (when (.get status)
                 (recur)))
-            (finally (comp/stop master))))))
+            (finally (comp/stop master)))))) ; STOP ApplicationMaster
     (finally
       (shutdown-agents))))
