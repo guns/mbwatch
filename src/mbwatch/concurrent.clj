@@ -1,13 +1,18 @@
 (ns mbwatch.concurrent
   (:require [clojure.core.async :refer [thread]]
+            [clojure.java.shell :refer [sh]]
             [mbwatch.types :as t :refer [VOID atom-of]]
             [mbwatch.util :refer [catch-print zero-or-min]]
-            [schema.core :as s :refer [Int defschema maybe]])
+            [schema.core :as s :refer [Int defschema either maybe]])
   (:import (java.util.concurrent Future)))
 
 (def ^:const CHAN-SIZE
   "4K ought to be enough for anybody."
   0x1000)
+
+(def ^:private SHELL-LOCK
+  "Global lock for synchronized-sh."
+  (Object.))
 
 (s/defn shutdown-future :- Boolean
   "Wait for a future for timeout ms, then cancel it. Returns true if the
@@ -138,3 +143,14 @@
    min-pos    :- Int]
   (let [timer₀ @timer-atom]
     (not= timer₀ (swap! timer-atom update-timer* new-period min-pos))))
+
+(s/defn synchronized-sh :- {:exit Int :out (either String bytes) :err (maybe String)}
+  "Synchronized execution of a shell command. Intended to avoid a pinentry
+   storm when multiple PassCmds call out to gpg.
+
+   https://bugs.gnupg.org/gnupg/issue1109
+
+   Returns the chomped output of cmd."
+  [& cmd]
+  (locking SHELL-LOCK
+    (apply sh cmd)))

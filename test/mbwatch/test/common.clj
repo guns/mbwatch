@@ -1,6 +1,7 @@
 (ns mbwatch.test.common
   (:require [clojure.core.async :refer [<!!]]
-            [clojure.test.check.generators :as g :refer [elements fmap]]))
+            [clojure.test.check.generators :as g :refer [elements fmap]])
+  (:import (java.io File)))
 
 (defn set-of [gen]
   (fmap (partial into #{}) (g/vector gen)))
@@ -30,3 +31,12 @@
    test-time schema validation?"
   [k x]
   (<= -0.05 (double (/ (- x k) k)) 0.05))
+
+(defmacro with-tempfile
+  {:requires [File]}
+  [tmp-sym & body]
+  `(let [~tmp-sym (File/createTempFile "slamhound_test" ".clj")]
+     (try
+       ~@body
+       (finally
+         (.delete ~tmp-sym)))))

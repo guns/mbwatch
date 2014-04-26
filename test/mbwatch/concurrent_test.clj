@@ -1,11 +1,15 @@
 (ns mbwatch.concurrent-test
-  (:require [clojure.test :refer [is]]
+  (:require [clojure.string :as string]
+            [clojure.test :refer [is]]
             [clojure.test.check.clojure-test :refer [defspec]]
             [clojure.test.check.generators :as g :refer [such-that]]
             [clojure.test.check.properties :refer [for-all]]
             [mbwatch.concurrent :refer [->Timer set-alarm! sig-notify-all
-                                        sig-wait-timer update-timer!]]
-            [mbwatch.test.common :refer [tol?]])
+                                        sig-wait-timer synchronized-sh
+                                        update-timer!]]
+            [mbwatch.shellwords :refer [shell-escape]]
+            [mbwatch.test.common :refer [tol? with-tempfile]]
+            [schema.test :refer [deftest]])
   (:import (java.util.concurrent.atomic AtomicBoolean AtomicLong)))
 
 (defspec test-Timer 10000
@@ -79,3 +83,12 @@
                  (is (<= 0 (- alarm (+ start p₀)) 1) "woke up at alarm time")
                  (is (zero? alarm) "alarm was set to zero")))
              (is (<= 0 ΔE_Δt 6) "test stops at expected time"))))))
+
+(deftest test-synchronized-sh
+  (with-tempfile tmp
+    (let [path (shell-escape (str tmp))]
+      (->> (vec (range 1000))
+           (pmap (fn [_]
+                   (synchronized-sh "sh" "-c" (str "date +%s%N >> " path))))
+           doall)
+      (is (apply < (mapv #(Long/parseLong %) (string/split-lines (slurp tmp))))))))

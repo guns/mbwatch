@@ -4,7 +4,7 @@
             [schema.test :refer [deftest]]))
 
 (deftest test-command-ids-are-unique
-  (is (distinct? (->> (range 1000)
+  (is (distinct? (->> (vec (range 1000))
                       (pmap (fn [_] (:id (->Command :sync/term nil))))
                       doall))))
 
