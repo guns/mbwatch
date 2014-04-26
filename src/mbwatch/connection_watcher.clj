@@ -32,7 +32,7 @@
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command :refer [->Command CommandSchema]]
             [mbwatch.concurrent :refer [->Timer CHAN-SIZE TimerAtom
-                                        future-catch-print set-alarm!
+                                        future-catch-print pmapv set-alarm!
                                         shutdown-future sig-notify-all
                                         sig-wait-timer thread-loop
                                         update-timer!]]
@@ -69,17 +69,17 @@
    mbchan->IMAPCredential :- {Word IMAPCredential}
    timeout-or-status      :- (either Int Boolean)]
   (->> conn-map
-       (pmap (fn [[mbchan m]]
-               (if-some [imap (mbchan->IMAPCredential mbchan)]
-                 (let [status (if (integer? timeout-or-status)
-                                (reachable? (:host imap) (:port imap) timeout-or-status)
-                                timeout-or-status)]
-                   ;; true -> false
-                   (if (and (true? (:status m)) (false? status))
-                     [mbchan (assoc m :status status :pending-syncs nil)]
-                     [mbchan (assoc m :status status)]))
-                 ;; Upstream is not an IMAP server
-                 [mbchan m])))
+       (pmapv (fn [[mbchan m]]
+                (if-some [imap (mbchan->IMAPCredential mbchan)]
+                  (let [status (if (integer? timeout-or-status)
+                                 (reachable? (:host imap) (:port imap) timeout-or-status)
+                                 timeout-or-status)]
+                    ;; true -> false
+                    (if (and (true? (:status m)) (false? status))
+                      [mbchan (assoc m :status status :pending-syncs nil)]
+                      [mbchan (assoc m :status status)]))
+                  ;; Upstream is not an IMAP server
+                  [mbchan m])))
        (into {})))
 
 (s/defn ^:private pending-sync-changes :- (pair MBMap "pool"

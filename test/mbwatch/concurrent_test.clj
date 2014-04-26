@@ -4,13 +4,18 @@
             [clojure.test.check.clojure-test :refer [defspec]]
             [clojure.test.check.generators :as g :refer [such-that]]
             [clojure.test.check.properties :refer [for-all]]
-            [mbwatch.concurrent :refer [->Timer set-alarm! sig-notify-all
-                                        sig-wait-timer synchronized-sh
-                                        update-timer!]]
+            [mbwatch.concurrent :refer [->Timer pmapv set-alarm!
+                                        sig-notify-all sig-wait-timer
+                                        synchronized-sh update-timer!]]
             [mbwatch.shellwords :refer [shell-escape]]
             [mbwatch.test.common :refer [tol? with-tempfile]]
             [schema.test :refer [deftest]])
   (:import (java.util.concurrent.atomic AtomicBoolean AtomicLong)))
+
+(deftest test-pmapv
+  (let [t₀ (System/currentTimeMillis)
+        vs (pmapv (fn [n] (Thread/sleep 1000) n) (vec (range 256)))]
+    (is (tol? 1000 (- (System/currentTimeMillis) t₀)))))
 
 (defspec test-Timer 10000
   (for-all [p g/int

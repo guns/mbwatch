@@ -28,7 +28,8 @@
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
             [mbwatch.command :refer [CommandSchema]]
-            [mbwatch.concurrent :refer [CHAN-SIZE sig-notify-all thread-loop]]
+            [mbwatch.concurrent :refer [CHAN-SIZE pmapv sig-notify-all
+                                        thread-loop]]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.events :refer [->MbsyncUnknownChannelError
                                     strict-map->MbsyncEventStart
@@ -128,10 +129,10 @@
 
 (s/defn ^:private stop-workers! :- VOID
   [workers :- [MbsyncWorker]]
-  (dorun
-    (pmap #(do (close! (:req-chan %))
-               (comp/stop %))
-          workers)))
+  (pmapv #(do (close! (:req-chan %))
+              (comp/stop %))
+         workers)
+  nil)
 
 (declare process-command)
 

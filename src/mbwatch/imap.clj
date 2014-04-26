@@ -19,8 +19,9 @@
             [clojure.set :refer [intersection subset?]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
             [mbwatch.command :refer [->Command CommandSchema]]
-            [mbwatch.concurrent :refer [CHAN-SIZE future-loop shutdown-future
-                                        sig-notify-all sig-wait thread-loop]]
+            [mbwatch.concurrent :refer [CHAN-SIZE future-loop pmapv
+                                        shutdown-future sig-notify-all
+                                        sig-wait thread-loop]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential get-password]]
             [mbwatch.events :refer [->IDLEEvent ->IDLENewMessageEvent
                                     ->IMAPCommandError ->IMAPShutdownEvent]]
@@ -292,8 +293,8 @@
 
 (s/defn ^:private stop-workers! :- VOID
   [workers :- [IDLEWorker]]
-  (dorun
-    (pmap comp/stop workers)))
+  (pmapv comp/stop workers)
+  nil)
 
 (s/defn ^:private start-workers :- IDLEWorkerMap
   [idle-master :- IDLEMaster

@@ -3,8 +3,9 @@
             [clojure.java.shell :refer [sh]]
             [mbwatch.types :as t :refer [VOID atom-of]]
             [mbwatch.util :refer [catch-print zero-or-min]]
-            [schema.core :as s :refer [Int defschema either maybe]])
-  (:import (java.util.concurrent Future)))
+            [schema.core :as s :refer [Any Int defschema either maybe]])
+  (:import (clojure.lang IFn)
+           (java.util.concurrent Future)))
 
 (def ^:const CHAN-SIZE
   "4K ought to be enough for anybody."
@@ -30,6 +31,15 @@
   `(future
      (catch-print
        ~@body)))
+
+(s/defn pmapv :- [Any]
+  "An eager version of pmap. Spawns a thread for _every_ element in coll. Use
+   for parallel IO."
+  [f    :- IFn
+   coll :- Any]
+  (->> coll
+       (mapv #(future-catch-print (f %)))
+       (mapv deref)))
 
 (defmacro future-loop
   {:requires [#'catch-print]}
