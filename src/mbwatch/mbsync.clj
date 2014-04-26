@@ -60,7 +60,7 @@
 (declare sync-boxes!)
 
 (t/defrecord ^:private MbsyncWorker
-  [rc        :- String
+  [render-fn :- IFn
    maildir   :- Maildirstore
    mbchan    :- String
    req-chan  :- ReadPort
@@ -101,13 +101,13 @@
   [mbsync-worker :- MbsyncWorker
    id            :- Int
    mboxes        :- #{String}]
-  (let [{:keys [rc maildir mbchan log-chan status]} mbsync-worker
+  (let [{:keys [render-fn maildir mbchan log-chan status]} mbsync-worker
         ev (strict-map->MbsyncEventStart
              {:id id
               :mbchan mbchan
               :mboxes mboxes
               :start (DateTime.)})
-        proc (spawn-sync rc mbchan mboxes)
+        proc (spawn-sync (render-fn) mbchan mboxes)
         _ (put! log-chan ev)
 
         graceful? (process/interruptible-wait status proc)
@@ -187,7 +187,7 @@
    mbsync-master :- MbsyncMaster]
   (let [{:keys [mbsyncrc log-chan]} mbsync-master]
     (strict-map->MbsyncWorker
-      {:rc (-> mbsyncrc :text)
+      {:render-fn (-> mbsyncrc :render-fn)
        :maildir (get-in mbsyncrc [:mbchan->Maildirstore mbchan])
        :mbchan mbchan
        :req-chan (chan CHAN-SIZE)

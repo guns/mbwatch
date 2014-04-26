@@ -21,7 +21,7 @@
             [mbwatch.command :refer [->Command CommandSchema]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-loop shutdown-future
                                         sig-notify-all sig-wait thread-loop]]
-            [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
+            [mbwatch.config.mbsyncrc :refer [IMAPCredential get-password]]
             [mbwatch.events :refer [->IDLEEvent ->IDLENewMessageEvent
                                     ->IMAPCommandError ->IMAPShutdownEvent]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
@@ -149,7 +149,7 @@
               ([type err] (put! log-chan (IMAPConnectionEvent. type url err (DateTime.)))))]
     (try
       (log :start)
-      (.connect store host port user pass)
+      (.connect store host port user (get-password pass))
       (log :success)
       (f store)
       (catch AuthenticationFailedException _

@@ -1,12 +1,20 @@
 (ns mbwatch.config.mbsyncrc-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer [is]]
-            [mbwatch.config.mbsyncrc :refer [parse-mbsyncrc]]
+            [mbwatch.config.mbsyncrc :refer [get-password parse-mbsyncrc]]
+            [mbwatch.util :refer [chomp]]
             [schema.test :refer [deftest]]))
+
+(deftest test-get-password
+  (is (= (get-password "cat test-resources/foo@example.com.pass")
+         (chomp (slurp (io/resource "foo@example.com.pass")))))
+  (is (= (get-password (.getBytes "correct horse battery staple"))
+         "correct horse battery staple"))
+  (is (nil? (get-password "echo >&2 testing get-password; false"))))
 
 (deftest test-parse
   (let [mbsyncrc (parse-mbsyncrc (slurp (io/resource "mbsyncrc")))]
-    (is (= (:text mbsyncrc)
+    (is (= ((:render-fn mbsyncrc))
            (slurp (io/resource "mbsyncrc.out"))))
     (is (= (-> mbsyncrc :sections :general)
            ["Create Both"
@@ -50,16 +58,16 @@
                             "expunge" "Both"}}))
     (is (= (-> mbsyncrc :mbchans)
            #{"FOO-chan" "BAR-chan" "FOO-BAR-chan" "FOO-ROOT-chan"}))
-    (is (= (-> mbsyncrc :mbchan->IMAPCredential)
+    (is (= (update-in (-> mbsyncrc :mbchan->IMAPCredential) ["BAR-chan" :pass] seq)
            {"FOO-chan" {:host "imap.example.com"
                         :user "foo@example.com"
                         :port 993
-                        :pass "@Y9GZa G!Dsl ZQ'PC(Gj5#6`-Sv->$xH0s{5|bMgq/0.R&g.u714\"; F3aN"
+                        :pass "cat test-resources/foo@example.com.pass"
                         :ssl? true}
             "BAR-chan" {:host "imap.example.com"
                         :user "bar@example.com"
                         :port 993
-                        :pass "H'|&z]0pIcU2?T/(<!zaIq[wW\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\""
+                        :pass (seq (.getBytes "H'|&z]0pIcU2?T/(<!zaIq[wW\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\""))
                         :ssl? false}}))
     (is (= (-> mbsyncrc :mbchan->Maildirstore)
            {"FOO-chan" {:inbox "test-resources/maildir/foo-mdir/INBOX"

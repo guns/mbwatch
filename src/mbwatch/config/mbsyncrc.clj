@@ -1,13 +1,14 @@
 (ns mbwatch.config.mbsyncrc
   "Configuration from an mbsyncrc configuration file."
-  (:require [clojure.java.shell :refer [sh]]
-            [clojure.string :as string]
+  (:require [clojure.string :as string]
+            [mbwatch.concurrent :refer [synchronized-sh]]
             [mbwatch.passwd :refer [expand-user-path parse-passwd]]
             [mbwatch.types :as t :refer [FilteredLine LowerCaseWord
                                          PortNumber Word tuple]]
             [mbwatch.util :refer [chomp dequote istr=]]
             [schema.core :as s :refer [defschema either enum eq maybe one
-                                       optional-key]]))
+                                       optional-key]])
+  (:import (clojure.lang IFn)))
 
 (def ^:const DEFAULT-MBSYNCRC-PATH
   "Default path of mbsyncrc."
@@ -48,7 +49,8 @@
   {:host String
    :port PortNumber
    :user String
-   :pass String
+   :pass (either String ; PassCmd
+                 bytes) ; Plaintext password, stored as a byte-array
    :ssl? Boolean})
 
 (defschema Maildirstore
@@ -101,8 +103,9 @@
     {} tokens))
 
 (s/defn ^:private parse-credentials :- IMAPCredential
-  "Extract credentials from an IMAPStore key-value map. Shells out for
-   evaluation of PassCmd."
+  "Extract credentials from an IMAPStore key-value map. Plaintext passwords
+   (bad user! bad!) are stored as a byte-array to prevent leaking via
+   stacktraces."
   [imap :- {LowerCaseWord FilteredLine}]
   (let [v (comp dequote imap)
         ;; Only disable SSL if the user insists
@@ -112,18 +115,13 @@
           (imap "host") (assoc :host (v "host"))
           (imap "port") (assoc :port (Integer/parseInt (v "port")))
           (imap "user") (assoc :user (v "user"))
-          (imap "pass") (assoc :pass (v "pass"))
-          (imap "passcmd") (assoc :pass (chomp (:out (sh "sh" "-c" (v "passcmd"))))))
+          (imap "pass") (assoc :pass (.getBytes ^String (v "pass")))
+          (imap "passcmd") (assoc :pass (v "passcmd"))) ; PassCmd is preferred
         (update-in [:user] #(or % (System/getProperty "user.name")))
         (update-in [:port] #(or % (if (= (imap "useimaps") "no") IMAP-PORT IMAPS-PORT))))))
 
 (s/defn ^:private map-credentials :- {Word IMAPCredential}
-  "Extract all credentials from IMAPStore sections.
-
-   Running this in parallel minimizes blocking IO, but also causes a pinentry
-   storm if multiple PassCmds call out to gpg.
-
-   https://bugs.gnupg.org/gnupg/issue1109"
+  "Extract credentials from IMAPStore sections."
   [imapstores :- MapSectionValue]
   (reduce-kv
     (fn [m store-name imap]
@@ -171,12 +169,24 @@
         m))
     {} channel-section))
 
+(s/defn get-password :- (maybe String)
+  "Get a password from an IMAPCredential :pass field. Calls `sh` to get the
+   output of PassCmd. Writes to System/err and returns nil when a PassCmd
+   returns with a non-zero status."
+  [pass :- (either String bytes)]
+  (if (string? pass)
+    (let [{:keys [exit out err]} (synchronized-sh "sh" "-c" pass)]
+      (if (zero? exit)
+        (chomp out)
+        (.println System/err err)))
+    (String. ^bytes pass)))
+
 (s/defn ^:private replace-passcmd :- MapSectionValue
   [imapstore                :- MapSectionValue
    imapname->IMAPCredential :- {Word IMAPCredential}]
   (reduce-kv
     (fn [m k v]
-      (let [pass (pr-str (get-in imapname->IMAPCredential [k :pass]))]
+      (let [pass (pr-str (get-password (get-in imapname->IMAPCredential [k :pass])))]
         (assoc m k (-> v
                        (dissoc "passcmd")
                        (assoc "pass" pass)))))
@@ -195,16 +205,15 @@
   [sections                 :- Sections
    imapname->IMAPCredential :- {Word IMAPCredential}]
   (let [s (update-in sections [:imapstore]
-                     #(replace-passcmd % imapname->IMAPCredential))
-        r (partial render-section s)]
+                     #(replace-passcmd % imapname->IMAPCredential))]
     (string/join \newline (concat (:general s)
                                   [""]
-                                  (r :imapstore)
-                                  (r :maildirstore)
-                                  (r :channel)))))
+                                  (render-section s :imapstore)
+                                  (render-section s :maildirstore)
+                                  (render-section s :channel)))))
 
 (t/defrecord ^:private Mbsyncrc
-  [text                   :- String
+  [render-fn              :- IFn
    sections               :- Sections
    mbchans                :- #{Word}
    mbchan->Maildirstore   :- {Word Maildirstore}
@@ -221,7 +230,7 @@
                                (:channel sections)
                                (map-maildirstores (:maildirstore sections)))]
     (strict-map->Mbsyncrc
-      {:text (render sections imapname->IMAPCredential)
+      {:render-fn #(render sections imapname->IMAPCredential)
        :sections sections
        :mbchans (-> sections :channel keys set)
        :mbchan->Maildirstore mbchan->Maildirstore
