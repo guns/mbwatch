@@ -11,7 +11,7 @@
   "
   (:require [clojure.core.async :refer [<!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
-            [clojure.set :refer [difference intersection]]
+            [clojure.set :refer [intersection]]
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command :refer [CommandSchema]]
@@ -23,7 +23,8 @@
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
             [mbwatch.maildir :refer [new-messages senders]]
-            [mbwatch.mbmap :refer [mbmap-diff mbmap-merge mbtuples->mbmap]]
+            [mbwatch.mbmap :refer [mbmap-diff mbmap-disj mbmap-merge
+                                   mbtuples->mbmap]]
             [mbwatch.process :as process]
             [mbwatch.time :refer [dt->ms]]
             [mbwatch.types :as t :refer [MBMap MBMapAtom VOID]]
@@ -200,16 +201,7 @@
                         swap! notify-service mbmap-merge command)
                       sync-req-map)
     :notify/remove (do (alter-notify-map-atom!
-                         swap! notify-service
-                         (fn [notify-map payload]
-                           (reduce-kv
-                             (fn [nmap mbchan mboxes]
-                               (let [bs (difference (nmap mbchan) mboxes)]
-                                 (if (seq bs)
-                                   (assoc nmap mbchan bs)
-                                   (dissoc nmap mbchan))))
-                             notify-map payload))
-                         command)
+                         swap! notify-service mbmap-disj command)
                        sync-req-map)
     :notify/set (do (alter-notify-map-atom! reset! notify-service nil command)
                     sync-req-map)
