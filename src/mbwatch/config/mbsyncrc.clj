@@ -169,16 +169,17 @@
         m))
     {} channel-section))
 
-(s/defn get-password :- (maybe String)
+(s/defn get-password :- String
   "Get a password from an IMAPCredential :pass field. Calls `sh` to get the
-   output of PassCmd. Writes to System/err and returns nil when a PassCmd
-   returns with a non-zero status."
+   output of PassCmd. Writes to System/err and returns an empty string when a
+   PassCmd returns with a non-zero status."
   [pass :- (either String bytes)]
   (if (string? pass)
     (let [{:keys [exit out err]} (synchronized-sh "sh" "-c" pass)]
       (if (zero? exit)
         (chomp out)
-        (.println System/err err)))
+        (do (.println System/err err)
+            "")))
     (String. ^bytes pass)))
 
 (s/defn ^:private replace-passcmd :- MapSectionValue

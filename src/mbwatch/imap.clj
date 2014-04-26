@@ -30,9 +30,9 @@
             [mbwatch.mbmap :refer [mbmap->mbtuples mbmap-diff mbmap-disj
                                    mbmap-merge mbtuples->mbmap]]
             [mbwatch.types :as t :refer [ConnectionMapAtom MBMap MBMapAtom
-                                         MBTuple VOID Word]]
+                                         MBTuple MapAtom VOID Word]]
             [mbwatch.util :refer [catch-print url-for]]
-            [schema.core :as s :refer [Any Int defschema maybe]])
+            [schema.core :as s :refer [Any Int defschema either maybe]])
   (:import (clojure.lang IFn)
            (com.sun.mail.imap IMAPFolder IMAPStore)
            (com.sun.mail.util MailConnectException)
@@ -80,6 +80,7 @@
   [mbchan           :- String
    mbox             :- String
    imap-credential  :- IMAPCredential
+   cache-atom       :- (maybe MapAtom)
    connections-atom :- ConnectionMapAtom
    timeout          :- Int
    master-cmd-chan  :- WritePort
@@ -133,11 +134,25 @@
                             (if exit-fn "↓ Stopping" "↑ Starting")
                             mbchan mbox))))
 
+(s/defn get-imap-password :- String
+  [pass       :- (either String bytes)
+   cache-atom :- (maybe MapAtom)
+   mbchan     :- String]
+  (cond
+    (instance? (Class/forName "[B") pass) (String. ^bytes pass)
+    cache-atom (let [bs (if-some [bs (@cache-atom mbchan)]
+                          bs
+                          (-> cache-atom
+                              (swap! assoc mbchan (.getBytes (get-password pass)))
+                              (get mbchan)))]
+                 (String. ^bytes bs))
+    :else (get-password pass)))
+
 (s/defn ^:private with-imap-connection :- Any
   [idle-worker :- IDLEWorker
    label       :- Any
    f           :- IFn]
-  (let [{:keys [imap-credential log-chan timeout]} idle-worker
+  (let [{:keys [mbchan imap-credential cache-atom log-chan timeout]} idle-worker
         {:keys [host port user pass ssl?]} imap-credential
         scheme (if ssl? "imaps" "imap")
         url (cond-> (url-for scheme host user port)
@@ -150,7 +165,7 @@
               ([type err] (put! log-chan (IMAPConnectionEvent. type url err (DateTime.)))))]
     (try
       (log :start)
-      (.connect store host port user (get-password pass))
+      (.connect store host port user (get-imap-password pass cache-atom mbchan))
       (log :success)
       (f store)
       (catch AuthenticationFailedException _
@@ -212,6 +227,7 @@
 
 (t/defrecord IDLEMaster
   [mbchan->IMAPCredential :- {Word IMAPCredential}
+   cache-atom             :- (maybe MapAtom)
    idle-map-atom          :- MBMapAtom
    connections-atom       :- ConnectionMapAtom
    timeout                :- Int
@@ -255,11 +271,13 @@
 (s/defn ->IDLEMaster :- IDLEMaster
   [mbchan->IMAPCredential :- {Word IMAPCredential}
    idle-map               :- MBMap
+   cache-atom             :- (maybe MapAtom)
    connections-atom       :- ConnectionMapAtom ; Read-only!
    timeout                :- Int
    cmd-chan-in            :- ReadPort]
   (strict-map->IDLEMaster
     {:mbchan->IMAPCredential mbchan->IMAPCredential
+     :cache-atom cache-atom
      :idle-map-atom (atom idle-map)
      :connections-atom connections-atom
      :timeout timeout
@@ -273,12 +291,13 @@
   [idle-master :- IDLEMaster
    mbchan      :- String
    mbox        :- String]
-  (let [{:keys [mbchan->IMAPCredential connections-atom timeout cmd-chan-in
-                cmd-chan-out log-chan]} idle-master]
+  (let [{:keys [mbchan->IMAPCredential cache-atom connections-atom timeout
+                cmd-chan-in cmd-chan-out log-chan]} idle-master]
     (strict-map->IDLEWorker
       {:mbchan mbchan
        :mbox mbox
        :imap-credential (mbchan->IMAPCredential mbchan)
+       :cache-atom cache-atom
        :connections-atom connections-atom
        :timeout timeout
        :master-cmd-chan cmd-chan-in

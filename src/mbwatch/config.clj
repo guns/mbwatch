@@ -13,7 +13,7 @@
             [mbwatch.sync-timer :as st]
             [mbwatch.time :refer [human-duration parse-ms]]
             [mbwatch.types :as t :refer [MBMap]]
-            [mbwatch.util :refer [parse-kv-string zero-or-min]]
+            [mbwatch.util :refer [istr= parse-kv-string zero-or-min]]
             [schema.core :as s :refer [Any Int validate]])
   (:import (clojure.lang Keyword)
            (mbwatch.config.mbsyncrc Mbsyncrc)))
@@ -89,7 +89,10 @@
      [nil "--imap-timeout TIME" "IMAP-specific socket timeout"
       :default (parse-ms "10s")
       :default-desc "10s"
-      :parse-fn parse-ms]]))
+      :parse-fn parse-ms]
+     [nil "--cache-passwords true|false" "Cache IMAP passwords from PassCmds"
+      :default false
+      :parse-fn (partial istr= "true")]]))
 
 (s/defn ^:private parse-config-file :- {Keyword Any}
   "Parse mbwatch-config-path, returning an option map with defaults. Throws an
@@ -108,18 +111,19 @@
       options)))
 
 (t/defrecord ^:private Config
-  [mbsyncrc       :- Mbsyncrc
-   idle           :- MBMap
-   sync           :- MBMap
-   notify         :- MBMap
-   log-level      :- Int
-   config         :- String
-   mbwatch-config :- String
-   notify-cmd     :- String
-   conn-period    :- Int
-   sync-period    :- Int
-   conn-timeout   :- Int
-   imap-timeout   :- Int])
+  [mbsyncrc        :- Mbsyncrc
+   idle            :- MBMap
+   sync            :- MBMap
+   notify          :- MBMap
+   log-level       :- Int
+   config          :- String
+   mbwatch-config  :- String
+   notify-cmd      :- String
+   conn-period     :- Int
+   sync-period     :- Int
+   conn-timeout    :- Int
+   imap-timeout    :- Int
+   cache-passwords :- Boolean])
 
 (s/defn ->Config :- Config
   [cli-options         :- {Keyword Any}

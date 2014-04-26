@@ -100,6 +100,9 @@
   (case (:opcode command)
     ;; Handle top-level commands directly
     :app/help (do (.println System/err OPCODE-HELP) true)
+    :app/clear (do (when-some [c (-> application-master :application deref :cache-atom)]
+                     (swap! c empty))
+                   true)
     ; :app/status
     ; :app/reload
     ; :app/restart

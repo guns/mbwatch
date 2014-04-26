@@ -67,8 +67,8 @@
             [mbwatch.mbsync :refer [->MbsyncMaster]]
             [mbwatch.notification :refer [->NewMessageNotificationService]]
             [mbwatch.sync-timer :refer [->SyncTimer]]
-            [mbwatch.types :as t]
-            [schema.core :as s])
+            [mbwatch.types :as t :refer [MapAtom]]
+            [schema.core :as s :refer [maybe]])
   (:import (mbwatch.config Config)
            (mbwatch.connection_watcher ConnectionWatcher)
            (mbwatch.imap IDLEMaster)
@@ -80,6 +80,7 @@
 (t/defrecord ^:private Application
   [cmd-chan             :- WritePort
    log-chan             :- WritePort
+   cache-atom           :- (maybe MapAtom)
    logging-service      :- LoggingService
    notification-service :- NewMessageNotificationService
    mbsync-master        :- MbsyncMaster
@@ -95,16 +96,17 @@
   ;; (keys a-record) to start and stop the components in FILO order.
 
   (start [this]
-    (start-system this (drop 2 (keys this))))
+    (start-system this (drop 3 (keys this))))
 
   (stop [this]
-    (stop-system this (drop 2 (keys this)))))
+    (stop-system this (drop 3 (keys this)))))
 
 (s/defn ->Application :- Application
   [config   :- Config
    cmd-chan :- WritePort
    log-chan :- WritePort]
   (let [connections-atom (atom {})
+        cache-atom (when (:cache-passwords config) (atom {}))
         ;; Command pipeline
         sync-timer (->SyncTimer (-> config :sync)
                                 cmd-chan
@@ -114,6 +116,7 @@
         ;; ->
         idle-master (->IDLEMaster (-> config :mbsyncrc :mbchan->IMAPCredential)
                                   (-> config :idle)
+                                  cache-atom
                                   connections-atom
                                   (-> config :imap-timeout)
                                   cmd-chan-1)
@@ -128,6 +131,7 @@
         cmd-chan-3 (:cmd-chan-out connection-watcher)
         ;; ->
         mbsync-master (->MbsyncMaster (-> config :mbsyncrc)
+                                      cache-atom
                                       cmd-chan-3)
         ;; Logging pipeline
         log-chan-0 (-> (mapv :log-chan [sync-timer
@@ -154,6 +158,7 @@
     (>!! cmd-chan (->Command :sync (-> config :sync)))
     (Application. cmd-chan
                   log-chan
+                  cache-atom
                   logging-service
                   notification-service
                   mbsync-master

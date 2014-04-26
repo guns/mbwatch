@@ -10,7 +10,7 @@
          (chomp (slurp (io/resource "foo@example.com.pass")))))
   (is (= (get-password (.getBytes "correct horse battery staple"))
          "correct horse battery staple"))
-  (is (nil? (get-password "echo >&2 testing get-password; false"))))
+  (is (= "" (get-password "echo >&2 testing get-password; false"))))
 
 (deftest test-parse
   (let [mbsyncrc (parse-mbsyncrc (slurp (io/resource "mbsyncrc")))]

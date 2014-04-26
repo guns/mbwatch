@@ -2,7 +2,7 @@
   (:require [clojure.core :as cc]
             [schema.core :as s :refer [Schema both defschema eq maybe one
                                        pair pred validate]])
-  (:import (clojure.lang Atom Symbol))
+  (:import (clojure.lang Atom IPersistentMap Symbol))
   (:refer-clojure :exclude [defrecord]))
 
 (defmacro defrecord
@@ -80,3 +80,6 @@
 
 (defschema ConnectionMapAtom
   (atom-of ConnectionMap "ConnectionMapAtom"))
+
+(defschema MapAtom
+  (atom-of IPersistentMap "MapAtom"))

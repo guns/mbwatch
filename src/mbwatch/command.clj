@@ -26,6 +26,7 @@
    help         :- String])
 
 (let [t [:app/help      (OpcodeMeta. VOID      "help"               "This help menu")
+         :app/clear     (OpcodeMeta. VOID      "CLEAR"              "Clear password cache")
          :app/status    (OpcodeMeta. VOID      "info"               "Print application status")
          :app/reload    (OpcodeMeta. VOID      "reload"             "Reload configuration")
          :app/restart   (OpcodeMeta. VOID      "RESTART"            "Restart application")
