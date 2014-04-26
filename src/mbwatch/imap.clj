@@ -365,14 +365,11 @@
    command     :- CommandSchema]
   (case (:opcode command)
     :idle/add (swap-stop-and-start!
-                idle-master worker-map
-                #(swap! % mbmap-merge (:payload command)))
+                idle-master worker-map #(swap! % mbmap-merge (:payload command)))
     :idle/remove (swap-stop-and-start!
-                   idle-master worker-map
-                   #(swap! % mbmap-disj (:payload command)))
+                   idle-master worker-map #(swap! % mbmap-disj (:payload command)))
     :idle/set (swap-stop-and-start!
-                idle-master worker-map
-                #(reset! % (:payload command)))
+                idle-master worker-map #(reset! % (:payload command)))
     :idle/restart (let [mbtuples (set (keys worker-map))]
                     (stop-workers! (vals worker-map))
                     (stop-and-start! idle-master {} #{} mbtuples))
