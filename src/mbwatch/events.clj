@@ -1,8 +1,7 @@
 (ns mbwatch.events
   "Loggable event records. Components implementing the Lifecycle protocol
    provide their own Loggable implementations."
-  (:require [mbwatch.concurrent]
-            [mbwatch.config.mbsyncrc :refer [Maildirstore]]
+  (:require [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [ERR INFO Loggable NOTICE WARNING
                                      defloggable]]
             [mbwatch.mbmap :refer [join-mbentry join-mbmap]]
@@ -10,7 +9,6 @@
             [mbwatch.types :as t :refer [MBMap]]
             [schema.core :as s :refer [Any Int enum maybe]])
   (:import (javax.mail.internet MimeMessage)
-           (mbwatch.concurrent Timer)
            (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
@@ -30,7 +28,23 @@
 
 (def ^:private USER-COMMAND-FEEDBACK-MAP
   {:parse-error [WARNING (fn [msg] msg)]
-   :app/clear   [NOTICE  (fn [_] "Cleared password cache")]})
+   :app/clear   [NOTICE (fn [_] "Cleared password cache")]
+   :sync/Δ      [NOTICE (fn [sync-req]
+                          (if (seq sync-req)
+                            (str "Sync timer request set to: " (join-mbmap sync-req))
+                            "Sync timer disabled."))]
+   :notify/Δ    [NOTICE (fn [notify-map]
+                          (if (seq notify-map)
+                            (str "Now notifying on: " (join-mbmap notify-map))
+                            "Notifications disabled."))]
+   :conn/period [NOTICE (fn [{:keys [period]}]
+                          (if (zero? period)
+                            "Connection polling disabled."
+                            (str "Connection polling period set to " (human-duration period))))]
+   :sync/period [NOTICE (fn [{:keys [period]}]
+                          (if (zero? period) ; zero?, not pos?, so we don't mask bugs
+                            "Sync timer disabled."
+                            (str "Sync timer period set to: " (human-duration period))))]})
 
 (t/defrecord ConnectionEvent
   [mbchan    :- String
@@ -183,32 +197,3 @@
   (if (pos? retry)
     (format "Connection retry #%d in %s" retry (human-duration (* retry ms-per-retry)))
     "Time jump! Retrying connections up to 3 times in the next 90 seconds."))
-
-(defloggable ConnectionWatcherPreferenceEvent INFO
-  [type  :- (enum :period)
-   timer :- Timer]
-  (let [{:keys [period]} timer]
-    (case type
-      :period (if (zero? period) ; zero?, not pos?, so we don't mask bugs
-                "Connection polling disabled."
-                (str "Connection polling period set to " (human-duration period))))))
-
-(defloggable NotifyMapChangeEvent INFO
-  [notify-map :- MBMap]
-  (let [msg (join-mbmap notify-map)]
-    (if (seq msg)
-      (str "Now notifying on: " msg)
-      "Notifications disabled.")))
-
-(defloggable SyncTimerPreferenceEvent INFO
-  [type     :- (enum :period :sync-req)
-   timer    :- Timer
-   sync-req :- MBMap]
-  (let [period (:period timer)]
-    (case type
-      :period (if (zero? period)
-                "Sync timer disabled."
-                (str "Sync timer period set to: " (human-duration period)))
-      :sync-req (if (seq sync-req)
-                  (str "Sync timer request set to: " (join-mbmap sync-req))
-                  "Sync timer disabled."))))

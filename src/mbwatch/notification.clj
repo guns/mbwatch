@@ -19,7 +19,7 @@
                                         thread-loop]]
             [mbwatch.config :refer [mdir-path]]
             [mbwatch.events :refer [->NewMessageNotification
-                                    ->NotifyMapChangeEvent]]
+                                    ->UserCommandFeedback]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
             [mbwatch.maildir :refer [new-messages senders]]
@@ -181,7 +181,7 @@
                   (alter-fn notify-map-atom merge-fn payload)
                   (alter-fn notify-map-atom payload))]
     (when-not (= old-map new-map)
-      (put! log-chan-out (->NotifyMapChangeEvent new-map)))
+      (put! log-chan-out (->UserCommandFeedback :notify/Δ new-map)))
     nil))
 
 (s/defn ^:private process-command :- SyncRequestMap

@@ -19,7 +19,7 @@
                                         shutdown-future sig-notify-all
                                         sig-wait-timer thread-loop
                                         update-timer!]]
-            [mbwatch.events :refer [->SyncTimerPreferenceEvent]]
+            [mbwatch.events :refer [->UserCommandFeedback]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
             [mbwatch.mbmap :refer [mbmap-disj mbmap-merge]]
@@ -108,8 +108,7 @@
                   (alter-fn sync-req-atom merge-fn payload)
                   (alter-fn sync-req-atom payload))]
     (when-not (= old-req new-req)
-      (put! log-chan (->SyncTimerPreferenceEvent
-                       :sync-req @timer-atom @sync-req-atom)))
+      (put! log-chan (->UserCommandFeedback :sync/Δ @sync-req-atom)))
     nil))
 
 (s/defn ^:private process-command :- VOID
@@ -121,8 +120,7 @@
                        new-period ^long (:payload command)]
                    (when (update-timer! timer-atom new-period MIN-POS-PERIOD)
                      (sig-notify-all timer-atom)
-                     (put! log-chan (->SyncTimerPreferenceEvent
-                                      :period @timer-atom @sync-req-atom))))
+                     (put! log-chan (->UserCommandFeedback :sync/period @timer-atom))))
     :sync/add (alter-sync-req-atom!
                 swap! sync-timer #(mbmap-merge %1 %2 true) command)
     :sync/remove (alter-sync-req-atom!

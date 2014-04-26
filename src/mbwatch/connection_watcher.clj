@@ -37,8 +37,8 @@
                                         sig-wait-timer thread-loop
                                         update-timer!]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
-            [mbwatch.events :refer [->ConnectionWatcherPreferenceEvent
-                                    ->PendingSyncsEvent ->TimeJumpEvent]]
+            [mbwatch.events :refer [->PendingSyncsEvent ->TimeJumpEvent
+                                    ->UserCommandFeedback]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
             [mbwatch.network :refer [reachable?]]
@@ -347,8 +347,8 @@
                        new-period ^long (:payload command)]
                    (when (update-timer! timer-atom new-period MIN-POS-PERIOD)
                      (sig-notify-all timer-atom)
-                     (put! log-chan (->ConnectionWatcherPreferenceEvent
-                                      :period @(:timer-atom connection-watcher))))
+                     (put! log-chan (->UserCommandFeedback
+                                      :conn/period @(:timer-atom connection-watcher))))
                    command)
     :conn/remove (let [{:keys [connections-atom]} connection-watcher]
                    (when-seq [mbchans (:payload command)]
