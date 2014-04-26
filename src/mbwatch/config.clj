@@ -90,9 +90,12 @@
       :default (parse-ms "10s")
       :default-desc "10s"
       :parse-fn parse-ms]
-     [nil "--cache-passwords true|false" "Cache IMAP passwords from PassCmds"
+     [nil "--cache-passwords BOOL" "Cache IMAP passwords from PassCmds"
       :default false
-      :parse-fn (partial istr= "true")]]))
+      :parse-fn (or (partial istr= "true")
+                    (partial istr= "yes")
+                    (partial istr= "on")
+                    (partial istr= "1"))]]))
 
 (s/defn ^:private parse-config-file :- {Keyword Any}
   "Parse mbwatch-config-path, returning an option map with defaults. Throws an
