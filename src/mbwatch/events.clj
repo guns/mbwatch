@@ -175,7 +175,7 @@
       "Notifications disabled.")))
 
 (defloggable SyncTimerPreferenceEvent INFO
-  [type     :- (enum :period :sync-request)
+  [type     :- (enum :period :sync-req)
    timer    :- Timer
    sync-req :- MBMap]
   (let [period (:period timer)]
@@ -183,9 +183,9 @@
       :period (if (zero? period)
                 "Sync timer disabled."
                 (str "Sync timer period set to: " (human-duration period)))
-      :sync-request (if (seq sync-req)
-                      (str "Sync timer request set to: " (join-mbmap sync-req))
-                      "Sync timer disabled."))))
+      :sync-req (if (seq sync-req)
+                  (str "Sync timer request set to: " (join-mbmap sync-req))
+                  "Sync timer disabled."))))
 
 (defloggable UserCommandError WARNING
   [msg :- String]

@@ -34,13 +34,13 @@
 (declare process-command)
 
 (t/defrecord ^:private SyncTimer
-  [cmd-chan-in       :- ReadPort
-   cmd-chan-out      :- WritePort
-   log-chan          :- WritePort
-   sync-request-atom :- MBMapAtom
-   timer-atom        :- TimerAtom
-   status            :- AtomicBoolean
-   exit-fn           :- (maybe IFn)]
+  [cmd-chan-in   :- ReadPort
+   cmd-chan-out  :- WritePort
+   log-chan      :- WritePort
+   sync-req-atom :- MBMapAtom
+   timer-atom    :- TimerAtom
+   status        :- AtomicBoolean
+   exit-fn       :- (maybe IFn)]
 
   Lifecycle
 
@@ -51,7 +51,7 @@
                 (sig-wait-timer timer-atom)
                 (when (.get status)
                   (set-alarm! timer-atom)
-                  (when-seq [sync-req @sync-request-atom]
+                  (when-seq [sync-req @sync-req-atom]
                     (>!! cmd-chan-out (->Command :sync sync-req)))
                   (recur))))
           c (thread-loop []
@@ -91,7 +91,7 @@
     {:cmd-chan-in cmd-chan-in
      :cmd-chan-out (chan CHAN-SIZE) ; OPEN cmd-chan-out
      :log-chan (chan CHAN-SIZE)     ; OPEN log-chan
-     :sync-request-atom (atom sync-req)
+     :sync-req-atom (atom sync-req)
      :timer-atom (atom (->Timer period MIN-POS-PERIOD false))
      :status (AtomicBoolean. true)
      :exit-fn nil}))
@@ -101,20 +101,20 @@
    command    :- CommandSchema]
   (case (:opcode command)
     :sync/trigger (sig-notify-all (:timer-atom sync-timer))
-    :sync/period (let [{:keys [sync-request-atom timer-atom log-chan]} sync-timer
+    :sync/period (let [{:keys [sync-req-atom timer-atom log-chan]} sync-timer
                        new-period ^long (:payload command)]
                    (when (update-timer! timer-atom new-period MIN-POS-PERIOD)
                      (sig-notify-all timer-atom)
                      (put! log-chan (->SyncTimerPreferenceEvent
-                                      :period @timer-atom @sync-request-atom))))
+                                      :period @timer-atom @sync-req-atom))))
     ;; TODO
     ; :sync/add
     ; :sync/remove
-    :sync/set (let [{:keys [sync-request-atom timer-atom log-chan]} sync-timer
-                    old-req @sync-request-atom
-                    new-req (reset! sync-request-atom (:payload command))]
+    :sync/set (let [{:keys [sync-req-atom timer-atom log-chan]} sync-timer
+                    old-req @sync-req-atom
+                    new-req (reset! sync-req-atom (:payload command))]
                 (when-not (= old-req new-req)
                   (put! log-chan (->SyncTimerPreferenceEvent
-                                   :sync-request @timer-atom @sync-request-atom))))
+                                   :sync-req @timer-atom @sync-req-atom))))
     nil)
   nil)

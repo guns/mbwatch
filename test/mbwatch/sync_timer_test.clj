@@ -16,7 +16,7 @@
   (for-all [sync-req (such-that seq MBMAP-GEN)
             ttl (g/choose 100 1000)]
     (let [sync-timer (->SyncTimer sync-req (chan 0x10000) 0)
-          {:keys [cmd-chan-in cmd-chan-out log-chan sync-request-atom timer-atom]} sync-timer
+          {:keys [cmd-chan-in cmd-chan-out log-chan sync-req-atom timer-atom]} sync-timer
           ;; Fire up to 20 sync requests
           _ (update-timer! timer-atom (quot ttl 20) 0)
           sync-timer (comp/start sync-timer)]
@@ -28,7 +28,7 @@
         (.println System/err (format "ttl %3d │ n %2d" ttl n))
         (and (is (every? #(and (validate CommandSchema %)
                                (= ((juxt :opcode :payload) %)
-                                  [:sync @sync-request-atom]))
+                                  [:sync @sync-req-atom]))
                          cmds)
                  "only produces :sync Commands")
              ;; Tolerate ±1 syncs (border conditions)
