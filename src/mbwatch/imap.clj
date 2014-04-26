@@ -72,37 +72,7 @@
          (sig-wait ~status)
          (recur)))))
 
-(s/defn ^:private with-imap-connection :- Any
-  [imap-credential :- IMAPCredential
-   label           :- Any
-   log-chan        :- WritePort
-   timeout         :- Int
-   f               :- IFn]
-  (let [{:keys [host port user pass ssl?]} imap-credential
-        scheme (if ssl? "imaps" "imap")
-        url (cond-> (url-for scheme host user port)
-              label (str label))
-        store (-> (->IMAPProperties timeout)
-                  (Session/getDefaultInstance)
-                  (.getStore scheme))
-        log (fn log
-              ([type] (log type nil))
-              ([type err] (put! log-chan (IMAPConnectionEvent. type url err (DateTime.)))))]
-    (try
-      (log :start)
-      (.connect store host port user pass)
-      (log :success)
-      (f store)
-      (catch AuthenticationFailedException e (log :badauth (str e)))
-      (catch MailConnectException e (log :failure (str e))) ;; TODO: Do we want this?
-      (catch MessagingException e (log :failure (str e)))
-      (finally
-        (log :stop)
-        (if (.isConnected store)
-          (do (.close store)
-              (log :disconnect))
-          (log :lost))))))
-
+(declare with-imap-connection)
 (declare idle!)
 
 (t/defrecord ^:private IDLEWorker
@@ -137,7 +107,7 @@
           f (future-loop []
               (when (.get status)
                 (with-active-connection mbchan connection status
-                  (with-imap-connection imap-credential label log-chan timeout
+                  (with-imap-connection this label
                     (partial idle! this)))
                 (recur)))]
       ;; IDLEMaster will close the shared outgoing channels
@@ -161,6 +131,41 @@
     (->LogItem this (format "%s IDLEWorker for %s/%s"
                             (if exit-fn "↓ Stopping" "↑ Starting")
                             mbchan mbox))))
+
+(s/defn ^:private with-imap-connection :- Any
+  [idle-worker :- IDLEWorker
+   label       :- Any
+   f           :- IFn]
+  (let [{:keys [imap-credential log-chan timeout]} idle-worker
+        {:keys [host port user pass ssl?]} imap-credential
+        scheme (if ssl? "imaps" "imap")
+        url (cond-> (url-for scheme host user port)
+              label (str label))
+        store (-> (->IMAPProperties timeout)
+                  (Session/getDefaultInstance)
+                  (.getStore scheme))
+        log (fn log
+              ([type] (log type nil))
+              ([type err] (put! log-chan (IMAPConnectionEvent. type url err (DateTime.)))))]
+    (try
+      (log :start)
+      (.connect store host port user pass)
+      (log :success)
+      (f store)
+      (catch AuthenticationFailedException _
+        (let [{:keys [mbchan mbox master-cmd-chan]} idle-worker]
+          (log :badauth)
+          ;; We will enter a failure loop if the auth credentials are
+          ;; incorrect, so remove this worker
+          (>!! master-cmd-chan (->Command :idle/remove {mbchan #{mbox}}))))
+      (catch MailConnectException e (log :failure (str e))) ;; TODO: Do we want this?
+      (catch MessagingException e (log :failure (str e)))
+      (finally
+        (log :stop)
+        (if (.isConnected store)
+          (do (.close store)
+              (log :disconnect))
+          (log :lost))))))
 
 (s/defn ^:private idle! :- VOID
   "IDLE on mbchan/mbox and queue :sync Commands on new messages. Blocks thread
