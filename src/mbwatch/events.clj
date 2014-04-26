@@ -8,7 +8,7 @@
             [mbwatch.mbmap :refer [join-mbentry join-mbmap]]
             [mbwatch.time :refer [human-duration]]
             [mbwatch.types :as t :refer [MBMap]]
-            [schema.core :refer [Int enum maybe]])
+            [schema.core :as s :refer [Any Int enum maybe]])
   (:import (javax.mail.internet MimeMessage)
            (mbwatch.concurrent Timer)
            (mbwatch.logging LogItem)
@@ -28,6 +28,10 @@
    :disconnect [WARNING "Disconnected "]
    :lost       [WARNING "Lost connection to "]})
 
+(def ^:private USER-COMMAND-FEEDBACK-MAP
+  {:parse-error [WARNING (fn [msg] msg)]
+   :app/clear   [NOTICE  (fn [_] "Cleared password cache")]})
+
 (t/defrecord ConnectionEvent
   [mbchan    :- String
    status    :- (maybe Boolean)
@@ -43,7 +47,7 @@
       (LogItem. level timestamp (str "Channel " mbchan suffix)))))
 
 (t/defrecord IMAPConnectionEvent
-  [type      :- (enum :start :success :badauth :failure :stop :disconnect :lost)
+  [type      :- (apply enum (keys IMAP-CONNECTION-EVENT-MAP))
    imap-url  :- String
    error     :- (maybe String)
    timestamp :- DateTime]
@@ -58,51 +62,27 @@
           msg (str prefix imap-url)]
       (LogItem. level timestamp (if error (str msg "\n" error) msg)))))
 
-(defloggable IDLEEvent NOTICE
-  [imap-url :- String]
-  (str "IDLE " imap-url))
+(t/defrecord ^:private UserCommandFeedback
+  [type      :- (apply enum (keys USER-COMMAND-FEEDBACK-MAP))
+   data      :- Any
+   timestamp :- DateTime]
 
-(defloggable IDLENewMessageEvent INFO
-  [n        :- Int
-   imap-url :- String]
-  (if (= 1 n)
-    (str "IDLE: New message in " imap-url)
-    (str "IDLE: " n " new messages in " imap-url)))
+  Loggable
 
-(defloggable IMAPCommandError ERR
-  [type     :- (enum :folder-not-found)
-   imap-url :- String]
-  (case type
-    :folder-not-found (format "IMAP folder %s does not exist!" imap-url)))
+  (log-level [_]
+    (first (USER-COMMAND-FEEDBACK-MAP type)))
 
-(defloggable IMAPShutdownEvent INFO
-  [timeout :- Int]
-  (format "Waiting %s for IMAP disconnection" (human-duration timeout)))
+  (log-item [this]
+    (let [[level f] (USER-COMMAND-FEEDBACK-MAP type)
+          msg (f data)]
+      (LogItem. level timestamp msg))))
 
-(defloggable PendingSyncsEvent INFO
-  [action   :- (enum :pool :release)
-   sync-req :- MBMap]
-  (->> sync-req
-       join-mbmap
-       (str (if (= action :pool)
-              "Delaying syncs: "
-              "Releasing pending syncs: "))))
-
-(defloggable TimeJumpEvent WARNING
-  [retry        :- Int
-   ms-per-retry :- Int]
-  (if (pos? retry)
-    (format "Connection retry #%d in %s" retry (human-duration (* retry ms-per-retry)))
-    "Time jump! Retrying connections up to 3 times in the next 90 seconds."))
-
-(defloggable ConnectionWatcherPreferenceEvent INFO
-  [type  :- (enum :period)
-   timer :- Timer]
-  (let [{:keys [period]} timer]
-    (case type
-      :period (if (zero? period) ; zero?, not pos?, so we don't mask bugs
-                "Connection polling disabled."
-                (str "Connection polling period set to " (human-duration period))))))
+(s/defn ->UserCommandFeedback :- UserCommandFeedback
+  ([type]
+   (->UserCommandFeedback type nil))
+  ([type :- (apply enum (keys USER-COMMAND-FEEDBACK-MAP))
+    data :- Any]
+   (UserCommandFeedback. type data (DateTime.))))
 
 (t/defrecord MbsyncEventStart
   [id     :- Int
@@ -156,6 +136,27 @@
    mbchan :- String]
   (format "Unknown channel: `%s`" mbchan))
 
+(defloggable IDLEEvent NOTICE
+  [imap-url :- String]
+  (str "IDLE " imap-url))
+
+(defloggable IDLENewMessageEvent INFO
+  [n        :- Int
+   imap-url :- String]
+  (if (= 1 n)
+    (str "IDLE: New message in " imap-url)
+    (str "IDLE: " n " new messages in " imap-url)))
+
+(defloggable IMAPCommandError ERR
+  [type     :- (enum :folder-not-found)
+   imap-url :- String]
+  (case type
+    :folder-not-found (format "IMAP folder %s does not exist!" imap-url)))
+
+(defloggable IMAPShutdownEvent INFO
+  [timeout :- Int]
+  (format "Waiting %s for IMAP disconnection" (human-duration timeout)))
+
 (defloggable NewMessageNotification INFO
   [mbchan->mbox->messages :- {String {String [MimeMessage]}}]
   (str
@@ -166,6 +167,31 @@
             (.append s (format " [%s/%s %d]" mbchan mbox (count messages))))
           s (sort mbox->messages)))
       (StringBuilder. "NewMessageNotification:") (sort mbchan->mbox->messages))))
+
+(defloggable PendingSyncsEvent INFO
+  [action   :- (enum :pool :release)
+   sync-req :- MBMap]
+  (->> sync-req
+       join-mbmap
+       (str (if (= action :pool)
+              "Delaying syncs: "
+              "Releasing pending syncs: "))))
+
+(defloggable TimeJumpEvent WARNING
+  [retry        :- Int
+   ms-per-retry :- Int]
+  (if (pos? retry)
+    (format "Connection retry #%d in %s" retry (human-duration (* retry ms-per-retry)))
+    "Time jump! Retrying connections up to 3 times in the next 90 seconds."))
+
+(defloggable ConnectionWatcherPreferenceEvent INFO
+  [type  :- (enum :period)
+   timer :- Timer]
+  (let [{:keys [period]} timer]
+    (case type
+      :period (if (zero? period) ; zero?, not pos?, so we don't mask bugs
+                "Connection polling disabled."
+                (str "Connection polling period set to " (human-duration period))))))
 
 (defloggable NotifyMapChangeEvent INFO
   [notify-map :- MBMap]
@@ -186,7 +212,3 @@
       :sync-req (if (seq sync-req)
                   (str "Sync timer request set to: " (join-mbmap sync-req))
                   "Sync timer disabled."))))
-
-(defloggable UserCommandError WARNING
-  [msg :- String]
-  msg)

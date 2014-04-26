@@ -26,7 +26,7 @@
             [mbwatch.config :refer [->Config DEFAULT-CONFIG-PATH]]
             [mbwatch.config.mbsyncrc :refer [DEFAULT-MBSYNCRC-PATH]]
             [mbwatch.console :refer [tty? with-console-input]]
-            [mbwatch.events :refer [->UserCommandError]]
+            [mbwatch.events :refer [->UserCommandFeedback]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
             [mbwatch.types :as t :refer [atom-of]]
@@ -52,7 +52,8 @@
                 (with-console-input line
                   (let [cmd (parse-command-input line)]
                     (if (string? cmd)
-                      (put! (:log-chan @application) (->UserCommandError cmd))
+                      (put! (:log-chan @application)
+                            (->UserCommandFeedback :parse-error cmd))
                       (process-command this cmd))))
                 (when (.get status)
                   ;; User closed input stream; let the main thread know that
@@ -101,8 +102,10 @@
     ;; Handle top-level commands directly
     :app/help (do (.println System/err OPCODE-HELP)
                   true)
-    :app/clear (do (when-some [c (-> application-master :application deref :cache-atom)]
-                     (swap! c empty))
+    :app/clear (do (let [{:keys [cache-atom log-chan]} @(:application application-master)]
+                     (when cache-atom
+                       (swap! cache-atom empty)
+                       (put! log-chan (->UserCommandFeedback :app/clear))))
                    true)
     :app/status (do (.println System/err (info-table @(:application application-master)))
                     true)
