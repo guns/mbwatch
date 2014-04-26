@@ -68,19 +68,28 @@
   [conn-map               :- ConnectionMap
    mbchan->IMAPCredential :- {Word IMAPCredential}
    timeout-or-status      :- (either Int Boolean)]
-  (->> conn-map
-       (pmapv (fn [[mbchan m]]
-                (if-some [imap (mbchan->IMAPCredential mbchan)]
+  ;; It is common for multiple mbchans to point to the same server
+  (let [[host->conn-map ignored]
+        (reduce-kv
+          (fn [[hs is] mbchan conn]
+            (if-some [cred (mbchan->IMAPCredential mbchan)]
+              (let [{:keys [host port]} cred]
+                [(merge-with merge hs {[host port] {mbchan conn}}) is])
+              [hs (assoc is mbchan conn)]))
+          [{} {}] conn-map)]
+    (->> host->conn-map
+         (pmapv (fn [[[host port] conn-map]]
                   (let [status (if (integer? timeout-or-status)
-                                 (reachable? (:host imap) (:port imap) timeout-or-status)
+                                 (reachable? host port timeout-or-status)
                                  timeout-or-status)]
                     ;; true -> false
-                    (if (and (true? (:status m)) (false? status))
-                      [mbchan (assoc m :status status :pending-syncs nil)]
-                      [mbchan (assoc m :status status)]))
-                  ;; Upstream is not an IMAP server
-                  [mbchan m])))
-       (into {})))
+                    (reduce-kv
+                      (fn [m mbchan conn]
+                        (if (and (true? (:status conn)) (false? status))
+                          (assoc m mbchan {:status status :pending-syncs nil})
+                          (assoc m mbchan (assoc conn :status status))))
+                      {} conn-map))))
+         ((partial apply merge ignored)))))
 
 (s/defn ^:private pending-sync-changes :- (pair MBMap "pool"
                                                 MBMap "release")
