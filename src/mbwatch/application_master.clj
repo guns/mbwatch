@@ -18,7 +18,7 @@
   "
   (:require [clojure.core.async :refer [chan close! put!]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
-            [mbwatch.application :refer [->Application]]
+            [mbwatch.application :refer [->Application info-table]]
             [mbwatch.command :refer [CommandSchema OPCODE-HELP
                                      parse-command-input]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
@@ -99,11 +99,13 @@
    command            :- CommandSchema]
   (case (:opcode command)
     ;; Handle top-level commands directly
-    :app/help (do (.println System/err OPCODE-HELP) true)
+    :app/help (do (.println System/err OPCODE-HELP)
+                  true)
     :app/clear (do (when-some [c (-> application-master :application deref :cache-atom)]
                      (swap! c empty))
                    true)
-    ; :app/status
+    :app/status (do (.println System/err (info-table @(:application application-master)))
+                    true)
     ; :app/reload
     ; :app/restart
     :app/quit nil

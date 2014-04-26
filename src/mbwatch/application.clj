@@ -68,6 +68,7 @@
             [mbwatch.notification :refer [->NewMessageNotificationService]]
             [mbwatch.sync-timer :refer [->SyncTimer]]
             [mbwatch.types :as t :refer [MapAtom]]
+            [mbwatch.util :refer [make-table]]
             [schema.core :as s :refer [maybe]])
   (:import (mbwatch.config Config)
            (mbwatch.connection_watcher ConnectionWatcher)
@@ -165,3 +166,10 @@
                   connection-watcher
                   idle-master
                   sync-timer)))
+
+(s/defn info-table :- String
+  [application :- Application]
+  (let [{:keys [cache-atom logging-service notification-service mbsync-master
+                connection-watcher idle-master sync-timer]} application]
+    (->> [["Password cache?" (str (some? cache-atom))]]
+         (make-table ["" ""]))))
