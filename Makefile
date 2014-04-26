@@ -1,15 +1,15 @@
 PREFIX ?= /usr/local
 
-build: check-lein target/mbwatch
+build: check-lein target/build/mbwatch
 
 install: build
 	install -d $(DESTDIR)$(PREFIX)/bin
-	install target/mbwatch $(DESTDIR)$(PREFIX)/bin
+	install target/build/mbwatch $(DESTDIR)$(PREFIX)/bin
 
 clean: check-lein
 	lein clean
 
-target/mbwatch:
+target/build/mbwatch:
 	lein BUILD
 
 check-lein:

@@ -19,6 +19,7 @@
                    :resource-paths ["test-resources"]
                    :eastwood {:exclude-linters [:redefd-vars]}}
              :build {:aot [mbwatch.core]
+                     :target-path "target/build"
                      :plugins [[lein-bin "0.3.4"]]
                      :bin {:name "mbwatch"
                            :bootclasspath true}}}
