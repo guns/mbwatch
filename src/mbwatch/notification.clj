@@ -138,10 +138,9 @@
                   (put! log-chan-out obj)
                   (recur (process-event obj sync-requests this)))))]
       (assoc this :exit-fn
-             #(do (.set status false)   ; Stop after current iteration
+             #(do (.set status false)       ; Stop after current iteration
                   (<!! c)
-                  (close! log-chan-out) ; Close outgoing channels
-                  ))))
+                  (close! log-chan-out))))) ; CLOSE log-chan-out
 
   (stop [this]
     (log-with-timestamp! log-chan-out this)
@@ -165,7 +164,7 @@
     {:notify-command notify-command
      :notify-map-atom (atom notify-map)
      :log-chan-in log-chan-in
-     :log-chan-out (chan CHAN-SIZE)
+     :log-chan-out (chan CHAN-SIZE) ; OPEN log-chan-out
      :status (AtomicBoolean. true)
      :exit-fn nil}))
 

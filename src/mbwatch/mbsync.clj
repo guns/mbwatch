@@ -141,8 +141,8 @@
 
 (s/defn ^:private stop-workers! :- VOID
   [workers :- [MbsyncWorker]]
-  (pmapv #(do (close! (:req-chan %))
-              (comp/stop %)) ; STOP MbsyncWorker
+  (pmapv #(do (close! (:req-chan %)) ; CLOSE req-chan
+              (comp/stop %))         ; STOP MbsyncWorker
          workers)
   nil)
 
@@ -167,10 +167,9 @@
                     (recur (process-command this worker-map cmd)))
                 (stop-workers! (vals worker-map))))]
       (assoc this :exit-fn
-             #(do (.set status false) ; Stop after current iteration
+             #(do (.set status false)   ; Stop after current iteration
                   (<!! c)
-                  (close! log-chan)   ; Close outgoing channels
-                  ))))
+                  (close! log-chan))))) ; CLOSE log-chan
 
   (stop [this]
     (log-with-timestamp! log-chan this)
@@ -194,7 +193,7 @@
     {:mbsyncrc mbsyncrc
      :cache-atom cache-atom
      :cmd-chan cmd-chan
-     :log-chan (chan CHAN-SIZE)
+     :log-chan (chan CHAN-SIZE) ; OPEN log-chan
      :status (AtomicBoolean. true)
      :exit-fn nil}))
 
@@ -207,7 +206,7 @@
        :cache-atom cache-atom
        :maildir (get-in mbsyncrc [:mbchan->Maildirstore mbchan])
        :mbchan mbchan
-       :req-chan (chan CHAN-SIZE)
+       :req-chan (chan CHAN-SIZE) ; OPEN req-chan
        :log-chan log-chan
        :status (AtomicBoolean. true)
        :exit-fn nil})))

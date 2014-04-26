@@ -62,8 +62,8 @@
                   (sig-notify-all status))))]
       (assoc this :exit-fn
              #(do (.set status false)
-                  (close! (:cmd-chan @application)) ; Close outgoing channels
-                  (close! (:log-chan @application))
+                  (close! (:cmd-chan @application)) ; CLOSE cmd-chan
+                  (close! (:log-chan @application)) ; CLOSE log-chan
                   (shutdown-future f 100)
                   (comp/stop @application))))) ; STOP Application
 
@@ -87,8 +87,8 @@
   (let [mbs (:config options DEFAULT-MBSYNCRC-PATH)
         mbw (:mbwatch-config options DEFAULT-CONFIG-PATH)
         config (->Config options mbs mbw)
-        cmd-chan (chan CHAN-SIZE)
-        log-chan (chan CHAN-SIZE)]
+        cmd-chan (chan CHAN-SIZE)  ; OPEN cmd-chan
+        log-chan (chan CHAN-SIZE)] ; OPEN log-chan
     (strict-map->ApplicationMaster
       {:application (atom (->Application config cmd-chan log-chan))
        :status (AtomicBoolean. true)

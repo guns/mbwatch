@@ -173,8 +173,8 @@
                   (sig-notify-all timer-atom) ; Trigger timer
                   (shutdown-future f 100)
                   (<!! c)
-                  (close! cmd-chan-out)       ; Close outgoing channels
-                  (close! log-chan)))))
+                  (close! cmd-chan-out)       ; CLOSE cmd-chan-out
+                  (close! log-chan)))))       ; CLOSE log-chan
 
   (stop [this]
     (log-with-timestamp! log-chan this)
@@ -199,8 +199,8 @@
   (strict-map->ConnectionWatcher
     {:mbchan->IMAPCredential mbchan->IMAPCredential
      :cmd-chan-in cmd-chan-in
-     :cmd-chan-out (chan CHAN-SIZE)
-     :log-chan (chan CHAN-SIZE)
+     :cmd-chan-out (chan CHAN-SIZE) ; OPEN cmd-chan-out
+     :log-chan (chan CHAN-SIZE)     ; OPEN log-chan
      :connections-atom connections-atom
      :timer-atom (atom (->Timer period MIN-POS-PERIOD false))
      :timeout timeout

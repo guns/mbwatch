@@ -253,8 +253,8 @@
       (assoc this :exit-fn
              #(do (.set status false)   ; Stop after current iteration
                   (<!! c)
-                  (close! cmd-chan-out) ; Close outgoing channels
-                  (close! log-chan)))))
+                  (close! cmd-chan-out) ; CLOSE cmd-chan-out
+                  (close! log-chan))))) ; CLOSE log-chan
 
   (stop [this]
     (log-with-timestamp! log-chan this)
@@ -282,8 +282,8 @@
      :connections-atom connections-atom
      :timeout timeout
      :cmd-chan-in cmd-chan-in
-     :cmd-chan-out (chan CHAN-SIZE)
-     :log-chan (chan CHAN-SIZE)
+     :cmd-chan-out (chan CHAN-SIZE) ; OPEN cmd-chan-out
+     :log-chan (chan CHAN-SIZE)     ; OPEN log-chan
      :status (AtomicBoolean. true)
      :exit-fn nil}))
 
