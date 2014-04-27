@@ -49,12 +49,14 @@
     (reset! application (comp/start @application)) ; START Application
     (let [f (future-catch-print
               (when (tty?)
-                (with-console-input line
-                  (let [cmd (parse-command-input line)]
-                    (if (string? cmd)
-                      (put! (:log-chan @application)
-                            (->UserCommandFeedback :parse-error cmd))
-                      (process-command this cmd))))
+                (try
+                  (with-console-input line
+                    (let [cmd (parse-command-input line)]
+                      (if (string? cmd)
+                        (put! (:log-chan @application)
+                              (->UserCommandFeedback :parse-error cmd))
+                        (process-command this cmd))))
+                  (catch InterruptedException _)) ; We are expecting this
                 (when (.get status)
                   ;; User closed input stream; let the main thread know that
                   ;; we are done
@@ -65,8 +67,8 @@
              #(do (.set status false)
                   (close! (:cmd-chan @application)) ; CLOSE cmd-chan
                   (close! (:log-chan @application)) ; CLOSE log-chan
-                  (shutdown-future f 100)
-                  (comp/stop @application))))) ; STOP Application
+                  (future-cancel f)                 ; Cancel the read on stdin
+                  (comp/stop @application)))))      ; STOP Application
 
   (stop [this]
     (log-with-timestamp! (:log-chan @application) this)

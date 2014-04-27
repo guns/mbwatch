@@ -117,15 +117,18 @@
   (BufferedReader. (InputStreamReader. System/in "UTF-8")))
 
 (defmacro with-read-line
-  "Execute body with input line from rdr-sym bound to line-sym. Reading from a
-   BufferedReader is uninterruptible; this macro wraps the .readLine call in a
-   future and ensures it is interrupted before exiting."
+  "Execute body with input line from rdr-sym bound to line-sym.
+
+   Reading from an input stream is normally uninterruptible; this macro wraps
+   the .readLine call in a future to ensure that we can at least unblock the
+   calling thread. While the future wrapping .readLine will be cancelled,
+   the actual read thread will stay alive until it receives input or the
+   underlying source is closed, raising an IOException."
   [rdr-sym line-sym & body]
   `(let [f# (future (.readLine ~rdr-sym))]
      (try
        (let [~line-sym @f#]
          ~@body)
-       (catch InterruptedException _#) ; We are expecting this
        (finally
          (future-cancel f#)))))
 
