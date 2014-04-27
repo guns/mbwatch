@@ -30,22 +30,24 @@
                :else (recur more (conj cs t expr))))))
 
 (s/defn make-table :- String
-  [headings :- [String]
-   rows     :- [[String]]]
-  (let [widths (->> (if (seq headings) (cons headings rows) rows)
-                    (apply mapv vector)
-                    (mapv #(apply max (mapv count %))))
-        fmt (->> widths
-                 (mapv #(format "%%-%ds" %))
-                 (string/join " | "))
-        sep (->> widths
-                 (mapv #(string/join (repeat % \-)))
-                 (string/join "-+-"))]
-    (->> (concat (if (seq headings)
-                   [(apply format fmt headings) sep]
-                   [])
-                 (mapv #(apply format fmt %) rows))
-         (string/join \newline))))
+  ([rows]
+   (make-table nil rows))
+  ([headings :- [String]
+    rows     :- [[String]]]
+   (let [widths (->> (if (seq headings) (cons headings rows) rows)
+                     (apply mapv vector)
+                     (mapv #(apply max (mapv count %))))
+         fmt (->> widths
+                  (mapv #(format "%%-%ds" %))
+                  (string/join " | "))
+         sep (->> widths
+                  (mapv #(string/join (repeat % \-)))
+                  (string/join "-+-"))]
+     (->> (concat (if (seq headings)
+                    [(apply format fmt headings) sep]
+                    [])
+                  (mapv #(apply format fmt %) rows))
+          (string/join \newline)))))
 
 (s/defn parse-kv-string :- {Keyword String}
   "Simple key = value parser. Like ini, but without hierarchy, multiline
