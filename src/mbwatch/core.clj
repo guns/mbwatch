@@ -19,11 +19,11 @@
               status ^AtomicBoolean (:status master)]
           (add-shutdown-hook!
             (comp/stop master)) ; STOP ApplicationMaster
-          (try
-            (while (.get status)
-              (sig-wait status))
-            (System/exit 0)
-            (catch Throwable _
-              (System/exit 1))))))
+          (while (.get status)
+            (sig-wait status))
+          (System/exit 0))))
+    (catch Throwable e
+      (.println System/err (str e))
+      (System/exit 1))
     (finally
       (shutdown-agents))))

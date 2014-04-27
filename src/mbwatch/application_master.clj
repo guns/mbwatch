@@ -22,7 +22,7 @@
             [mbwatch.command :refer [CommandSchema OPCODE-HELP
                                      parse-command-input]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
-                                        shutdown-future sig-notify-all]]
+                                        sig-notify-all]]
             [mbwatch.config :refer [->Config DEFAULT-MBWATCHRC-PATH]]
             [mbwatch.config.mbsyncrc :refer [DEFAULT-MBSYNCRC-PATH]]
             [mbwatch.console :refer [tty? with-console-input]]

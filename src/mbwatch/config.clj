@@ -103,20 +103,20 @@
    mbwatch-config-path does not exist, only the defaults from config-options
    are returned. Throws an exception if there are any errors."
   [mbwatch-config-path :- Coercions]
-  (if (.exists (io/file mbwatch-config-path))
-    (let [{:keys [options errors]} (-> (slurp mbwatch-config-path)
+  (let [{:keys [options errors]} (if (.exists (io/file mbwatch-config-path))
+                                   (-> (slurp mbwatch-config-path)
                                        parse-kv-string
                                        (as-> m
                                          (mapv (fn [[k v]]
                                                  (str "--" (name k) \= v)) m))
-                                       (parse-opts (config-options)))]
-      (if errors
-        (throw (IllegalArgumentException.
-                 (format "The following errors occured while parsing %s:\n\n%s\n"
-                         mbwatch-config-path
-                         (string/join "\n" errors))))
-        options))
-    (get-default-options (config-options))))
+                                       (parse-opts (config-options)))
+                                   {:options (get-default-options (config-options))})]
+    (if errors
+      (throw (IllegalArgumentException.
+               (format "The following errors occured while parsing %s:\n\n%s\n"
+                       mbwatch-config-path
+                       (string/join "\n" errors))))
+      options)))
 
 (t/defrecord ^:private Config
   [mbsyncrc        :- Mbsyncrc
@@ -134,10 +134,17 @@
    cache-passwords :- Boolean])
 
 (s/defn ->Config :- Config
+  "Create a Config object. Throws exceptions on errors."
   [cli-options         :- {Keyword Any}
    mbsyncrc-path       :- Coercions
    mbwatch-config-path :- Coercions]
-  (let [mbsyncrc (parse-mbsyncrc (slurp mbsyncrc-path))
+  (let [mbsyncrc-file (io/file mbsyncrc-path)
+        ;; mbsync _requires_ a config file
+        _ (when-not (and (.exists mbsyncrc-file) (.canRead mbsyncrc-file))
+            (throw (RuntimeException.
+                     (str (pr-str mbsyncrc-path)
+                          " does not exist, or cannot be read! mbsync requires a config file."))))
+        mbsyncrc (parse-mbsyncrc (slurp mbsyncrc-path))
         ;; Parse the config file as if it were an command line argument vector
         options (merge (parse-config-file mbwatch-config-path)
                        cli-options)
