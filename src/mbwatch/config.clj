@@ -29,14 +29,20 @@
                      "notify-send \"$(cat)\""
                      "")
         log-level-desc (format "%d-%d or one of %s"
-                               EMERG DEBUG (string/join ", " LOG-LEVELS))]
+                               EMERG DEBUG (string/join ", " LOG-LEVELS))
+        file-is-readable [#(.exists (io/file %)) "File does not exist"
+                          #(.canRead (io/file %)) "File is unreadable"]
+        mbmap-has-mboxes [mbmap? "Bad mbsync argument format"
+                          #(every? seq (vals %)) "No mailboxes specified"]
+        zero-or-min? (fn [period]
+                       [#(zero-or-min % period)
+                        (str "Must be zero or >= " (human-duration period))])]
     [["-i" "--idle MBSYNC-ARGS" "Mailboxes to watch with IMAP IDLE"
       :default {}
       :default-desc ""
       :parse-fn parse-mbline
       :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge v))
-      :validate [mbmap? "Bad mbsync argument format"
-                 #(every? seq (vals %)) "No mailboxes specified"]]
+      :validate mbmap-has-mboxes]
      ["-s" "--sync MBSYNC-ARGS" "Channels to periodically sync"
       :default {}
       :default-desc ""
@@ -48,8 +54,7 @@
       :default-desc ""
       :parse-fn parse-mbline
       :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge v))
-      :validate [mbmap? "Bad mbsync argument format"
-                 #(every? seq (vals %)) "No mailboxes specified"]]
+      :validate mbmap-has-mboxes]
      ["-l" "--log-level LEVEL" log-level-desc
       :default INFO
       :default-desc "INFO"
@@ -60,13 +65,11 @@
      ["-c" "--config PATH" "Path to mbsyncrc"
       :default DEFAULT-MBSYNCRC-PATH
       :default-desc "~/.mbsyncrc"
-      :validate [#(.exists (io/file %)) "File does not exist"
-                 #(.canRead (io/file %)) "File is unreadable"]]
+      :validate file-is-readable]
      ["-C" "--mbwatch-config PATH" "Path to mbwatch configuration file"
       :default DEFAULT-MBWATCHRC-PATH
       :default-desc "~/.mbwatchrc"
-      :validate [#(.exists (io/file %)) "File does not exist"
-                 #(.canRead (io/file %)) "File is unreadable"]]
+      :validate file-is-readable]
      ["-N" "--notify-cmd SHELL-CMD" "Notification command; receives text on stdin"
       :default notify-cmd
       :default-desc ""]
@@ -74,14 +77,12 @@
       :default (parse-ms "15m")
       :default-desc "15m"
       :parse-fn parse-ms
-      :validate [#(zero-or-min % st/MIN-POS-PERIOD)
-                 (str "Must be zero or >= " (human-duration st/MIN-POS-PERIOD))]]
+      :validate (zero-or-min? st/MIN-POS-PERIOD)]
      [nil "--conn-period TIME" "Time between connection checks"
       :default (parse-ms "5m")
       :default-desc "5m"
       :parse-fn parse-ms
-      :validate [#(zero-or-min % cw/MIN-POS-PERIOD)
-                 (str "Must be zero or >= " (human-duration cw/MIN-POS-PERIOD))]]
+      :validate (zero-or-min? cw/MIN-POS-PERIOD)]
      [nil "--conn-timeout TIME" "Timeout for DNS queries and connection checks"
       :default (parse-ms "2s")
       :default-desc "2s"
