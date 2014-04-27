@@ -1,7 +1,8 @@
 (ns mbwatch.config-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer [is]]
-            [mbwatch.config :refer [->Config mdir-path]]
+            [clojure.tools.cli :refer [get-default-options]]
+            [mbwatch.config :refer [->Config config-options mdir-path]]
             [mbwatch.config.mbsyncrc]
             [schema.core :refer [validate]]
             [schema.test :refer [deftest]])
@@ -19,7 +20,10 @@
     (is (= conn-period 0))
     (is (= sync-period (* 10 60 1000)))
     (is (= conn-timeout 5000))
-    (is (= imap-timeout 20000))))
+    (is (= imap-timeout 20000)))
+  (is (= (-> (->Config {} (io/resource "mbsyncrc") "/does/not/exist")
+             (dissoc :mbsyncrc))
+         (get-default-options (config-options)))))
 
 (deftest test-mdir-path
   (let [maildir {:inbox "/home/user/Mail/INBOX"

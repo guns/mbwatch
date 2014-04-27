@@ -3,7 +3,7 @@
   (:require [clojure.java.io :as io :refer [Coercions]]
             [clojure.java.shell :refer [sh]]
             [clojure.string :as string]
-            [clojure.tools.cli :refer [parse-opts]]
+            [clojure.tools.cli :refer [get-default-options parse-opts]]
             [mbwatch.config.mbsyncrc :refer [DEFAULT-MBSYNCRC-PATH
                                              Maildirstore parse-mbsyncrc]]
             [mbwatch.connection-watcher :as cw]
@@ -98,20 +98,24 @@
                     (partial istr= "1"))]]))
 
 (s/defn ^:private parse-config-file :- {Keyword Any}
-  "Parse mbwatch-config-path, returning an option map with defaults. Throws an
-   exception if there are any errors."
+  "Parse mbwatch-config-path, returning an option map with defaults. If
+   mbwatch-config-path does not exist, only the defaults from config-options
+   are returned. Throws an exception if there are any errors."
   [mbwatch-config-path :- Coercions]
-  (let [{:keys [options errors]}
-        (-> (slurp mbwatch-config-path)
-            parse-kv-string
-            (as-> m (mapv (fn [[k v]] (str "--" (name k) \= v)) m))
-            (parse-opts (config-options)))]
-    (if errors
-      (throw (IllegalArgumentException.
-               (format "The following errors occured while parsing %s:\n\n%s\n"
-                       mbwatch-config-path
-                       (string/join "\n" errors))))
-      options)))
+  (if (.exists (io/file mbwatch-config-path))
+    (let [{:keys [options errors]} (-> (slurp mbwatch-config-path)
+                                       parse-kv-string
+                                       (as-> m
+                                         (mapv (fn [[k v]]
+                                                 (str "--" (name k) \= v)) m))
+                                       (parse-opts (config-options)))]
+      (if errors
+        (throw (IllegalArgumentException.
+                 (format "The following errors occured while parsing %s:\n\n%s\n"
+                         mbwatch-config-path
+                         (string/join "\n" errors))))
+        options))
+    (get-default-options (config-options))))
 
 (t/defrecord ^:private Config
   [mbsyncrc        :- Mbsyncrc
