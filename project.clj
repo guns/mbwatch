@@ -4,7 +4,7 @@
   :license {:name "MIT License"
             :url "http://opensource.org/licenses/MIT"}
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [org.clojure/core.async "0.1.278.0-76b25b-alpha"]
+                 [org.clojure/core.async "0.1.298.0-2a82a1-alpha"]
                  [org.clojure/tools.cli "0.3.2-SNAPSHOT"]
                  [com.sun.mail/imap "1.5.1"]
                  [com.sun.mail/mailapi "1.5.1"]
