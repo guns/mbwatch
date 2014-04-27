@@ -21,7 +21,7 @@
              :build {:aot [mbwatch.core]
                      :target-path "target/build"
                      :plugins [[lein-bin "0.3.4"]]
-                     :jvm-opts ~(if-let [jvm-opts (System/getenv "JVM_OPTS")]
+                     :jvm-opts ~(if-let [jvm-opts (System/getenv "MBWATCH_JVM_OPTS")]
                                   (clojure.string/split jvm-opts #"\s+")
                                   [])
                      :bin {:name "mbwatch"

@@ -10,6 +10,9 @@ clean: check-lein
 	lein clean
 
 target/build/mbwatch:
+	@# FIXME: Iterative building does not work. This may be due to the
+	@#        runtime import of macros into schema.core.
+	rm -rf target/build/mbwatch target/build/classes
 	lein BUILD
 
 check-lein:
