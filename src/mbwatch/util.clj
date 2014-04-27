@@ -29,6 +29,11 @@
                (vector? t) (recur more (into cs (interleave t (repeat expr))))
                :else (recur more (conj cs t expr))))))
 
+(defmacro add-shutdown-hook!
+  "Execute body during JVM shutdown."
+  [& body]
+  `(.addShutdownHook (Runtime/getRuntime) (Thread. (fn [] ~@body))))
+
 (s/defn make-table :- String
   ([rows]
    (make-table nil rows))
