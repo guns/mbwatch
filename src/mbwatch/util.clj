@@ -32,8 +32,7 @@
 (s/defn make-table :- String
   [headings :- [String]
    rows     :- [[String]]]
-  (let [widths (->> rows
-                    (cons headings)
+  (let [widths (->> (if (seq headings) (cons headings rows) rows)
                     (apply mapv vector)
                     (mapv #(apply max (mapv count %))))
         fmt (->> widths
@@ -42,8 +41,9 @@
         sep (->> widths
                  (mapv #(string/join (repeat % \-)))
                  (string/join "-+-"))]
-    (->> (concat [(apply format fmt headings)
-                  sep]
+    (->> (concat (if (seq headings)
+                   [(apply format fmt headings) sep]
+                   [])
                  (mapv #(apply format fmt %) rows))
          (string/join \newline))))
 
