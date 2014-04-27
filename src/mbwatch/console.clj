@@ -97,9 +97,9 @@
   (log [_ log-item]
     (let [{:keys [level ^DateTime timestamp message]} log-item
           ts (.print dt-formatter timestamp)
-          msg (wrap (str "[" ts "] " message) (get colors level))]
-      (.append stream msg)
-      (.append stream \newline))))
+          ;; Leading CR is to overwrite the rlwrap prompt
+          msg (wrap (str "\r[" ts "] " message "\n") (get colors level))]
+      (.append stream msg))))
 
 (s/defn ->ConsoleLogger :- ConsoleLogger
   ([stream]
