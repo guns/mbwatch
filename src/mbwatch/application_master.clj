@@ -18,7 +18,7 @@
   "
   (:require [clojure.core.async :refer [chan close! put!]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
-            [mbwatch.application :refer [->Application info-table]]
+            [mbwatch.application :refer [->Application status-table]]
             [mbwatch.command :refer [CommandSchema OPCODE-HELP
                                      parse-command-input]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
@@ -107,7 +107,7 @@
                        (swap! cache-atom empty)
                        (put! log-chan (->UserCommandFeedback :app/clear))))
                    true)
-    :app/status (do (.println System/err (info-table @(:application application-master)))
+    :app/status (do (.println System/err (status-table @(:application application-master)))
                     true)
     ; :app/reload
     ; :app/restart

@@ -54,6 +54,7 @@
   "
   (:require [clojure.core.async :as async :refer [put!]]
             [clojure.core.async.impl.protocols :refer [WritePort]]
+            [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle start-system
                                                 stop-system]]
             [mbwatch.command :refer [->Command]]
@@ -64,9 +65,11 @@
                                      TIMESTAMP-FORMAT get-default-colors]]
             [mbwatch.imap :refer [->IDLEMaster]]
             [mbwatch.logging :refer [->LoggingService DEBUG]]
+            [mbwatch.mbmap :refer [join-mbentry join-mbmap]]
             [mbwatch.mbsync :refer [->MbsyncMaster]]
             [mbwatch.notification :refer [->NewMessageNotificationService]]
             [mbwatch.sync-timer :refer [->SyncTimer]]
+            [mbwatch.time :refer [human-duration]]
             [mbwatch.types :as t :refer [MapAtom]]
             [mbwatch.util :refer [make-table]]
             [schema.core :as s :refer [maybe]])
@@ -76,7 +79,8 @@
            (mbwatch.logging LoggingService)
            (mbwatch.mbsync MbsyncMaster)
            (mbwatch.notification NewMessageNotificationService)
-           (mbwatch.sync_timer SyncTimer)))
+           (mbwatch.sync_timer SyncTimer)
+           (org.joda.time DateTime)))
 
 (t/defrecord ^:private Application
   [cmd-chan             :- WritePort
@@ -167,9 +171,28 @@
                   idle-master
                   sync-timer)))
 
-(s/defn info-table :- String
+(s/defn status-table :- String
   [application :- Application]
   (let [{:keys [cache-atom logging-service notification-service mbsync-master
                 connection-watcher idle-master sync-timer]} application]
-    (->> [["Password cache?" (str (some? cache-atom))]]
-         (make-table ["" ""]))))
+    (make-table
+      (into
+        [["Current time" (.print TIMESTAMP-FORMAT (DateTime.))]
+         ["idle" (join-mbmap @(:idle-map-atom idle-master))]
+         ["sync" (join-mbmap @(:sync-req-atom sync-timer))]
+         ["notify" (join-mbmap @(:notify-map-atom notification-service))]
+         ["conn-period" (let [{:keys [period alarm]} @(:timer-atom connection-watcher)]
+                          (str (human-duration period)
+                               (when (pos? alarm)
+                                 (str "\tnext: " (human-duration (- alarm (System/currentTimeMillis)))))))]
+         ["sync-period" (let [{:keys [period alarm]} @(:timer-atom sync-timer)]
+                          (str (human-duration period)
+                               (when (pos? alarm)
+                                 (str "\tnext: " (human-duration (- alarm (System/currentTimeMillis)))))))]
+         ["cache-passwords" (str (some? cache-atom))]]
+        (mapv (fn [{:keys [mbchan mboxes start]}]
+                ["Active process"
+                 (format "`mbsync %s` elapsed: %s"
+                         (join-mbentry mbchan mboxes)
+                         (human-duration start (DateTime.)))])
+              @(:events-atom mbsync-master))))))

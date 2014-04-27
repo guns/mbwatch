@@ -59,13 +59,15 @@
            (mapv (fn [{:keys [payload-type user-command help]}]
                    [user-command
                     (condp = payload-type
-                      VOID "none"
+                      VOID ""
                       MBMap "channel:box,…"
-                      Int "integer"
+                      Int "Number + TIME UNIT"
                       #{String} "channel …")
                     help])
                  (take-nth 2 (rest t))))
-         "\n\nCommands may be abbreviated: `i a home:INBOX` -> `idle add home:INBOX`"))
+         "\n"
+         "\n* TIME UNIT: One of d, h, m, s, ms; minutes are the default unit"
+         "\n* Commands may be abbreviated: `i a home:INBOX` -> `idle add home:INBOX`"))
 
   (def ^:private OPCODE-TABLE (apply hash-map t)))
 
