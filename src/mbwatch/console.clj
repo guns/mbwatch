@@ -95,8 +95,8 @@
   IItemLogger
 
   (log [_ log-item]
-    (let [{:keys [level timestamp message]} log-item
-          ts (.print dt-formatter ^DateTime timestamp)
+    (let [{:keys [level ^DateTime timestamp message]} log-item
+          ts (.print dt-formatter timestamp)
           msg (wrap (str "[" ts "] " message) (get colors level))]
       (.append stream msg)
       (.append stream \newline))))
