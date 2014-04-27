@@ -169,7 +169,7 @@
 
 (defloggable IMAPShutdownEvent INFO
   [timeout :- Int]
-  (format "Waiting %s for IMAP disconnection" (human-duration timeout)))
+  (format "Waiting up to %s for IMAP disconnection" (human-duration timeout)))
 
 (defloggable NewMessageNotification INFO
   [mbchan->mbox->messages :- {String {String [MimeMessage]}}]
