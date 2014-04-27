@@ -18,10 +18,11 @@
       (is (= "" (with-out-str (dump! proc :out *out*)))))))
 
 (deftest test-interruptible-wait
-  (is (true? (interruptible-wait (Object.) (spawn "true"))))
+  (is (true? (interruptible-wait (Object.) (spawn "true") 0)))
   (is (false?
         (let [lock (Object.)
-              f (future (interruptible-wait lock (spawn "sleep" "1")))]
+              f (future (interruptible-wait lock (spawn "sleep" "1") 0))]
           (Thread/sleep 10) ; Give the future thread a chance to start
           (sig-notify-all lock)
-          @f))))
+          @f)))
+  (is (false? (interruptible-wait (Object.) (spawn "sleep" "1") 100))))

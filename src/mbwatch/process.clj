@@ -2,7 +2,7 @@
   (:require [clojure.java.io :as io]
             [mbwatch.concurrent :refer [sig-wait]]
             [mbwatch.types :refer [VOID]]
-            [schema.core :as s :refer [either enum]])
+            [schema.core :as s :refer [Int either enum]])
   (:import (java.io File IOException OutputStream Writer)))
 
 (s/defn spawn :- Process
@@ -20,15 +20,18 @@
 
 (s/defn interruptible-wait :- Boolean
   "Run process while waiting on lock. If a notification is received, the
-   process is sent a termination signal and false is returned."
-  [lock      :- Object
-   proc      :- Process]
+   process is sent a termination signal and false is returned. If the process
+   has not ended within timeout ms, the process is terminated and false is
+   returned. A timeout of zero means no timeout."
+  [lock    :- Object
+   proc    :- Process
+   timeout :- Int]
   (let [graceful? (promise)
         ;; Loop so that the user can send multiple termination signals to a
         ;; recalcitrant process.
         sword (future
                 (loop []
-                  (sig-wait lock)
+                  (sig-wait lock timeout)
                   (deliver graceful? false)
                   (.destroy proc)
                   (recur)))]

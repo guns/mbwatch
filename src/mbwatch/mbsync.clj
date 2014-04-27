@@ -48,6 +48,12 @@
            (mbwatch.events MbsyncEventStart)
            (org.joda.time DateTime)))
 
+(def ^:private ^:const MBSYNC-TIMEOUT
+  "Maximum runtime for mbsync processes. If it's taking longer than 10 minutes
+   to sync a channel, either something has gone wrong or the user should run
+   this outside of mbwatch."
+  (* 10 60 1000))
+
 (s/defn ^:private spawn-sync :- Process
   "Asynchronously launch an mbsync process to sync a single mbchan. The config
    string is passed to mbsync via `cat` and bash's <(/dev/fd) feature in order
@@ -131,7 +137,7 @@
         _ (do (put! log-chan ev)
               (swap! events-atom conj ev))
 
-        graceful? (process/interruptible-wait status proc)
+        graceful? (process/interruptible-wait status proc MBSYNC-TIMEOUT)
 
         _ (swap! events-atom disj ev)
 
