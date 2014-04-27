@@ -1,8 +1,8 @@
 (ns mbwatch.mbmap
   "Tools for working with MBMap structures: {String #{String}}"
-  (:require [clojure.set :refer [difference intersection]]
+  (:require [clj-shellwords.core :refer [shell-split]]
+            [clojure.set :refer [difference intersection]]
             [clojure.string :as string]
-            [mbwatch.shellwords :refer [shell-split]]
             [mbwatch.types :refer [MBMap MBTuple]]
             [schema.core :as s :refer [pair]]))
 

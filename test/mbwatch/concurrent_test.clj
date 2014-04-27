@@ -1,5 +1,6 @@
 (ns mbwatch.concurrent-test
-  (:require [clojure.string :as string]
+  (:require [clj-shellwords.core :refer [shell-escape]]
+            [clojure.string :as string]
             [clojure.test :refer [is]]
             [clojure.test.check.clojure-test :refer [defspec]]
             [clojure.test.check.generators :as g :refer [such-that]]
@@ -7,7 +8,6 @@
             [mbwatch.concurrent :refer [->Timer pmapv set-alarm!
                                         sig-notify-all sig-wait-timer
                                         synchronized-sh update-timer!]]
-            [mbwatch.shellwords :refer [shell-escape]]
             [mbwatch.test.common :refer [tol? with-tempfile]]
             [schema.test :refer [deftest]])
   (:import (java.util.concurrent.atomic AtomicBoolean AtomicLong)))

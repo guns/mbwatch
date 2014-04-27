@@ -24,7 +24,8 @@
           └──────────────┘       └──────────────┘    │
                                                     ─┘
    "
-  (:require [clojure.core.async :refer [<!! chan close! put!]]
+  (:require [clj-shellwords.core :refer [shell-escape]]
+            [clojure.core.async :refer [<!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
             [mbwatch.command :refer [CommandSchema]]
@@ -38,7 +39,6 @@
                                      WARNING log-with-timestamp!]]
             [mbwatch.mbmap :refer [join-mbentry]]
             [mbwatch.process :as process]
-            [mbwatch.shellwords :refer [shell-escape]]
             [mbwatch.types :as t :refer [MBMap MapAtom VOID atom-of]]
             [schema.core :as s :refer [Int defschema maybe]])
   (:import (clojure.lang IFn)
