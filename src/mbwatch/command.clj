@@ -54,17 +54,18 @@
          :sync/trigger  (OpcodeMeta. VOID      "trigger"       "Trigger periodic sync")]]
 
   (def OPCODE-HELP
-    (make-table
-      ["Command" "Arguments" "Description"]
-      (mapv (fn [{:keys [payload-type user-command help]}]
-              [user-command
-               (condp = payload-type
-                 VOID "none"
-                 MBMap "channel:box,…"
-                 Int "integer"
-                 #{String} "channel …")
-               help])
-            (take-nth 2 (rest t)))))
+    (str (make-table
+           ["Command" "Arguments" "Description"]
+           (mapv (fn [{:keys [payload-type user-command help]}]
+                   [user-command
+                    (condp = payload-type
+                      VOID "none"
+                      MBMap "channel:box,…"
+                      Int "integer"
+                      #{String} "channel …")
+                    help])
+                 (take-nth 2 (rest t))))
+         "\n\nCommands may be abbreviated: `i a home:INBOX` -> `idle add home:INBOX`"))
 
   (def ^:private OPCODE-TABLE (apply hash-map t)))
 
