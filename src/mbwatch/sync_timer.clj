@@ -124,7 +124,7 @@
     :sync/add (alter-sync-req-atom!
                 swap! sync-timer #(mbmap-merge %1 %2 true) command)
     :sync/remove (alter-sync-req-atom!
-                   swap! sync-timer #(mbmap-disj %1 %2 true) command)
+                   swap! sync-timer mbmap-disj command)
     :sync/set (alter-sync-req-atom!
                 reset! sync-timer nil command)
     nil)

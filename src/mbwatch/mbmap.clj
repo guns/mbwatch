@@ -90,22 +90,15 @@
       (dissoc mbmap mbchan))))
 
 (s/defn mbmap-disj :- MBMap
-  "Disjoin mboxes and mbchans from m₁. If empty-is-universal? is true, an
-   empty set is treated like a universal set."
-  ([m₁ m₂]
-   (mbmap-disj m₁ m₂ false))
-  ([m₁                  :- MBMap
-    m₂                  :- MBMap
-    empty-is-universal? :- Boolean]
-   (if empty-is-universal?
-     (reduce-kv
-       (fn [m mbchan mboxes₁]
-         (let [mboxes₀ (m mbchan)]
-           (cond (empty? mboxes₁) (dissoc m mbchan)
-                 (empty? mboxes₀) m
-                 :else (mbmap-disj* m mbchan mboxes₁))))
-       m₁ m₂)
-     (reduce-kv mbmap-disj* m₁ m₂))))
+  [m₁ :- MBMap
+   m₂ :- MBMap]
+  (reduce-kv
+    (fn [m mbchan mboxes₁]
+      (let [mboxes₀ (m mbchan)]
+        (cond (empty? mboxes₁) (dissoc m mbchan)
+              (empty? mboxes₀) m
+              :else (mbmap-disj* m mbchan mboxes₁))))
+    m₁ m₂))
 
 (s/defn mbmap-merge :- MBMap
   "Like (merge-with union m₁ m₂), except that missing values from m₁ are
