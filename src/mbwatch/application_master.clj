@@ -23,7 +23,7 @@
                                      parse-command-input]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
                                         shutdown-future sig-notify-all]]
-            [mbwatch.config :refer [->Config DEFAULT-CONFIG-PATH]]
+            [mbwatch.config :refer [->Config DEFAULT-MBWATCHRC-PATH]]
             [mbwatch.config.mbsyncrc :refer [DEFAULT-MBSYNCRC-PATH]]
             [mbwatch.console :refer [tty? with-console-input]]
             [mbwatch.events :refer [->UserCommandFeedback]]
@@ -88,7 +88,7 @@
    mbwatch.cli/parse-argv!"
   [options :- {Keyword Any}]
   (let [mbs (:config options DEFAULT-MBSYNCRC-PATH)
-        mbw (:mbwatch-config options DEFAULT-CONFIG-PATH)
+        mbw (:mbwatch-config options DEFAULT-MBWATCHRC-PATH)
         config (->Config options mbs mbw)
         cmd-chan (chan CHAN-SIZE)  ; OPEN cmd-chan
         log-chan (chan CHAN-SIZE)] ; OPEN log-chan

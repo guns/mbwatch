@@ -18,7 +18,7 @@
   (:import (clojure.lang Keyword)
            (mbwatch.config.mbsyncrc Mbsyncrc)))
 
-(def ^:const DEFAULT-CONFIG-PATH
+(def ^:const DEFAULT-MBWATCHRC-PATH
   (str (System/getProperty "user.home") "/.mbwatchrc"))
 
 (s/defn config-options :- [[Any]]
@@ -63,7 +63,7 @@
       :validate [#(.exists (io/file %)) "File does not exist"
                  #(.canRead (io/file %)) "File is unreadable"]]
      ["-C" "--mbwatch-config PATH" "Path to mbwatch configuration file"
-      :default DEFAULT-CONFIG-PATH
+      :default DEFAULT-MBWATCHRC-PATH
       :default-desc "~/.mbwatchrc"
       :validate [#(.exists (io/file %)) "File does not exist"
                  #(.canRead (io/file %)) "File is unreadable"]]
