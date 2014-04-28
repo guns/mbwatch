@@ -6,11 +6,11 @@
             [schema.core :as s :refer [Any either]])
   (:import (clojure.lang Keyword)))
 
-(s/defn usage :- String
+(s/defn ^:private usage :- String
   [options-summary :- String]
   (format (slurp (io/resource "usage.txt")) options-summary))
 
-(s/defn error-msg :- String
+(s/defn ^:private error-msg :- String
   [errors :- [String]]
   (str "The following errors occurred while parsing your command:\n\n"
        (string/join \newline errors)))
