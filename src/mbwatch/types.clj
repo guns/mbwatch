@@ -11,10 +11,8 @@
   {:requires [#'cc/defrecord #'s/defrecord]}
   [name & body]
   (let [fields (first body)
-        schema? (and (coll? fields) (some #{:-} fields))
-        sym (fn [prefix] (symbol (str prefix name)))
-        get-var (fn [prefix] `(resolve '~(sym prefix)))]
-    `(do ~(if schema?
+        get-var (fn [prefix] `(resolve '~(symbol (str prefix name))))]
+    `(do ~(if (and (coll? fields) (some #{:-} fields))
             `(s/defrecord ~name ~@body)
             `(cc/defrecord ~name ~@body))
          (alter-meta! ~(get-var "->") assoc :private true)
