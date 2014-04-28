@@ -82,7 +82,7 @@
            (mbwatch.sync_timer SyncTimer)
            (org.joda.time DateTime)))
 
-(t/defrecord ^:private Application
+(t/defrecord Application
   [cmd-chan             :- WritePort
    log-chan             :- WritePort
    cache-atom           :- (maybe MapAtom)

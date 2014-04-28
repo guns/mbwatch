@@ -77,7 +77,7 @@
   (locking lock
     (.notifyAll lock)))
 
-(t/defrecord ^:private Timer
+(t/defrecord Timer
   [period :- long
    alarm  :- long])
 

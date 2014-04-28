@@ -34,7 +34,7 @@
 
 (declare process-command)
 
-(t/defrecord ^:private SyncTimer
+(t/defrecord SyncTimer
   [cmd-chan-in   :- ReadPort
    cmd-chan-out  :- WritePort
    log-chan      :- WritePort

@@ -6,10 +6,8 @@
   (:refer-clojure :exclude [defrecord]))
 
 (defmacro defrecord
-  "Same as clojure.core/defrecord or schema.core/defrecord, except that
-   the ->name and map->name constructors are set to ^:private. The
-   strict-map->name constructor remains public if the schema version is used,
-   unless the name symbol is also marked ^:private."
+  "Same as clojure.core/defrecord or schema.core/defrecord, except that the
+   ->name, map->name, and strict-map->name constructors are set to ^:private."
   {:requires [#'cc/defrecord #'s/defrecord]}
   [name & body]
   (let [fields (first body)
@@ -21,8 +19,7 @@
             `(cc/defrecord ~name ~@body))
          (alter-meta! ~(get-var "->") assoc :private true)
          (alter-meta! ~(get-var "map->") assoc :private true)
-         ~(when (and schema? (-> name meta :private))
-            `(alter-meta! ~(get-var "strict-map->") assoc :private true)))))
+         (alter-meta! ~(get-var "strict-map->") assoc :private true))))
 
 (defmacro tuple [& schemas]
   `[~@(mapv (fn [s] `(~one ~s ~(str s))) schemas)])

@@ -77,7 +77,7 @@
 (declare with-imap-connection)
 (declare idle!)
 
-(t/defrecord ^:private IDLEWorker
+(t/defrecord IDLEWorker
   [mbchan           :- String
    mbox             :- String
    imap-credential  :- IMAPCredential

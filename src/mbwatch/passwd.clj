@@ -3,7 +3,7 @@
             [mbwatch.types :as t]
             [schema.core :as s :refer [Int]]))
 
-(t/defrecord ^:private Passwd
+(t/defrecord Passwd
   [name   :- String
    passwd :- String
    uid    :- Int

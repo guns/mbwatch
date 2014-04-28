@@ -120,7 +120,7 @@
     "Returns a new version of sync-req-map, adding or removing self from it as
      necessary."))
 
-(t/defrecord ^:private NewMessageNotificationService
+(t/defrecord NewMessageNotificationService
   [notify-command  :- String
    notify-map-atom :- MBMapAtom
    log-chan-in     :- ReadPort

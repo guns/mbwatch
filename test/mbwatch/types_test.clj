@@ -7,10 +7,10 @@
   (let [ns-sym `types-test#]
     (try
       (eval `(do (ns ~ns-sym ~'(:require [mbwatch.types :as t]))
-                 ~'(t/defrecord ^:private Foo [bar :- Integer])))
-      (is (nil? (ns-resolve ns-sym '->Foo)))
-      (is (nil? (ns-resolve ns-sym 'map->Foo)))
-      (is (:private (meta (ns-resolve ns-sym 'strict-map->Foo))))
+                 ~'(t/defrecord Foo [bar :- Integer])))
+      (is (= (mapv #(:private (meta (ns-resolve ns-sym %)))
+                   ['->Foo 'map->Foo 'strict-map->Foo])
+             [true true true]))
       (finally
         (remove-ns ns-sym)))))
 

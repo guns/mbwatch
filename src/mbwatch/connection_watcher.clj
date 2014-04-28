@@ -148,7 +148,7 @@
 (declare filter-command)
 (declare watch-connections!)
 
-(t/defrecord ^:private ConnectionWatcher
+(t/defrecord ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
    cmd-chan-in            :- ReadPort
    cmd-chan-out           :- WritePort

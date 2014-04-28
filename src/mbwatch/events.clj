@@ -76,7 +76,7 @@
           msg (str prefix imap-url)]
       (LogItem. level timestamp (if error (str msg "\n" error) msg)))))
 
-(t/defrecord ^:private UserCommandFeedback
+(t/defrecord UserCommandFeedback
   [type      :- (apply enum (keys USER-COMMAND-FEEDBACK-MAP))
    data      :- Any
    timestamp :- DateTime]
@@ -144,6 +144,9 @@
                     (.append buf error))
                   (str buf)))]
       (LogItem. level stop msg))))
+
+(do (alter-meta! #'strict-map->MbsyncEventStop dissoc :private)
+    (alter-meta! #'strict-map->MbsyncEventStart dissoc :private))
 
 (defloggable MbsyncUnknownChannelError WARNING
   [id     :- Int

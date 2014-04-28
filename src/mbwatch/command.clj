@@ -20,7 +20,7 @@
    global var."
   (AtomicLong. 0))
 
-(t/defrecord ^:private OpcodeMeta
+(t/defrecord OpcodeMeta
   [payload-type :- Schema
    user-command :- String
    help         :- String])
@@ -81,7 +81,7 @@
 (defschema ^:private Opcode
   (apply enum (keys OPCODE-TABLE)))
 
-(t/defrecord ^:private Command
+(t/defrecord Command
   [opcode    :- Opcode
    payload   :- Any
    id        :- long

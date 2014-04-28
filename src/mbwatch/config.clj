@@ -118,7 +118,7 @@
                        (string/join "\n" errors))))
       options)))
 
-(t/defrecord ^:private Config
+(t/defrecord Config
   [mbsyncrc        :- Mbsyncrc
    idle            :- MBMap
    sync            :- MBMap

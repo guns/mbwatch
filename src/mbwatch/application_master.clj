@@ -37,7 +37,7 @@
 
 (declare process-command)
 
-(t/defrecord ^:private ApplicationMaster
+(t/defrecord ApplicationMaster
   [application :- (atom-of Application "ApplicationAtom")
    status      :- AtomicBoolean
    exit-fn     :- (maybe IFn)]

@@ -213,7 +213,7 @@
                                   (render-section s :maildirstore)
                                   (render-section s :channel)))))
 
-(t/defrecord ^:private Mbsyncrc
+(t/defrecord Mbsyncrc
   [render-fn              :- IFn
    sections               :- Sections
    mbchans                :- #{Word}

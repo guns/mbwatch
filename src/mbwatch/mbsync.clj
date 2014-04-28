@@ -70,7 +70,7 @@
 
 (declare sync-boxes!)
 
-(t/defrecord ^:private MbsyncWorker
+(t/defrecord MbsyncWorker
   [render-fn   :- IFn
    events-atom :- CurrentEventsAtom
    cache-atom  :- (maybe MapAtom)
@@ -164,7 +164,7 @@
 
 (declare process-command)
 
-(t/defrecord ^:private MbsyncMaster
+(t/defrecord MbsyncMaster
   [mbsyncrc    :- Mbsyncrc
    events-atom :- CurrentEventsAtom
    cache-atom  :- (maybe MapAtom)
