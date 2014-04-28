@@ -54,7 +54,6 @@
   "
   (:require [clojure.core.async :as async :refer [put!]]
             [clojure.core.async.impl.protocols :refer [WritePort]]
-            [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle start-system
                                                 stop-system]]
             [mbwatch.command :refer [->Command]]
@@ -73,7 +72,8 @@
             [mbwatch.types :as t :refer [MapAtom]]
             [mbwatch.util :refer [make-table]]
             [schema.core :as s :refer [maybe]])
-  (:import (mbwatch.config Config)
+  (:import (mbwatch.concurrent Timer)
+           (mbwatch.config Config)
            (mbwatch.connection_watcher ConnectionWatcher)
            (mbwatch.imap IDLEMaster)
            (mbwatch.logging LoggingService)
@@ -171,6 +171,13 @@
                   idle-master
                   sync-timer)))
 
+(s/defn ^:private timer-status :- String
+  [timer :- Timer]
+  (let [{:keys [period alarm]} timer]
+    (str (human-duration period)
+         (when (pos? alarm)
+           (str "\tnext: " (human-duration (- alarm (System/currentTimeMillis))))))))
+
 (s/defn status-table :- String
   [application :- Application]
   (let [{:keys [cache-atom logging-service notification-service mbsync-master
@@ -181,14 +188,8 @@
          ["idle" (join-mbmap @(:idle-map-atom idle-master))]
          ["sync" (join-mbmap @(:sync-req-atom sync-timer))]
          ["notify" (join-mbmap @(:notify-map-atom notification-service))]
-         ["conn-period" (let [{:keys [period alarm]} @(:timer-atom connection-watcher)]
-                          (str (human-duration period)
-                               (when (pos? alarm)
-                                 (str "\tnext: " (human-duration (- alarm (System/currentTimeMillis)))))))]
-         ["sync-period" (let [{:keys [period alarm]} @(:timer-atom sync-timer)]
-                          (str (human-duration period)
-                               (when (pos? alarm)
-                                 (str "\tnext: " (human-duration (- alarm (System/currentTimeMillis)))))))]
+         ["conn-period" (timer-status @(:timer-atom connection-watcher))]
+         ["sync-period" (timer-status @(:timer-atom sync-timer))]
          ["cache-passwords" (str (some? cache-atom))]]
         (mapv (fn [{:keys [mbchan mboxes start]}]
                 ["Active process"
