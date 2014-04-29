@@ -18,26 +18,28 @@
   (and (.isDirectory f)
        (subset? #{"cur" "new" "tmp"} (set (.list f)))))
 
-(s/defn get-mdir :- File
+(s/defn get-mdir :- String
   [maildir :- Maildirstore
    mbox    :- String]
   (let [{:keys [path inbox flatten]} maildir]
-    (cond (= "INBOX" mbox) (io/file inbox)
-          (nil? flatten) (io/file path mbox)
+    (cond (= "INBOX" mbox) (str (io/file inbox))
+          (nil? flatten) (str (io/file path mbox))
           :else (->> (string/split mbox #"/")
                      (string/join flatten)
-                     (io/file path)))))
+                     (io/file path)
+                     str))))
 
-(s/defn get-all-mdirs :- #{File}
+(s/defn get-all-mdirs :- #{String}
   [maildir :- Maildirstore]
   (let [{:keys [inbox path]} maildir
-        inbox-dir (io/file inbox)
         mdirs (cond-> #{}
-                (maildir? inbox-dir) (conj inbox-dir))]
-    (->> (io/file path)
-         .listFiles
-         (filterv (fn [^File f] (and (.isDirectory f) (maildir? f))))
-         (into mdirs))))
+                (maildir? (io/file inbox)) (conj inbox))]
+    (reduce
+      (fn [s ^File f]
+        (if (and (.isDirectory f) (maildir? f))
+          (conj s (str f))
+          s))
+      mdirs (.listFiles (io/file path)))))
 
 (s/defn new-messages :- [MimeMessage]
   "Vector of new messages in maildir newer than given timestamp. Messages are

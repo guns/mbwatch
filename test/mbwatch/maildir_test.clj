@@ -14,16 +14,16 @@
                  :path "/home/user/Mail/gmail"
                  :flatten "."}]
     (is (= (get-mdir maildir "INBOX")
-           (io/file "/home/user/Mail/INBOX")))
+           "/home/user/Mail/INBOX"))
     (is (= (get-mdir maildir "clojure")
-           (io/file "/home/user/Mail/gmail/clojure")))
+           "/home/user/Mail/gmail/clojure"))
     (is (= (get-mdir maildir "[Gmail]/Sent Mail")
-           (io/file "/home/user/Mail/gmail/[Gmail].Sent Mail")))
+           "/home/user/Mail/gmail/[Gmail].Sent Mail"))
     (is (= (get-mdir (assoc maildir :flatten nil) "[Gmail]/Sent Mail")
-           (io/file "/home/user/Mail/gmail/[Gmail]/Sent Mail")))))
+           "/home/user/Mail/gmail/[Gmail]/Sent Mail"))))
 
 (deftest test-get-all-mdirs
-  (is (= (into #{} (mapv #(io/file "test-resources/maildir/foo-mdir" %) ["INBOX" "clojure"]))
+  (is (= (into #{} (mapv #(str "test-resources/maildir/foo-mdir/" %) ["INBOX" "clojure"]))
          (get-all-mdirs {:path "test-resources/maildir/foo-mdir"
                          :inbox "test-resources/maildir/foo-mdir/INBOX"
                          :flatten nil}))))
