@@ -130,7 +130,7 @@
   (merge-with (fn [s₁ s₂] (into (or s₁ #{}) s₂)) m₁ m₂))
 
 (s/defn mbmap-merge :- MBMap
-  "Merge two MBMaps, treating the empty set is treated like a universal set.
+  "Merge two MBMaps, treating the empty set as universal.
    i.e. (conj #{} :any) -> #{}"
   [m₁ :- MBMap
    m₂ :- MBMap]
