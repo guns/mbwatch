@@ -44,4 +44,4 @@
                     (istr= "ms" u) n
                     :else (throw (illegal-time-unit u)))]
         (+ ms (Math/round ^double n))))
-    0 (re-seq #"(\d+(?:\.\d+)?)([^\d\s]*)" s)))
+    0 (re-seq #"([+-]?\d+(?:\.\d+)?)([^\d\s]*)" s)))
