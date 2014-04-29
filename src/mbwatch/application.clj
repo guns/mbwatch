@@ -174,7 +174,9 @@
 (s/defn ^:private timer-status :- String
   [timer :- Timer]
   (let [{:keys [period alarm]} timer]
-    (str (human-duration period)
+    (str (if (zero? period)
+           "disabled"
+           (human-duration period))
          (when (pos? alarm)
            (str "\tnext: " (human-duration (- alarm (System/currentTimeMillis))))))))
 
