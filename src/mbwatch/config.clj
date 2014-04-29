@@ -5,7 +5,7 @@
             [clojure.string :as string]
             [clojure.tools.cli :refer [get-default-options parse-opts]]
             [mbwatch.config.mbsyncrc :refer [DEFAULT-MBSYNCRC-PATH
-                                             Maildirstore parse-mbsyncrc]]
+                                             parse-mbsyncrc]]
             [mbwatch.connection-watcher :as cw]
             [mbwatch.logging :refer [DEBUG EMERG INFO LOG-LEVELS
                                      NAME->LOG-LEVEL]]
@@ -158,14 +158,3 @@
                     (update-in [:notify] mbmap-merge idle))]
     (strict-map->Config
       (assoc options :mbsyncrc mbsyncrc))))
-
-(s/defn mdir-path :- String
-  [maildir :- Maildirstore
-   mbox    :- String]
-  (let [{:keys [path inbox flatten]} maildir]
-    (cond (= "INBOX" mbox) inbox
-          (nil? flatten) (str (io/file path mbox))
-          :else (->> (string/split mbox #"/")
-                     (string/join flatten)
-                     (io/file path)
-                     str))))

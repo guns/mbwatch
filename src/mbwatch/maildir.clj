@@ -1,5 +1,7 @@
 (ns mbwatch.maildir
   (:require [clojure.java.io :as io]
+            [clojure.string :as string]
+            [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [schema.core :as s])
   (:import (java.io File FileInputStream)
            (javax.mail Session)
@@ -28,3 +30,14 @@
        (mapcat #(.getFrom ^MimeMessage %))
        distinct
        (mapv #(MimeUtility/decodeText (str %)))))
+
+(s/defn mdir-path :- String
+  [maildir :- Maildirstore
+   mbox    :- String]
+  (let [{:keys [path inbox flatten]} maildir]
+    (cond (= "INBOX" mbox) inbox
+          (nil? flatten) (str (io/file path mbox))
+          :else (->> (string/split mbox #"/")
+                     (string/join flatten)
+                     (io/file path)
+                     str))))

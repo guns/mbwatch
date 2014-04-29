@@ -17,12 +17,11 @@
             [mbwatch.command :refer [CommandSchema]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
                                         thread-loop]]
-            [mbwatch.config :refer [mdir-path]]
             [mbwatch.events :refer [->NewMessageNotification
                                     ->UserCommandFeedback]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
-            [mbwatch.maildir :refer [new-messages senders]]
+            [mbwatch.maildir :refer [mdir-path new-messages senders]]
             [mbwatch.mbmap :refer [mbmap-diff mbmap-disj mbmap-merge
                                    mbtuples->mbmap]]
             [mbwatch.process :as process]

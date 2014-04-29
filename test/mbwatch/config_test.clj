@@ -2,7 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.test :refer [is]]
             [clojure.tools.cli :refer [get-default-options]]
-            [mbwatch.config :refer [->Config config-options mdir-path]]
+            [mbwatch.config :refer [->Config config-options]]
             [mbwatch.config.mbsyncrc]
             [schema.core :refer [validate]]
             [schema.test :refer [deftest]])
@@ -24,16 +24,3 @@
   (is (= (-> (->Config {} (io/resource "mbsyncrc") "/does/not/exist")
              (dissoc :mbsyncrc))
          (get-default-options (config-options)))))
-
-(deftest test-mdir-path
-  (let [maildir {:inbox "/home/user/Mail/INBOX"
-                 :path "/home/user/Mail/gmail"
-                 :flatten "."}]
-    (is (= (mdir-path maildir "INBOX")
-           "/home/user/Mail/INBOX"))
-    (is (= (mdir-path maildir "clojure")
-           "/home/user/Mail/gmail/clojure"))
-    (is (= (mdir-path maildir "[Gmail]/Sent Mail")
-           "/home/user/Mail/gmail/[Gmail].Sent Mail"))
-    (is (= (mdir-path (assoc maildir :flatten nil) "[Gmail]/Sent Mail")
-           "/home/user/Mail/gmail/[Gmail]/Sent Mail"))))
