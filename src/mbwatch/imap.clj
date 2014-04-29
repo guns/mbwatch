@@ -192,6 +192,17 @@
               (log :disconnect))
           (log :lost))))))
 
+(s/defn ^:private idle-message-count-listener :- MessageCountListener
+  [sync-req :- MBMap
+   cmd-chan :- WritePort
+   log-chan :- WritePort
+   imap-url :- String]
+  (reify MessageCountListener
+    (messagesAdded [this ev]
+      (catch-print
+        (put! log-chan (->IDLENewMessageEvent (count (.getMessages ev)) imap-url))
+        (put! cmd-chan (->Command :sync sync-req))))))
+
 (s/defn ^:private idle! :- VOID
   "IDLE on mbchan/mbox and queue :sync Commands on new messages. Blocks thread
    indefinitely. Signal :status to restart. Set :status to false then signal
@@ -200,18 +211,14 @@
    Will return false on IMAP errors."
   [idle-worker :- IDLEWorker
    imap-store  :- IMAPStore]
-  (let [{:keys [mbchan ^String mbox ^AtomicBoolean status ^AtomicBoolean connection
-                cmd-chan log-chan]} idle-worker
+  (let [{:keys [mbchan ^String mbox ^AtomicBoolean status
+                ^AtomicBoolean connection cmd-chan log-chan]} idle-worker
         folder ^IMAPFolder (.getFolder imap-store mbox)
-        url (str imap-store \/ mbox)
-        handler (reify MessageCountListener
-                  (messagesAdded [this ev]
-                    (catch-print
-                      (put! log-chan (->IDLENewMessageEvent (count (.getMessages ev)) url))
-                      (put! cmd-chan (->Command :sync {mbchan #{mbox}})))))]
+        url (str imap-store \/ mbox)]
     (try
       (.open folder Folder/READ_ONLY)
-      (.addMessageCountListener folder handler)
+      (.addMessageCountListener folder (idle-message-count-listener
+                                         {mbchan #{mbox}} cmd-chan log-chan url))
       (put! log-chan (->IDLEEvent url))
       (loop []
         (when (.get status)
