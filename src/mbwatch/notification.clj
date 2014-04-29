@@ -205,6 +205,15 @@
                     sync-req-map)
     sync-req-map))
 
+(s/defn ^:private notify-events! :- VOID
+  [notify-service :- NewMessageNotificationService
+   events         :- [MbsyncEventStop]]
+  (let [{:keys [log-chan-out notify-command notify-map-atom]} notify-service]
+    (when-some [note (find-new-messages @notify-map-atom events)]
+      (put! log-chan-out note)
+      (when-seq [cmd notify-command]
+        (notify! cmd note)))))
+
 (s/defn ^:private process-stop-event :- SyncRequestMap
   [event          :- (either MbsyncEventStop MbsyncUnknownChannelError)
    sync-req-map   :- SyncRequestMap
@@ -218,12 +227,7 @@
                      conj-event? (conj event))]
         (if (zero? countdown)
           (do (future-catch-print
-                (when-some [note (find-new-messages
-                                   (deref (:notify-map-atom notify-service))
-                                   events)]
-                  (put! (:log-chan-out notify-service) note)
-                  (when-seq [cmd (:notify-command notify-service)]
-                    (notify! cmd note))))
+                (notify-events! notify-service events))
               (dissoc sync-req-map id))
           (assoc sync-req-map id {:countdown countdown :events events})))
       sync-req-map)))
