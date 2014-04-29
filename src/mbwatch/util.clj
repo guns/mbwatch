@@ -54,6 +54,12 @@
                   (mapv #(apply format fmt %) rows))
           (string/join \newline)))))
 
+(s/defn multi-row-entry :- [[String]]
+  [title  :- String
+   & rows :- [[String]]]
+  (partition (inc (count rows))
+             (apply interleave (concat [title] (repeat "")) rows)))
+
 (s/defn parse-kv-string :- {Keyword String}
   "Simple key = value parser. Like ini, but without hierarchy, multiline
    values, or very many features at all."

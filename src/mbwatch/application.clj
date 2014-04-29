@@ -54,6 +54,7 @@
   "
   (:require [clojure.core.async :as async :refer [put!]]
             [clojure.core.async.impl.protocols :refer [WritePort]]
+            [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle start-system
                                                 stop-system]]
             [mbwatch.command :refer [->Command]]
@@ -70,7 +71,7 @@
             [mbwatch.sync-timer :refer [->SyncTimer]]
             [mbwatch.time :refer [human-duration]]
             [mbwatch.types :as t :refer [MapAtom]]
-            [mbwatch.util :refer [make-table]]
+            [mbwatch.util :refer [make-table multi-row-entry]]
             [schema.core :as s :refer [maybe]])
   (:import (mbwatch.concurrent Timer)
            (mbwatch.config Config)
@@ -174,18 +175,20 @@
 (s/defn ^:private timer-status :- String
   [timer :- Timer]
   (let [{:keys [period alarm]} timer]
-    (str (if (zero? period)
-           "disabled"
-           (human-duration period))
-         (when (pos? alarm)
-           (str "\tnext: " (human-duration (- alarm (System/currentTimeMillis))))))))
+    (format "%-20s %s"
+            (if (zero? period)
+              "disabled"
+              (human-duration period))
+            (if (pos? alarm)
+              (str "next: " (human-duration (- alarm (System/currentTimeMillis))))
+              ""))))
 
 (s/defn status-table :- String
   [application :- Application]
   (let [{:keys [cache-atom logging-service notification-service mbsync-master
                 connection-watcher idle-master sync-timer]} application]
     (make-table
-      (into
+      (concat
         [["Current time" (.print TIMESTAMP-FORMAT (DateTime.))]
          ["idle" (join-mbmap @(:idle-map-atom idle-master))]
          ["sync" (join-mbmap @(:sync-req-atom sync-timer))]
@@ -193,9 +196,21 @@
          ["conn-period" (timer-status @(:timer-atom connection-watcher))]
          ["sync-period" (timer-status @(:timer-atom sync-timer))]
          ["cache-passwords" (str (some? cache-atom))]]
-        (mapv (fn [{:keys [mbchan mboxes start]}]
-                ["Active process"
-                 (format "`mbsync %s` elapsed: %s"
-                         (join-mbentry mbchan mboxes)
-                         (human-duration start (DateTime.)))])
-              @(:events-atom mbsync-master))))))
+        (multi-row-entry
+          "Connections"
+          (mapv (fn [[mbchan {:keys [status pending-syncs]}]]
+                  (format "[%4s] %-13s %s"
+                          (if status " OK " "FAIL")
+                          mbchan
+                          (if (and (not status) pending-syncs)
+                            (str "pending syncs: "
+                                 (string/join \, pending-syncs))
+                            "")))
+                @(:connections-atom connection-watcher)))
+        (multi-row-entry
+          "Processes"
+          (mapv (fn [{:keys [mbchan mboxes start]}]
+                  (format "`mbsync %s` elapsed: %s"
+                          (join-mbentry mbchan mboxes)
+                          (human-duration start (DateTime.))))
+                @(:events-atom mbsync-master)))))))
