@@ -6,7 +6,7 @@
             [mbwatch.time :refer [parse-ms]]
             [mbwatch.trie :refer [EMPTY-TRIE-NODE add-substring-aliases
                                   lookup]]
-            [mbwatch.types :as t :refer [MBMap VOID tuple]]
+            [mbwatch.types :as t :refer [MBMap MBMap+ VOID tuple]]
             [mbwatch.util :refer [make-table]]
             [schema.core :as s :refer [Any Int Schema both defschema either
                                        enum maybe pred validate]])
@@ -36,9 +36,9 @@
          :conn/period   (OpcodeMeta. Int       "conn period"   "Set connection check period")
          :conn/trigger  (OpcodeMeta. VOID      "conn trigger"  "Re-check connections")
 
-         :idle/add      (OpcodeMeta. MBMap     "idle add"      "Add to watched mboxes")
+         :idle/add      (OpcodeMeta. MBMap+    "idle add"      "Add to watched mboxes")
          :idle/remove   (OpcodeMeta. MBMap     "idle remove"   "Remove from watched mboxes")
-         :idle/set      (OpcodeMeta. MBMap     "idle set"      "Set watched mboxes")
+         :idle/set      (OpcodeMeta. MBMap+    "idle set"      "Set watched mboxes")
          :idle/restart  (OpcodeMeta. VOID      "idle RESTART"  "Restart IMAP connections")
 
          :notify/add    (OpcodeMeta. MBMap     "notify add"    "Add to notification mboxes")
@@ -60,7 +60,8 @@
                    [user-command
                     (condp = payload-type
                       VOID ""
-                      MBMap "channel:box,…"
+                      MBMap "channel[:box,…]"
+                      MBMap+ "channel:box[,…]"
                       Int "Number + TIME UNIT"
                       #{String} "channel …")
                     help])
@@ -134,21 +135,21 @@
                         (mapv (comp pr-str :user-command OPCODE-TABLE) ops)))
       :else
       (let [op (first ops)
-            op-str (pr-str op)
-            {:keys [payload-type]} (OPCODE-TABLE op)]
+            {:keys [payload-type user-command]} (OPCODE-TABLE op)
+            op-str (pr-str user-command)]
         (condp = payload-type
           VOID (if (seq args)
                  (str op-str " takes no arguments")
                  (->Command op nil))
-          MBMap (if (empty? args)
-                  (->Command op {})
-                  (->Command op (parse-mbline (string/join \space args))))
+          MBMap (->Command op (parse-mbline (string/join \space args)))
+          MBMap+ (let [mbmap (parse-mbline (string/join \space args))]
+                   (if (nil? (s/check MBMap+ mbmap))
+                     (->Command op mbmap)
+                     (str op-str " requires arguments in the form of channel:box[,…]")))
           Int (if (or (not= (count args) 1))
                 (str op-str " expects a single time argument")
                 (try
                   (->Command op (parse-ms (first args)))
                   (catch Throwable e
                     (str e))))
-          #{String} (if (empty? args)
-                      (str op-str " expects a list of channels")
-                      (->Command op (set args))))))))
+          #{String} (->Command op (set args)))))))

@@ -65,6 +65,13 @@
 (defschema MBMapAtom
   (atom-of MBMap "MBMapAtom"))
 
+(defschema MBMap+
+  (both MBMap
+        (pred #(every? seq (vals %)) "mboxes present?")))
+
+(defschema MBMap+Atom
+  (atom-of MBMap+ "MBMap+Atom"))
+
 (defschema MBTuple
   (pair String "mbchan"
         String "mbox"))

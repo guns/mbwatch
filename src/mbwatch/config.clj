@@ -12,7 +12,7 @@
             [mbwatch.mbmap :refer [mbmap-merge parse-mbline]]
             [mbwatch.sync-timer :as st]
             [mbwatch.time :refer [human-duration parse-ms]]
-            [mbwatch.types :as t :refer [MBMap]]
+            [mbwatch.types :as t :refer [MBMap MBMap+]]
             [mbwatch.util :refer [istr= parse-kv-string zero-or-min]]
             [schema.core :as s :refer [Any Int validate]])
   (:import (clojure.lang Keyword)
@@ -25,6 +25,7 @@
   "Default config options as a tools.cli options vector."
   []
   (let [mbmap? (partial validate MBMap)
+        mbmap+? (partial validate MBMap+)
         notify-cmd (if (zero? (:exit (sh "sh" "-c" "command -v notify-send")))
                      "notify-send \"$(cat)\""
                      "")
@@ -40,8 +41,7 @@
       :default-desc ""
       :parse-fn parse-mbline
       :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge v))
-      :validate [mbmap? "Bad mbsync argument format"
-                 #(every? seq (vals %)) "No mailboxes specified"]]
+      :validate [mbmap+? "No mailboxes specified"]]
      ["-s" "--sync MBSYNC-ARGS" "Channels to periodically sync"
       :default {}
       :default-desc ""
@@ -119,7 +119,7 @@
 
 (t/defrecord Config
   [mbsyncrc        :- Mbsyncrc
-   idle            :- MBMap
+   idle            :- MBMap+
    sync            :- MBMap
    notify          :- MBMap
    log-level       :- Int

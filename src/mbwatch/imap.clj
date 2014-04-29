@@ -29,8 +29,9 @@
                                      log-with-timestamp!]]
             [mbwatch.mbmap :refer [mbmap->mbtuples mbmap-diff mbmap-disj
                                    mbmap-merge mbtuples->mbmap]]
-            [mbwatch.types :as t :refer [ConnectionMapAtom MBMap MBMapAtom
-                                         MBTuple MapAtom VOID Word]]
+            [mbwatch.types :as t :refer [ConnectionMapAtom MBMap MBMap+
+                                         MBMap+Atom MBTuple MapAtom VOID
+                                         Word]]
             [mbwatch.util :refer [catch-print url-for]]
             [schema.core :as s :refer [Any Int defschema either maybe]])
   (:import (clojure.lang IFn)
@@ -244,7 +245,7 @@
 (t/defrecord IDLEMaster
   [mbchan->IMAPCredential :- {Word IMAPCredential}
    cache-atom             :- (maybe MapAtom)
-   idle-map-atom          :- MBMapAtom
+   idle-map-atom          :- MBMap+Atom
    connections-atom       :- ConnectionMapAtom
    timeout                :- Int
    cmd-chan-in            :- ReadPort
@@ -285,7 +286,7 @@
 
 (s/defn ->IDLEMaster :- IDLEMaster
   [mbchan->IMAPCredential :- {Word IMAPCredential}
-   idle-map               :- MBMap
+   idle-map               :- MBMap+
    cache-atom             :- (maybe MapAtom)
    connections-atom       :- ConnectionMapAtom ; Read-only!
    timeout                :- Int
