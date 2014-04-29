@@ -141,7 +141,7 @@
                  (str op-str " takes no arguments")
                  (->Command op nil))
           MBMap (if (empty? args)
-                  (str op-str " expects arguments of the form channel:box,…")
+                  (->Command op {})
                   (->Command op (parse-mbline (string/join \space args))))
           Int (if (or (not= (count args) 1))
                 (str op-str " expects a single time argument")
