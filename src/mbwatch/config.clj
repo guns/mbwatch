@@ -32,8 +32,6 @@
                                EMERG DEBUG (string/join ", " LOG-LEVELS))
         file-is-readable [#(.exists (io/file %)) "File does not exist"
                           #(.canRead (io/file %)) "File is unreadable"]
-        mbmap-has-mboxes [mbmap? "Bad mbsync argument format"
-                          #(every? seq (vals %)) "No mailboxes specified"]
         zero-or-min? (fn [period]
                        [#(zero-or-min % period)
                         (str "Must be zero or >= " (human-duration period))])]
@@ -42,7 +40,8 @@
       :default-desc ""
       :parse-fn parse-mbline
       :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge v))
-      :validate mbmap-has-mboxes]
+      :validate [mbmap? "Bad mbsync argument format"
+                 #(every? seq (vals %)) "No mailboxes specified"]]
      ["-s" "--sync MBSYNC-ARGS" "Channels to periodically sync"
       :default {}
       :default-desc ""
@@ -53,8 +52,8 @@
       :default {}
       :default-desc ""
       :parse-fn parse-mbline
-      :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge v))
-      :validate mbmap-has-mboxes]
+      :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge v true))
+      :validate [mbmap? "Bad mbsync argument format"]]
      ["-l" "--log-level LEVEL" log-level-desc
       :default INFO
       :default-desc "INFO"
@@ -148,13 +147,10 @@
         ;; Parse the config file as if it were an command line argument vector
         options (merge (parse-config-file mbwatch-config-path)
                        cli-options)
-        idle (:idle options)
-        options (-> options
-                    ;; Periodically sync idle channels unless specified
-                    (update-in [:sync] #(if (seq %)
-                                          %
-                                          (zipmap (keys idle) (repeat #{}))))
-                    ;; Always notify on IDLE mboxes
-                    (update-in [:notify] mbmap-merge idle))]
+        ;; Notify on all IDLE and periodic syncs by default
+        options (update-in options [:notify]
+                           #(if (seq %)
+                              %
+                              (mbmap-merge (:idle options) (:sync options) true)))]
     (strict-map->Config
       (assoc options :mbsyncrc mbsyncrc))))

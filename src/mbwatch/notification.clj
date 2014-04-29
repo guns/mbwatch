@@ -19,7 +19,8 @@
                                     ->UserCommandFeedback]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
-            [mbwatch.maildir :refer [get-mdir new-messages senders]]
+            [mbwatch.maildir :refer [get-all-mdirs get-mdir new-messages
+                                     senders]]
             [mbwatch.mbmap :refer [mbmap-diff mbmap-disj mbmap-merge
                                    mbtuples->mbmap]]
             [mbwatch.process :as process]
@@ -61,10 +62,14 @@
    event      :- MbsyncEventStop]
   (let [{:keys [mbchan mboxes maildir start]} event]
     (when (and maildir (contains? notify-map mbchan))
-      (let [nboxes (notify-map mbchan)
-            bs (if (empty? mboxes)
-                 nboxes ; #{} means full sync
-                 (intersection mboxes nboxes))
+      (let [notify-mboxes (notify-map mbchan)
+            ;; TODO: Filter by `Patterns`?
+            mboxes (if (seq mboxes)
+                     mboxes
+                     (get-all-mdirs maildir))
+            bs (if (empty? notify-mboxes)
+                 mboxes
+                 (intersection mboxes notify-mboxes))
             timestamp (dt->ms start)]
         (reduce
           (fn [m b]
@@ -194,8 +199,9 @@
                   swap! notify-service mbmap-merge (assoc command :payload m))
                 sync-req-map)
     [:idle/add
+     :sync/add
      :notify/add] (do (alter-notify-map-atom!
-                        swap! notify-service mbmap-merge command)
+                        swap! notify-service #(mbmap-merge %1 %2 true) command)
                       sync-req-map)
     :notify/remove (do (alter-notify-map-atom!
                          swap! notify-service mbmap-disj command)
