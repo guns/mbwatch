@@ -1,5 +1,5 @@
 (ns mbwatch.maildir
-  (:require [clojure.java.io :as io]
+  (:require [clojure.java.io :as io :refer [Coercions]]
             [clojure.string :as string]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [schema.core :as s])
@@ -12,12 +12,22 @@
   (MimeMessage. (Session/getDefaultInstance (System/getProperties))
                 (FileInputStream. file)))
 
+(s/defn get-mdir :- File
+  [maildir :- Maildirstore
+   mbox    :- String]
+  (let [{:keys [path inbox flatten]} maildir]
+    (cond (= "INBOX" mbox) (io/file inbox)
+          (nil? flatten) (io/file path mbox)
+          :else (->> (string/split mbox #"/")
+                     (string/join flatten)
+                     (io/file path)))))
+
 (s/defn new-messages :- [MimeMessage]
   "Vector of new messages in maildir newer than given timestamp. Messages are
    sorted in reverse order by timestamp."
-  [mdir-path :- String
-   mtime     :- long]
-  (->> (io/file mdir-path "new")
+  [mdir  :- Coercions
+   mtime :- long]
+  (->> (io/file mdir "new")
        .listFiles
        (filter (fn [^File f] (and (.isFile f) (> (.lastModified f) mtime))))
        (sort-by #(- (.lastModified ^File %)))
@@ -30,14 +40,3 @@
        (mapcat #(.getFrom ^MimeMessage %))
        distinct
        (mapv #(MimeUtility/decodeText (str %)))))
-
-(s/defn mdir-path :- String
-  [maildir :- Maildirstore
-   mbox    :- String]
-  (let [{:keys [path inbox flatten]} maildir]
-    (cond (= "INBOX" mbox) inbox
-          (nil? flatten) (str (io/file path mbox))
-          :else (->> (string/split mbox #"/")
-                     (string/join flatten)
-                     (io/file path)
-                     str))))

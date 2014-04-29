@@ -1,12 +1,25 @@
 (ns mbwatch.maildir-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer [is]]
-            [mbwatch.maildir :refer [mdir-path new-messages senders]]
+            [mbwatch.maildir :refer [get-mdir new-messages senders]]
             [schema.test :refer [deftest]])
   (:import (java.io File)))
 
 (def ^String TEST-MDIR
   "test-resources/maildir/foo-mdir/INBOX")
+
+(deftest test-get-mdir
+  (let [maildir {:inbox "/home/user/Mail/INBOX"
+                 :path "/home/user/Mail/gmail"
+                 :flatten "."}]
+    (is (= (get-mdir maildir "INBOX")
+           (io/file "/home/user/Mail/INBOX")))
+    (is (= (get-mdir maildir "clojure")
+           (io/file "/home/user/Mail/gmail/clojure")))
+    (is (= (get-mdir maildir "[Gmail]/Sent Mail")
+           (io/file "/home/user/Mail/gmail/[Gmail].Sent Mail")))
+    (is (= (get-mdir (assoc maildir :flatten nil) "[Gmail]/Sent Mail")
+           (io/file "/home/user/Mail/gmail/[Gmail]/Sent Mail")))))
 
 (deftest test-new-messages
   (is (= (count (new-messages TEST-MDIR 0))
@@ -16,16 +29,3 @@
   (is (= (senders (new-messages TEST-MDIR 0))
          ["★ ❤ Carol ❤ ★ <carol@example.com>"
           "Alice <alice@example.com>"])))
-
-(deftest test-mdir-path
-  (let [maildir {:inbox "/home/user/Mail/INBOX"
-                 :path "/home/user/Mail/gmail"
-                 :flatten "."}]
-    (is (= (mdir-path maildir "INBOX")
-           "/home/user/Mail/INBOX"))
-    (is (= (mdir-path maildir "clojure")
-           "/home/user/Mail/gmail/clojure"))
-    (is (= (mdir-path maildir "[Gmail]/Sent Mail")
-           "/home/user/Mail/gmail/[Gmail].Sent Mail"))
-    (is (= (mdir-path (assoc maildir :flatten nil) "[Gmail]/Sent Mail")
-           "/home/user/Mail/gmail/[Gmail]/Sent Mail"))))

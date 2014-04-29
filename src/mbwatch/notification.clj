@@ -21,7 +21,7 @@
                                     ->UserCommandFeedback]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
-            [mbwatch.maildir :refer [mdir-path new-messages senders]]
+            [mbwatch.maildir :refer [get-mdir new-messages senders]]
             [mbwatch.mbmap :refer [mbmap-diff mbmap-disj mbmap-merge
                                    mbtuples->mbmap]]
             [mbwatch.process :as process]
@@ -70,7 +70,7 @@
             timestamp (dt->ms start)]
         (reduce
           (fn [m b]
-            (let [msgs (new-messages (mdir-path maildir b) timestamp)]
+            (let [msgs (new-messages (get-mdir maildir b) timestamp)]
               (cond-> m
                 (seq msgs) (assoc b msgs))))
           {} bs)))))
