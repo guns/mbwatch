@@ -1,8 +1,8 @@
 (ns mbwatch.logging
   "The LoggingService component takes a Loggable object from a channel,
    converts it to a LogItem, then logs it with its IItemLogger implementation.
-   The incoming Loggable object is simply discarded if its log-level exceeds
-   that of the LoggingService.
+   The incoming Loggable object is discarded if its log-level exceeds that of
+   the LoggingService.
 
                        ┌────────────────┐
       ─── Loggable ──▶ │ LoggingService │

@@ -3,8 +3,6 @@
    Commands and spawns a notification when all requested mbchans have been
    synchronized.
 
-   The set of mboxes to notify on can be changed via :notify-* Commands.
-
                       ┌───────────────────────────────┐
      ─── Loggable ──▶ │ NewMessageNotificationService ├──── Loggable ──▶
                       └───────────────────────────────┘

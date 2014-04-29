@@ -1,5 +1,5 @@
 (ns mbwatch.trie
-  "A string trie, optimized for mbwatch."
+  "A string trie, optimized for mbwatch commands."
   (:require [clojure.set :refer [union]]
             [clojure.string :as string]
             [immutable-int-map :refer [int-map]]

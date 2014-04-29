@@ -1,7 +1,6 @@
 (ns mbwatch.sync-timer
   "A SyncTimer is a simple Command middleware that periodically produces :sync
-   Commands. The interval and command to be issued can be set by sending
-   commands to the SyncTimer. The timer can also be triggered on command.
+   Commands. The SyncTimer can also be triggered on command.
 
                       ┌───────────┐
       ─── Command ──▶ │ SyncTimer ├─── Command ──▶
