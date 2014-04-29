@@ -150,9 +150,9 @@
    imapname->IMAPCredential :- {Word IMAPCredential}]
   (reduce-kv
     (fn [m ch-name ch-map]
-      (if-let [cred (->> (ch-map "master")
-                         get-store-name
-                         imapname->IMAPCredential)]
+      (if-some [cred (->> (ch-map "master")
+                          get-store-name
+                          imapname->IMAPCredential)]
         (assoc m ch-name cred)
         m))
     {} channel-section))
@@ -162,9 +162,9 @@
    maildirstores   :- {Word Maildirstore}]
   (reduce-kv
     (fn [m ch-name ch-map]
-      (if-let [mdir (->> (ch-map "slave")
-                         get-store-name
-                         maildirstores)]
+      (if-some [mdir (->> (ch-map "slave")
+                          get-store-name
+                          maildirstores)]
         (assoc m ch-name mdir)
         m))
     {} channel-section))

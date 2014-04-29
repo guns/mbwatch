@@ -214,16 +214,16 @@
    notify-service :- NewMessageNotificationService
    conj-event?    :- Boolean]
   (let [{:keys [id mbchan]} event]
-    (if-let [req (sync-req-map id)]
+    (if-some [req (sync-req-map id)]
       (let [{:keys [countdown events]} req
             countdown (dec countdown)
             events (cond-> events
                      conj-event? (conj event))]
         (if (zero? countdown)
           (do (future-catch-print
-                (when-let [note (find-new-messages
-                                  (deref (:notify-map-atom notify-service))
-                                  events)]
+                (when-some [note (find-new-messages
+                                   (deref (:notify-map-atom notify-service))
+                                   events)]
                   (put! (:log-chan-out notify-service) note)
                   (when-seq [cmd (:notify-command notify-service)]
                     (notify! cmd note))))

@@ -117,7 +117,7 @@
             nwords (count words)]
         (when (some? ops)
           (if (and (> nwords 1) (> nops 1))
-            (when-let [ops (lookup USER-COMMAND-TRIE (string/join " " (take 2 words)))]
+            (when-some [ops (lookup USER-COMMAND-TRIE (string/join " " (take 2 words)))]
               [ops (drop 2 words)])
             [ops (rest words)]))))))
 
