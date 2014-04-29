@@ -3,8 +3,9 @@
   (:require [clj-shellwords.core :refer [shell-split]]
             [clojure.set :refer [difference intersection]]
             [clojure.string :as string]
-            [mbwatch.types :refer [MBMap MBTuple]]
-            [schema.core :as s :refer [pair]]))
+            [mbwatch.types :refer [MBMap MBMap+ MBTuple]]
+            [schema.core :as s :refer [maybe pair]])
+  (:import (clojure.lang IPersistentSet)))
 
 (s/defn parse-mbargs :- MBMap
   [argv :- [String]]
@@ -50,10 +51,18 @@
       (update-in m [mbchan] #(conj (or % #{}) mbox)))
     {} mbtuples))
 
-(s/defn ^:private mbmap-diff* :- (pair MBMap "removals"
-                                       MBMap "additions")
-  [m₁ :- MBMap
-   m₂ :- MBMap]
+(s/defn ^:private diff* :- (maybe IPersistentSet)
+  "Like clojure.set/difference, except that an empty set is coerced to nil."
+  [s₁ :- IPersistentSet
+   s₂ :- IPersistentSet]
+  (let [Δ (difference s₁ s₂)]
+    (when (seq Δ) Δ)))
+
+(s/defn mbmap-diff+ :- (pair MBMap+ "removals"
+                             MBMap+ "additions")
+  "Diff of two MBMaps, where an empty set is equivalent to nil."
+  [m₁ :- MBMap+
+   m₂ :- MBMap+]
   (reduce
     (fn [[rem add] mbchan]
       (let [s₁ (or (m₁ mbchan) #{})
@@ -64,11 +73,24 @@
          (cond-> add (seq Δ+) (assoc mbchan Δ+))]))
     [{} {}] (distinct (mapcat keys [m₁ m₂]))))
 
-(s/defn mbmap-diff :- (pair #{MBTuple} "removals"
-                            #{MBTuple} "additions")
+(s/defn mbmap-diff :- (pair MBMap "removals"
+                            MBMap "additions")
+  "Diff of two MBMaps, where an empty set is equivalent to the universal set."
   [m₁ :- MBMap
    m₂ :- MBMap]
-  (mapv mbmap->mbtuples (mbmap-diff* m₁ m₂)))
+  (reduce
+    (fn [[rem add] mbchan]
+      (let [s₁ (m₁ mbchan)
+            s₂ (m₂ mbchan)
+            [Δ- Δ+] (cond (nil? s₁) [nil s₂]
+                     (nil? s₂) [s₁ nil]
+                     (empty? s₁) [nil nil]
+                     (empty? s₂) [nil s₂]
+                     :else [(diff* s₁ s₂)
+                            (diff* s₂ s₁)])]
+        [(cond-> rem (some? Δ-) (assoc mbchan Δ-))
+         (cond-> add (some? Δ+) (assoc mbchan Δ+))]))
+    [{} {}] (distinct (mapcat keys [m₁ m₂]))))
 
 (s/defn mbmap-intersection :- MBMap
   [m₁ :- MBMap
@@ -100,21 +122,22 @@
               :else (mbmap-disj* m mbchan mboxes₁))))
     m₁ m₂))
 
-(s/defn mbmap-merge :- MBMap
+(s/defn mbmap-merge+ :- MBMap+
   "Like (merge-with union m₁ m₂), except that missing values from m₁ are
-   always substituted with empty sets. If empty-is-universal? is true, an
-   empty set is treated like a universal set. i.e. (conj #{} :any) -> #{}"
-  ([m₁ m₂]
-   (mbmap-merge m₁ m₂ false))
-  ([m₁                  :- MBMap
-    m₂                  :- MBMap
-    empty-is-universal? :- Boolean]
-   (if empty-is-universal?
-     (reduce-kv
-       (fn [m mbchan mboxes₁]
-         (let [mboxes₀ (m mbchan)]
-           (cond (= mboxes₀ #{}) m
-                 (seq mboxes₁) (assoc m mbchan (into (or mboxes₀ #{}) mboxes₁))
-                 :else (assoc m mbchan #{}))))
-       m₁ m₂)
-     (merge-with (fn [s₁ s₂] (into (or s₁ #{}) s₂)) m₁ m₂))))
+   always substituted with empty sets."
+  [m₁ :- MBMap+
+   m₂ :- MBMap+]
+  (merge-with (fn [s₁ s₂] (into (or s₁ #{}) s₂)) m₁ m₂))
+
+(s/defn mbmap-merge :- MBMap
+  "Merge two MBMaps, treating the empty set is treated like a universal set.
+   i.e. (conj #{} :any) -> #{}"
+  [m₁ :- MBMap
+   m₂ :- MBMap]
+  (reduce-kv
+    (fn [m mbchan mboxes₁]
+      (let [mboxes₀ (m mbchan)]
+        (cond (= mboxes₀ #{}) m
+              (seq mboxes₁) (assoc m mbchan (into (or mboxes₀ #{}) mboxes₁))
+              :else (assoc m mbchan #{}))))
+    m₁ m₂))

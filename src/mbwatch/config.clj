@@ -9,7 +9,7 @@
             [mbwatch.connection-watcher :as cw]
             [mbwatch.logging :refer [DEBUG EMERG INFO LOG-LEVELS
                                      NAME->LOG-LEVEL]]
-            [mbwatch.mbmap :refer [mbmap-merge parse-mbline]]
+            [mbwatch.mbmap :refer [mbmap-merge mbmap-merge+ parse-mbline]]
             [mbwatch.sync-timer :as st]
             [mbwatch.time :refer [human-duration parse-ms]]
             [mbwatch.types :as t :refer [MBMap MBMap+]]
@@ -40,19 +40,19 @@
       :default {}
       :default-desc ""
       :parse-fn parse-mbline
-      :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge v))
+      :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge+ v))
       :validate [mbmap+? "No mailboxes specified"]]
      ["-s" "--sync MBSYNC-ARGS" "Channels to periodically sync"
       :default {}
       :default-desc ""
       :parse-fn parse-mbline
-      :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge v true))
+      :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge v))
       :validate [mbmap? "Bad mbsync argument format"]]
      ["-n" "--notify MBSYNC-ARGS" "Mailboxes to notify on"
       :default {}
       :default-desc ""
       :parse-fn parse-mbline
-      :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge v true))
+      :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge v))
       :validate [mbmap? "Bad mbsync argument format"]]
      ["-l" "--log-level LEVEL" log-level-desc
       :default INFO
@@ -151,6 +151,6 @@
         options (update-in options [:notify]
                            #(if (seq %)
                               %
-                              (mbmap-merge (:idle options) (:sync options) true)))]
+                              (mbmap-merge (:idle options) (:sync options))))]
     (strict-map->Config
       (assoc options :mbsyncrc mbsyncrc))))

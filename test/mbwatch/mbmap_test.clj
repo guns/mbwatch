@@ -1,8 +1,9 @@
 (ns mbwatch.mbmap-test
   (:require [clojure.test :refer [is]]
             [mbwatch.mbmap :refer [join-mbentry join-mbmap mbmap->mbtuples
-                                   mbmap-diff mbmap-disj mbmap-intersection
-                                   mbmap-merge mbtuples->mbmap parse-mbargs]]
+                                   mbmap-diff mbmap-diff+ mbmap-disj
+                                   mbmap-intersection mbmap-merge
+                                   mbmap-merge+ mbtuples->mbmap parse-mbargs]]
             [schema.test :refer [deftest]]))
 
 (deftest test-parse-mbargs
@@ -22,16 +23,20 @@
          (join-mbmap (sorted-map "foo" #{} "bar" #{"a"} "baz" #{"c" "b"})))))
 
 (deftest test-mbtuples
-  (let [nmap {"α" #{"a" "b" "c"} "β" #{"a"}}
+  (let [nmap {"α" #{"a" "b" "c"} "β" #{"a"} "γ" #{}}
         mbts (mbmap->mbtuples nmap)]
     (is (= mbts #{["α" "a"] ["α" "b"] ["α" "c"] ["β" "a"]}))
-    (is (= (mbtuples->mbmap mbts) nmap))))
+    (is (= (mbtuples->mbmap mbts) (dissoc nmap "γ")))))
 
 (deftest test-mbmap-diff
-  (is (= (mbmap-diff {"α" #{"b"} "β" #{"b"} "γ" #{"b"}}
-                     {"α" #{"a" "c"} "β" #{"b" "c"}})
-         [#{["α" "b"] ["γ" "b"]}
-          #{["α" "a"] ["α" "c"] ["β" "c"]}])))
+  (is (= (mbmap-diff+ {"α" #{"b"} "β" #{"b"} "γ" #{"b"}}
+                      {"α" #{"a" "c"} "β" #{"b" "c"}})
+         [{"α" #{"b"} "γ" #{"b"}}
+          {"α" #{"a" "c"} "β" #{"c"}}]))
+  (is (= (mbmap-diff {"α" #{"b"} "β" #{} "γ" #{"b"} "Δ" #{} "ε" #{"b"}}
+                     {"α" #{} "β" #{"b"} "γ" #{"a" "c"} "ε" #{"a" "b" "c"}})
+         [{"γ" #{"b"} "Δ" #{}}
+          {"α" #{} "γ" #{"a" "c"} "ε" #{"a" "c"}}])))
 
 (deftest test-mbmap-intersection
   (is (= (mbmap-intersection {"α" #{"a" "b"} "β" #{"c" "d"}}
@@ -44,10 +49,9 @@
          {"α" #{"a"} "γ" #{}})))
 
 (deftest test-mbmap-merge
-  (is (= (mbmap-merge {"α" #{"a"} "β" #{} "γ" #{"a"}}
-                      {"α" #{} "β" #{"a"} "γ" #{"a" "b"} "Δ" #{"a"}}
-                      true)
-         {"α" #{} "β" #{} "γ" #{"a" "b"} "Δ" #{"a"}}))
+  (is (= (mbmap-merge+ {"α" #{"a"} "γ" #{"a"}}
+                       {"β" #{"a"} "γ" #{"a" "b"} "Δ" #{"a"}})
+         {"α" #{"a"} "β" #{"a"} "γ" #{"a" "b"} "Δ" #{"a"}}))
   (is (= (mbmap-merge {"α" #{"a"} "β" #{} "γ" #{"a"}}
                       {"α" #{} "β" #{"a"} "γ" #{"a" "b"} "Δ" #{"a"}})
-         {"α" #{"a"} "β" #{"a"} "γ" #{"a" "b"} "Δ" #{"a"}})))
+         {"α" #{} "β" #{} "γ" #{"a" "b"} "Δ" #{"a"}})))

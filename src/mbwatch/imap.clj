@@ -27,8 +27,8 @@
                                     ->IMAPCommandError ->IMAPShutdownEvent]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
-            [mbwatch.mbmap :refer [mbmap->mbtuples mbmap-diff mbmap-disj
-                                   mbmap-merge mbtuples->mbmap]]
+            [mbwatch.mbmap :refer [mbmap->mbtuples mbmap-diff+ mbmap-disj
+                                   mbmap-merge+ mbtuples->mbmap]]
             [mbwatch.types :as t :refer [ConnectionMapAtom MBMap MBMap+
                                          MBMap+Atom MBTuple MapAtom VOID
                                          Word]]
@@ -364,7 +364,7 @@
   (let [{:keys [idle-map-atom cmd-chan-out]} idle-master
         imap₀ @idle-map-atom
         imap₁ (f idle-map-atom)
-        [Δ- Δ+] (mbmap-diff imap₀ imap₁)]
+        [Δ- Δ+] (mapv mbmap->mbtuples (mbmap-diff+ imap₀ imap₁))]
     (stop-and-start! idle-master worker-map Δ- Δ+)))
 
 (s/defn ^:private process-command :- IDLEWorkerMap
@@ -373,7 +373,7 @@
    command     :- CommandSchema]
   (case (:opcode command)
     :idle/add (swap-stop-and-start!
-                idle-master worker-map #(swap! % mbmap-merge (:payload command)))
+                idle-master worker-map #(swap! % mbmap-merge+ (:payload command)))
     :idle/remove (swap-stop-and-start!
                    idle-master worker-map #(swap! % mbmap-disj (:payload command)))
     :idle/set (swap-stop-and-start!

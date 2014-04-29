@@ -21,8 +21,7 @@
                                      log-with-timestamp!]]
             [mbwatch.maildir :refer [get-all-mdirs get-mdir new-messages
                                      senders]]
-            [mbwatch.mbmap :refer [mbmap-diff mbmap-disj mbmap-merge
-                                   mbtuples->mbmap]]
+            [mbwatch.mbmap :refer [mbmap-diff mbmap-disj mbmap-merge]]
             [mbwatch.process :as process]
             [mbwatch.time :refer [dt->ms]]
             [mbwatch.types :as t :refer [MBMap MBMapAtom VOID]]
@@ -193,15 +192,16 @@
   (case+ (:opcode command)
     :sync (let [{:keys [id payload]} command]
             (assoc sync-req-map id {:countdown (count payload) :events []}))
-    :idle/set (let [[_ Δ+] (mbmap-diff @(:notify-map-atom notify-service) (:payload command))
-                    m (mbtuples->mbmap Δ+)]
-                (alter-notify-map-atom!
-                  swap! notify-service mbmap-merge (assoc command :payload m))
-                sync-req-map)
+    [:idle/set
+     :sync/set] (let [[_ Δ+] (mbmap-diff @(:notify-map-atom notify-service)
+                                         (:payload command))]
+                  (alter-notify-map-atom!
+                    swap! notify-service mbmap-merge (assoc command :payload Δ+))
+                  sync-req-map)
     [:idle/add
      :sync/add
      :notify/add] (do (alter-notify-map-atom!
-                        swap! notify-service #(mbmap-merge %1 %2 true) command)
+                        swap! notify-service mbmap-merge command)
                       sync-req-map)
     :notify/remove (do (alter-notify-map-atom!
                          swap! notify-service mbmap-disj command)

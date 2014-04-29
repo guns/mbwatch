@@ -121,7 +121,7 @@
                      (sig-notify-all timer-atom)
                      (put! log-chan (->UserCommandFeedback :sync/period @timer-atom))))
     :sync/add (alter-sync-req-atom!
-                swap! sync-timer #(mbmap-merge %1 %2 true) command)
+                swap! sync-timer mbmap-merge command)
     :sync/remove (alter-sync-req-atom!
                    swap! sync-timer mbmap-disj command)
     :sync/set (alter-sync-req-atom!
