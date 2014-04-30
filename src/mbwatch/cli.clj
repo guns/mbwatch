@@ -24,8 +24,8 @@
         {:keys [options arguments errors summary]} (parse-opts argv opts :no-defaults true)]
     (cond
       (or (:help options)
-          (seq arguments)) (do (println (usage summary)) true)
-      errors (do (binding [*out* *err*]
-                   (println (error-msg errors)))
+          (seq arguments)) (do (.println System/out (usage summary))
+                               true)
+      errors (do (.println System/err (error-msg errors))
                  false)
       :else options)))
