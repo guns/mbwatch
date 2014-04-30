@@ -3,7 +3,7 @@
             [clojure.set :refer [subset?]]
             [clojure.string :as string]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
-            [schema.core :as s])
+            [schema.core :as s :refer [maybe]])
   (:import (java.io File FileInputStream)
            (javax.mail Session)
            (javax.mail.internet MimeMessage MimeUtility)))
@@ -18,26 +18,31 @@
   (and (.isDirectory f)
        (subset? #{"cur" "new" "tmp"} (set (.list f)))))
 
+(s/defn flatten-mbox :- String
+  [mbox    :- String
+   flatten :- (maybe String)]
+  (if flatten
+    (string/join flatten (string/split mbox #"/"))
+    mbox))
+
 (s/defn get-mdir :- String
   [maildir :- Maildirstore
    mbox    :- String]
   (let [{:keys [path inbox flatten]} maildir]
-    (cond (= "INBOX" mbox) (str (io/file inbox))
-          (nil? flatten) (str (io/file path mbox))
-          :else (->> (string/split mbox #"/")
-                     (string/join flatten)
-                     (io/file path)
-                     str))))
+    (if (= "INBOX" mbox)
+      (str (io/file inbox))
+      (str (io/file path (flatten-mbox mbox flatten))))))
 
-(s/defn get-all-mdirs :- #{String}
+(s/defn get-all-mboxes :- #{String}
   [maildir :- Maildirstore]
   (let [{:keys [inbox path]} maildir
+        inbox-file (io/file inbox)
         mdirs (cond-> #{}
-                (maildir? (io/file inbox)) (conj inbox))]
+                (maildir? inbox-file) (conj (.getName inbox-file)))]
     (reduce
       (fn [s ^File f]
         (if (and (.isDirectory f) (maildir? f))
-          (conj s (str f))
+          (conj s (.getName f))
           s))
       mdirs (.listFiles (io/file path)))))
 

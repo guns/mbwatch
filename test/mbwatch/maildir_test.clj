@@ -1,13 +1,18 @@
 (ns mbwatch.maildir-test
-  (:require [clojure.java.io :as io]
-            [clojure.test :refer [is]]
-            [mbwatch.maildir :refer [get-all-mdirs get-mdir new-messages
-                                     senders]]
+  (:require [clojure.test :refer [is]]
+            [mbwatch.maildir :refer [flatten-mbox get-all-mboxes get-mdir
+                                     new-messages senders]]
             [schema.test :refer [deftest]])
   (:import (java.io File)))
 
 (def ^String TEST-MDIR
   "test-resources/maildir/foo-mdir/INBOX")
+
+(deftest test-flatten-mbox
+  (is (= (flatten-mbox "foo/bar/baz" ".")
+         "foo.bar.baz"))
+  (is (= (flatten-mbox "foo/bar/baz" nil)
+         "foo/bar/baz")))
 
 (deftest test-get-mdir
   (let [maildir {:inbox "/home/user/Mail/INBOX"
@@ -22,11 +27,11 @@
     (is (= (get-mdir (assoc maildir :flatten nil) "[Gmail]/Sent Mail")
            "/home/user/Mail/gmail/[Gmail]/Sent Mail"))))
 
-(deftest test-get-all-mdirs
-  (is (= (into #{} (mapv #(str "test-resources/maildir/foo-mdir/" %) ["INBOX" "clojure"]))
-         (get-all-mdirs {:path "test-resources/maildir/foo-mdir"
-                         :inbox "test-resources/maildir/foo-mdir/INBOX"
-                         :flatten nil}))))
+(deftest test-get-all-mboxes
+  (is (= (get-all-mboxes {:path "test-resources/maildir/foo-mdir"
+                          :inbox "test-resources/maildir/foo-mdir/INBOX"
+                          :flatten nil})
+         #{"INBOX" "clojure"})))
 
 (deftest test-new-messages
   (is (= (count (new-messages TEST-MDIR 0))

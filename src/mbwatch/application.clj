@@ -150,6 +150,7 @@
         notification-service (->NewMessageNotificationService
                                (:notify-cmd config)
                                (:notify config)
+                               (-> config :mbsyncrc :mbchan->Maildirstore)
                                log-chan-0)
         log-chan-1 (:log-chan-out notification-service)
         ;; ->

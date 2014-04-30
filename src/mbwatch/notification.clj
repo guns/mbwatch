@@ -15,16 +15,17 @@
             [mbwatch.command :refer [CommandSchema]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
                                         thread-loop]]
+            [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.events :refer [->NewMessageNotification
                                     ->UserCommandFeedback]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
-            [mbwatch.maildir :refer [get-all-mdirs get-mdir new-messages
-                                     senders]]
+            [mbwatch.maildir :refer [flatten-mbox get-all-mboxes get-mdir
+                                     new-messages senders]]
             [mbwatch.mbmap :refer [mbmap-diff mbmap-disj mbmap-merge]]
             [mbwatch.process :as process]
             [mbwatch.time :refer [dt->ms]]
-            [mbwatch.types :as t :refer [MBMap MBMapAtom VOID]]
+            [mbwatch.types :as t :refer [MBMap MBMapAtom VOID Word]]
             [mbwatch.util :refer [case+ when-seq]]
             [schema.core :as s :refer [Int defschema either maybe]])
   (:import (clojure.lang IFn)
@@ -65,7 +66,7 @@
             ;; TODO: Filter by `Patterns`?
             mboxes (if (seq mboxes)
                      mboxes
-                     (get-all-mdirs maildir))
+                     (get-all-mboxes maildir))
             bs (if (empty? notify-mboxes)
                  mboxes
                  (intersection mboxes notify-mboxes))
@@ -122,12 +123,13 @@
      necessary."))
 
 (t/defrecord NewMessageNotificationService
-  [notify-command  :- String
-   notify-map-atom :- MBMapAtom
-   log-chan-in     :- ReadPort
-   log-chan-out    :- WritePort
-   status          :- AtomicBoolean
-   exit-fn         :- (maybe IFn)]
+  [notify-command       :- String
+   notify-map-atom      :- MBMapAtom
+   mbchan->Maildirstore :- {Word Maildirstore}
+   log-chan-in          :- ReadPort
+   log-chan-out         :- WritePort
+   status               :- AtomicBoolean
+   exit-fn              :- (maybe IFn)]
 
   Lifecycle
 
@@ -159,12 +161,14 @@
                       "↑ Starting NewMessageNotificationService"))))
 
 (s/defn ->NewMessageNotificationService :- NewMessageNotificationService
-  [notify-command :- String
-   notify-map     :- MBMap
-   log-chan-in    :- ReadPort]
+  [notify-command       :- String
+   notify-map           :- MBMap
+   mbchan->Maildirstore :- {Word Maildirstore}
+   log-chan-in          :- ReadPort]
   (strict-map->NewMessageNotificationService
     {:notify-command notify-command
      :notify-map-atom (atom notify-map)
+     :mbchan->Maildirstore mbchan->Maildirstore
      :log-chan-in log-chan-in
      :log-chan-out (chan CHAN-SIZE) ; OPEN log-chan-out
      :status (AtomicBoolean. true)
@@ -175,12 +179,19 @@
    notify-service :- NewMessageNotificationService
    merge-fn       :- (maybe IFn)
    command        :- CommandSchema]
-  (let [{:keys [notify-map-atom log-chan-out]} notify-service
+  (let [{:keys [notify-map-atom mbchan->Maildirstore log-chan-out]} notify-service
         {:keys [payload]} command
+        ;; Flatten mboxes
+        notify-map (reduce-kv
+                     (fn [m mbchan mboxes]
+                       (let [fl (:flatten (mbchan->Maildirstore mbchan))
+                             bs (into #{} (mapv #(flatten-mbox % fl) mboxes))]
+                         (assoc m mbchan bs)))
+                     {} payload)
         old-map @notify-map-atom
         new-map (if merge-fn
-                  (alter-fn notify-map-atom merge-fn payload)
-                  (alter-fn notify-map-atom payload))]
+                  (alter-fn notify-map-atom merge-fn notify-map)
+                  (alter-fn notify-map-atom notify-map))]
     (when-not (= old-map new-map)
       (put! log-chan-out (->UserCommandFeedback :notify/Δ new-map)))
     nil))
