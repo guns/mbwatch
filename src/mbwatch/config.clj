@@ -9,6 +9,7 @@
             [mbwatch.connection-watcher :as cw]
             [mbwatch.logging :refer [DEBUG EMERG INFO LOG-LEVELS
                                      NAME->LOG-LEVEL]]
+            [mbwatch.maildir :refer [flatten-mbmap]]
             [mbwatch.mbmap :refer [mbmap-merge mbmap-merge+ parse-mbline]]
             [mbwatch.sync-timer :as st]
             [mbwatch.time :refer [human-duration parse-ms]]
@@ -151,6 +152,9 @@
         options (update-in options [:notify]
                            #(if (seq %)
                               %
-                              (mbmap-merge (:idle options) (:sync options))))]
+                              (mbmap-merge (:idle options) (:sync options))))
+        ;; Flatten notify-map
+        options (update-in options [:notify]
+                           #(flatten-mbmap % (:mbchan->Maildirstore mbsyncrc)))]
     (strict-map->Config
       (assoc options :mbsyncrc mbsyncrc))))

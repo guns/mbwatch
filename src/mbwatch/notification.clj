@@ -20,7 +20,7 @@
                                     ->UserCommandFeedback]]
             [mbwatch.logging :refer [->LogItem DEBUG Loggable
                                      log-with-timestamp!]]
-            [mbwatch.maildir :refer [flatten-mbox get-all-mboxes get-mdir
+            [mbwatch.maildir :refer [flatten-mbmap get-all-mboxes get-mdir
                                      new-messages senders]]
             [mbwatch.mbmap :refer [mbmap-diff mbmap-disj mbmap-merge]]
             [mbwatch.process :as process]
@@ -182,12 +182,7 @@
   (let [{:keys [notify-map-atom mbchan->Maildirstore log-chan-out]} notify-service
         {:keys [payload]} command
         ;; Flatten mboxes
-        notify-map (reduce-kv
-                     (fn [m mbchan mboxes]
-                       (let [fl (:flatten (mbchan->Maildirstore mbchan))
-                             bs (into #{} (mapv #(flatten-mbox % fl) mboxes))]
-                         (assoc m mbchan bs)))
-                     {} payload)
+        notify-map (flatten-mbmap payload mbchan->Maildirstore)
         old-map @notify-map-atom
         new-map (if merge-fn
                   (alter-fn notify-map-atom merge-fn notify-map)

@@ -3,6 +3,7 @@
             [clojure.set :refer [subset?]]
             [clojure.string :as string]
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
+            [mbwatch.types :refer [MBMap Word]]
             [schema.core :as s :refer [maybe]])
   (:import (java.io File FileInputStream)
            (javax.mail Session)
@@ -24,6 +25,16 @@
   (if flatten
     (string/join flatten (string/split mbox #"/"))
     mbox))
+
+(s/defn flatten-mbmap :- MBMap
+  [mbmap                :- MBMap
+   mbchan->Maildirstore :- {Word Maildirstore}]
+  (reduce-kv
+    (fn [m mbchan mboxes]
+      (let [fl (:flatten (mbchan->Maildirstore mbchan))
+            bs (into #{} (mapv #(flatten-mbox % fl) mboxes))]
+        (assoc m mbchan bs)))
+    {} mbmap))
 
 (s/defn get-mdir :- String
   [maildir :- Maildirstore

@@ -1,7 +1,8 @@
 (ns mbwatch.maildir-test
   (:require [clojure.test :refer [is]]
-            [mbwatch.maildir :refer [flatten-mbox get-all-mboxes get-mdir
-                                     new-messages senders]]
+            [mbwatch.maildir :refer [flatten-mbmap flatten-mbox
+                                     get-all-mboxes get-mdir new-messages
+                                     senders]]
             [schema.test :refer [deftest]])
   (:import (java.io File)))
 
@@ -13,6 +14,17 @@
          "foo.bar.baz"))
   (is (= (flatten-mbox "foo/bar/baz" nil)
          "foo/bar/baz")))
+
+(deftest test-flatten-mbmap
+  (is (= (flatten-mbmap {"foo" #{"bar/baz"}
+                         "bar" #{"baz/foo"}
+                         "baz" #{"foo/bar"}}
+                        {"foo" {:inbox "" :path "" :flatten "."}
+                         "bar" {:inbox "" :path "" :flatten "_"}
+                         "baz" {:inbox "" :path "" :flatten nil}})
+         {"foo" #{"bar.baz"}
+          "bar" #{"baz_foo"}
+          "baz" #{"foo/bar"}})))
 
 (deftest test-get-mdir
   (let [maildir {:inbox "/home/user/Mail/INBOX"
