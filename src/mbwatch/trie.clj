@@ -23,7 +23,7 @@
                     (add node' more value)
                     node'))))
 
-(s/defn add-substring-aliases :- Node
+(s/defn add-command-aliases :- Node
   [node  :- Node
    input :- String
    value :- Any]

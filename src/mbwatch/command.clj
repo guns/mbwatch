@@ -4,8 +4,7 @@
             [mbwatch.logging :refer [DEBUG Loggable]]
             [mbwatch.mbmap :refer [parse-mbline]]
             [mbwatch.time :refer [parse-ms]]
-            [mbwatch.trie :refer [EMPTY-TRIE-NODE add-substring-aliases
-                                  lookup]]
+            [mbwatch.trie :refer [EMPTY-TRIE-NODE add-command-aliases lookup]]
             [mbwatch.types :as t :refer [MBMap MBMap+ VOID tuple]]
             [mbwatch.util :refer [make-table]]
             [schema.core :as s :refer [Any Int Schema both defschema either
@@ -80,7 +79,7 @@
   (reduce-kv
     (fn [node op opmeta]
       (let [cmd (:user-command opmeta)]
-        (add-substring-aliases node cmd op)))
+        (add-command-aliases node cmd op)))
     EMPTY-TRIE-NODE OPCODE-TABLE))
 
 (defschema ^:private Opcode
