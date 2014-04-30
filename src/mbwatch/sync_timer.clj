@@ -19,8 +19,9 @@
                                         sig-wait-timer thread-loop
                                         update-timer!]]
             [mbwatch.events :refer [->UserCommandFeedback]]
-            [mbwatch.logging :refer [->LogItem DEBUG Loggable
-                                     log-with-timestamp!]]
+            [mbwatch.logging :refer [->LogItem log-with-timestamp!]]
+            [mbwatch.logging.levels :refer [DEBUG]]
+            [mbwatch.logging.protocols :refer [Loggable]]
             [mbwatch.mbmap :refer [mbmap-disj mbmap-merge]]
             [mbwatch.time :refer [human-duration]]
             [mbwatch.types :as t :refer [MBMap MBMapAtom VOID]]

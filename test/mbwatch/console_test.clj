@@ -1,8 +1,9 @@
 (ns mbwatch.console-test
   (:require [clojure.test :refer [is]]
-            [mbwatch.console :refer [->ConsoleLogger SGR get-default-colors
-                                     print-console]]
-            [mbwatch.logging :refer [NOTICE log log-item]]
+            [mbwatch.console :refer [->ConsoleLogger SGR catch-print
+                                     get-default-colors print-console]]
+            [mbwatch.logging.levels :refer [NOTICE]]
+            [mbwatch.logging.protocols :refer [log log-item]]
             [mbwatch.test.common :refer [with-system-output]]
             [schema.core :refer [validate]]
             [schema.test :refer [deftest]])
@@ -32,6 +33,11 @@
                       (print-console NOTICE :out "baz"))]
     (is (= out "\rfoo\n\r\033[32mbaz\033[0m\n"))
     (is (= err "\rbar\n"))))
+
+(deftest test-catch-print
+  (let [[out err _] (with-system-output (catch-print (assert false)))]
+    (is (empty? out))
+    (is (re-find #"\n" err))))
 
 (deftest test-ConsoleLogger
   (is (= "\033[31;48;5;100m\r[❤] Hello world.\n\033[0m"

@@ -3,6 +3,8 @@
             [mbwatch.application-master :refer [->ApplicationMaster]]
             [mbwatch.cli :refer [parse-argv!]]
             [mbwatch.concurrent :refer [sig-wait]]
+            [mbwatch.console :refer [print-console]]
+            [mbwatch.logging.levels :refer [EMERG]]
             [mbwatch.util :refer [add-shutdown-hook!]])
   (:import (java.util.concurrent.atomic AtomicBoolean))
   (:gen-class))
@@ -23,7 +25,7 @@
             (sig-wait status))
           (System/exit 0))))
     (catch Throwable e
-      (.println System/err (str e))
+      (print-console EMERG :err (str e))
       (System/exit 1))
     (finally
       (shutdown-agents))))

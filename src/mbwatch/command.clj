@@ -1,7 +1,9 @@
 (ns mbwatch.command
   "Mbwatch components are configured and controlled via Commands."
   (:require [clojure.string :as string]
-            [mbwatch.logging :refer [DEBUG Loggable]]
+            [mbwatch.logging.levels :refer [DEBUG]]
+            [mbwatch.logging.protocols :refer [Loggable]]
+            [mbwatch.logging]
             [mbwatch.mbmap :refer [parse-mbline]]
             [mbwatch.time :refer [parse-ms]]
             [mbwatch.trie :refer [EMPTY-TRIE-NODE add-command-aliases lookup]]

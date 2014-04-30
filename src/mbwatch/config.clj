@@ -7,8 +7,7 @@
             [mbwatch.config.mbsyncrc :refer [DEFAULT-MBSYNCRC-PATH
                                              parse-mbsyncrc]]
             [mbwatch.connection-watcher :as cw]
-            [mbwatch.logging :refer [DEBUG EMERG INFO LOG-LEVELS
-                                     NAME->LOG-LEVEL]]
+            [mbwatch.logging.levels :refer [DEBUG EMERG INFO NAME->LEVEL]]
             [mbwatch.maildir :refer [flatten-mbmap]]
             [mbwatch.mbmap :refer [mbmap-merge mbmap-merge+ parse-mbline]]
             [mbwatch.sync-timer :as st]
@@ -31,7 +30,7 @@
                      "notify-send \"$(cat)\""
                      "")
         log-level-desc (format "%d-%d or one of %s"
-                               EMERG DEBUG (string/join ", " LOG-LEVELS))
+                               EMERG DEBUG (string/join ", " (keys NAME->LEVEL)))
         file-is-readable [#(.exists (io/file %)) "File does not exist"
                           #(.canRead (io/file %)) "File is unreadable"]
         zero-or-min? (fn [period]
@@ -64,7 +63,7 @@
      ["-l" "--log-level LEVEL" log-level-desc
       :default INFO
       :default-desc "INFO"
-      :parse-fn #(or (NAME->LOG-LEVEL %)
+      :parse-fn #(or (NAME->LEVEL %)
                      (when (re-find #"\A\d+\z" %)
                        (Long/parseLong %)))
       :validate [#(<= EMERG % DEBUG) log-level-desc]]

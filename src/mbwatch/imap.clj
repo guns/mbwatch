@@ -23,16 +23,18 @@
                                         shutdown-future sig-notify-all
                                         sig-wait thread-loop]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential get-password]]
+            [mbwatch.console :refer [catch-print]]
             [mbwatch.events :refer [->IDLEEvent ->IDLENewMessageEvent
                                     ->IMAPCommandError ->IMAPShutdownEvent]]
-            [mbwatch.logging :refer [->LogItem DEBUG Loggable
-                                     log-with-timestamp!]]
+            [mbwatch.logging :refer [->LogItem log-with-timestamp!]]
+            [mbwatch.logging.levels :refer [DEBUG]]
+            [mbwatch.logging.protocols :refer [Loggable]]
             [mbwatch.mbmap :refer [mbmap->mbtuples mbmap-diff+ mbmap-disj
                                    mbmap-merge+ mbtuples->mbmap]]
             [mbwatch.types :as t :refer [ConnectionMapAtom MBMap MBMap+
                                          MBMap+Atom MBTuple MapAtom VOID
                                          Word]]
-            [mbwatch.util :refer [catch-print url-for]]
+            [mbwatch.util :refer [url-for]]
             [schema.core :as s :refer [Any Int defschema either maybe]])
   (:import (clojure.lang IFn)
            (com.sun.mail.imap IMAPFolder IMAPStore)

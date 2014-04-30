@@ -2,9 +2,10 @@
   (:require [clojure.core.async :refer [<!! >!! chan close!]]
             [clojure.test :refer [is]]
             [com.stuartsierra.component :as comp]
-            [mbwatch.logging :refer [->LogItem ->LoggingService DEBUG
-                                     IItemLogger Loggable NOTICE WARNING
-                                     log-item log-with-timestamp!]]
+            [mbwatch.logging :refer [->LogItem ->LoggingService
+                                     log-with-timestamp!]]
+            [mbwatch.logging.levels :refer [DEBUG NOTICE WARNING]]
+            [mbwatch.logging.protocols :refer [ILogger Loggable log-item]]
             [schema.test :refer [deftest]])
   (:import (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
@@ -29,7 +30,7 @@
         service (comp/start
                   (->LoggingService
                     NOTICE
-                    (reify IItemLogger
+                    (reify ILogger
                       (log [_ item] (swap! sink conj (:message item))))
                     ch))
         values [(LogItem. WARNING (DateTime.) "SYN")

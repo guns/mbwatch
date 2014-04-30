@@ -1,8 +1,9 @@
 (ns mbwatch.concurrent
   (:require [clojure.core.async :refer [thread]]
             [clojure.java.shell :refer [sh]]
+            [mbwatch.console :refer [catch-print]]
             [mbwatch.types :as t :refer [VOID atom-of]]
-            [mbwatch.util :refer [catch-print zero-or-min]]
+            [mbwatch.util :refer [zero-or-min]]
             [schema.core :as s :refer [Any Int defschema either maybe]])
   (:import (clojure.lang IFn)
            (java.util.concurrent Future)))

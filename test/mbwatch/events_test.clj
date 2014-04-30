@@ -3,7 +3,9 @@
             [mbwatch.events :refer [->MbsyncUnknownChannelError
                                     strict-map->MbsyncEventStart
                                     strict-map->MbsyncEventStop]]
-            [mbwatch.logging :refer [DEBUG ERR WARNING log-item log-level]]
+            [mbwatch.logging.levels :refer [DEBUG ERR WARNING]]
+            [mbwatch.logging.protocols :refer [log-item log-level]]
+            [mbwatch.logging]
             [schema.test :refer [deftest]])
   (:import (mbwatch.logging LogItem)
            (org.joda.time DateTime)))

@@ -62,10 +62,10 @@
             [mbwatch.config]
             [mbwatch.connection-watcher :refer [->ConnectionWatcher]]
             [mbwatch.console :refer [->ConsoleLogger MILLIS-TIMESTAMP-FORMAT
-                                     TIMESTAMP-FORMAT get-default-colors
-                                     tty?]]
+                                     TIMESTAMP-FORMAT get-default-colors]]
             [mbwatch.imap :refer [->IDLEMaster]]
-            [mbwatch.logging :refer [->LoggingService DEBUG]]
+            [mbwatch.logging :refer [->LoggingService]]
+            [mbwatch.logging.levels :refer [DEBUG]]
             [mbwatch.mbmap :refer [join-mbentry join-mbmap]]
             [mbwatch.mbsync :refer [->MbsyncMaster]]
             [mbwatch.notification :refer [->NewMessageNotificationService]]

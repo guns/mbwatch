@@ -2,6 +2,8 @@
   "Configuration from an mbsyncrc configuration file."
   (:require [clojure.string :as string]
             [mbwatch.concurrent :refer [synchronized-sh]]
+            [mbwatch.console :refer [print-console]]
+            [mbwatch.logging.levels :refer [CRIT]]
             [mbwatch.passwd :refer [expand-user-path parse-passwd]]
             [mbwatch.types :as t :refer [FilteredLine LowerCaseWord
                                          PortNumber Word tuple]]
@@ -178,7 +180,7 @@
     (let [{:keys [exit out err]} (synchronized-sh "sh" "-c" pass)]
       (if (zero? exit)
         (chomp out)
-        (do (.println System/err err)
+        (do (print-console CRIT :err err)
             "")))
     (String. ^bytes pass)))
 

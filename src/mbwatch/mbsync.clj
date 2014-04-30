@@ -35,8 +35,9 @@
             [mbwatch.events :refer [->MbsyncUnknownChannelError
                                     strict-map->MbsyncEventStart
                                     strict-map->MbsyncEventStop]]
-            [mbwatch.logging :refer [->LogItem DEBUG ERR Loggable NOTICE
-                                     WARNING log-with-timestamp!]]
+            [mbwatch.logging :refer [->LogItem log-with-timestamp!]]
+            [mbwatch.logging.levels :refer [DEBUG ERR NOTICE WARNING]]
+            [mbwatch.logging.protocols :refer [Loggable]]
             [mbwatch.mbmap :refer [join-mbentry]]
             [mbwatch.process :as process]
             [mbwatch.types :as t :refer [MBMap MapAtom VOID atom-of]]

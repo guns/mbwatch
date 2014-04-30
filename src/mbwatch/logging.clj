@@ -1,8 +1,8 @@
 (ns mbwatch.logging
   "The LoggingService component takes a Loggable object from a channel,
-   converts it to a LogItem, then logs it with its IItemLogger implementation.
-   The incoming Loggable object is discarded if its log-level exceeds that of
-   the LoggingService.
+   converts it to a LogItem, then logs it with its ILogger implementation. The
+   incoming Loggable object is discarded if its log-level exceeds that of the
+   LoggingService.
 
                        ┌────────────────┐
       ─── Loggable ──▶ │ LoggingService │
@@ -12,34 +12,14 @@
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.concurrent :refer [thread-loop]]
+            [mbwatch.logging.levels :refer [DEBUG LEVEL->NAME]]
+            [mbwatch.logging.protocols :refer [ILogger Loggable log log-item
+                                               log-level]]
             [mbwatch.types :as t :refer [VOID schema-params]]
             [mbwatch.util :refer [class-name]]
             [schema.core :as s :refer [Any Int maybe]])
   (:import (clojure.lang Associative IFn)
            (org.joda.time DateTime)))
-
-;; From linux/kern_levels.h
-(def ^:const EMERG   0) ; /* system is unusable */
-(def ^:const ALERT   1) ; /* action must be taken immediately */
-(def ^:const CRIT    2) ; /* critical conditions */
-(def ^:const ERR     3) ; /* error conditions */
-(def ^:const WARNING 4) ; /* warning conditions */
-(def ^:const NOTICE  5) ; /* normal but significant condition */
-(def ^:const INFO    6) ; /* informational */
-(def ^:const DEBUG   7) ; /* debug-level messages */
-
-(def LOG-LEVELS
-  (mapv str '[EMERG ALERT CRIT ERR WARNING NOTICE INFO DEBUG]))
-
-(def NAME->LOG-LEVEL
-  (->> LOG-LEVELS
-       (map-indexed (fn [i lvl] [lvl i]))
-       (apply concat)
-       (apply hash-map)))
-
-(defprotocol Loggable
-  (log-level [this] "Returns this object's logging level")
-  (log-item [this] "Returns a new LogItem object"))
 
 (t/defrecord LogItem
   [level     :- Int
@@ -59,7 +39,7 @@
 (s/defn ^:private get-timestamp :- DateTime
   [obj :- Any]
   {:pre [(do (when (nil? (:timestamp obj))
-               (.println System/err (str "No timestamp for " obj)))
+               (.println System/err (str "No timestamp for " (pr-str obj))))
              true)]}
   (or (:timestamp obj) (DateTime.)))
 
@@ -107,11 +87,8 @@
   (log-level [_] DEBUG)
   (log-item [this] (->LogItem this (str this))))
 
-(defprotocol IItemLogger
-  (log [this ^LogItem log-item]))
-
 (s/defn ^:private log* :- VOID
-  [logger    :- IItemLogger
+  [logger    :- ILogger
    max-level :- Int
    loggable  :- Loggable]
   ;; Malkovich malkovich Malkovich!
@@ -121,7 +98,7 @@
 
 (t/defrecord LoggingService
   [level     :- Int
-   logger    :- IItemLogger
+   logger    :- ILogger
    log-chan  :- ReadPort
    exit-fn   :- (maybe IFn)]
 
@@ -149,12 +126,12 @@
   (log-item [this]
     (->LogItem this (format "%s LoggingService [%s %s]"
                             (if exit-fn "↓ Stopping" "↑ Starting")
-                            (LOG-LEVELS level)
+                            (LEVEL->NAME level)
                             (class-name logger)))))
 
 (s/defn ->LoggingService :- LoggingService
   [level    :- Int
-   logger   :- IItemLogger
+   logger   :- ILogger
    log-chan :- ReadPort]
   (strict-map->LoggingService
     {:level level

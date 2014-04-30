@@ -37,15 +37,17 @@
                                         sig-wait-timer thread-loop
                                         update-timer!]]
             [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
+            [mbwatch.console :refer [catch-print]]
             [mbwatch.events :refer [->PendingSyncsEvent ->TimeJumpEvent
                                     ->UserCommandFeedback]]
-            [mbwatch.logging :refer [->LogItem DEBUG Loggable
-                                     log-with-timestamp!]]
+            [mbwatch.logging :refer [->LogItem log-with-timestamp!]]
+            [mbwatch.logging.levels :refer [DEBUG]]
+            [mbwatch.logging.protocols :refer [Loggable]]
             [mbwatch.network :refer [reachable?]]
             [mbwatch.time :refer [human-duration]]
             [mbwatch.types :as t :refer [ConnectionMap ConnectionMapAtom
                                          MBMap VOID Word tuple]]
-            [mbwatch.util :refer [catch-print when-seq]]
+            [mbwatch.util :refer [when-seq]]
             [schema.core :as s :refer [Int either maybe pair pred validate]])
   (:import (clojure.lang IFn)
            (java.util.concurrent.atomic AtomicBoolean)

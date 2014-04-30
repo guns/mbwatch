@@ -1,11 +1,13 @@
 (ns mbwatch.console
   (:require [clojure.java.shell :refer [sh]]
             [clojure.string :as string]
-            [mbwatch.logging :refer [IItemLogger]]
+            [mbwatch.logging.levels :refer [WARNING]]
+            [mbwatch.logging.protocols :refer [ILogger]]
             [mbwatch.types :refer [VOID]]
             [schema.core :as s :refer [Any Int either enum maybe]])
   (:import (clojure.lang Keyword)
-           (java.io BufferedReader InputStreamReader)
+           (java.io BufferedReader ByteArrayOutputStream InputStreamReader
+                    PrintStream)
            (org.joda.time DateTime)
            (org.joda.time.format DateTimeFormat DateTimeFormatter)))
 
@@ -112,9 +114,21 @@
                     (wrap msg (get simple-colors level))
                     msg)))))
 
+(defmacro catch-print
+  {:requires [print-console]}
+  [& body]
+  `(try
+     ~@body
+     (catch InterruptedException e#
+       (print-console ~WARNING :err (str e#)))
+     (catch Throwable e#
+       (let [buf# (new ~ByteArrayOutputStream)]
+         (.printStackTrace e# (new ~PrintStream buf# true))
+         (print-console ~WARNING :err (str buf#))))))
+
 (deftype ConsoleLogger [^Appendable stream colors ^DateTimeFormatter dt-formatter]
 
-  IItemLogger
+  ILogger
 
   (log [_ log-item]
     (let [{:keys [level ^DateTime timestamp message]} log-item

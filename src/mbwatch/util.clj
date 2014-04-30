@@ -4,14 +4,6 @@
   (:import (clojure.lang Keyword)
            (java.net URLEncoder)))
 
-(defmacro catch-print [& body]
-  `(try
-     ~@body
-     (catch InterruptedException e#
-       (.println System/err e#))
-     (catch Throwable e#
-       (.printStackTrace e#))))
-
 (defmacro when-seq [[sym form] & body]
   `(let [x# ~form]
      (when (seq x#)

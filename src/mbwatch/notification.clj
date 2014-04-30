@@ -18,8 +18,9 @@
             [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.events :refer [->NewMessageNotification
                                     ->UserCommandFeedback]]
-            [mbwatch.logging :refer [->LogItem DEBUG Loggable
-                                     log-with-timestamp!]]
+            [mbwatch.logging :refer [->LogItem log-with-timestamp!]]
+            [mbwatch.logging.levels :refer [DEBUG]]
+            [mbwatch.logging.protocols :refer [Loggable]]
             [mbwatch.maildir :refer [flatten-mbmap get-all-mboxes get-mdir
                                      new-messages senders]]
             [mbwatch.mbmap :refer [mbmap-diff mbmap-disj mbmap-merge]]

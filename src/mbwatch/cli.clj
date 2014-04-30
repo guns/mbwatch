@@ -3,6 +3,7 @@
             [clojure.string :as string]
             [clojure.tools.cli :refer [parse-opts]]
             [mbwatch.config :refer [config-options]]
+            [mbwatch.console :refer [print-console]]
             [schema.core :as s :refer [Any either]])
   (:import (clojure.lang Keyword)))
 
@@ -24,8 +25,8 @@
         {:keys [options arguments errors summary]} (parse-opts argv opts :no-defaults true)]
     (cond
       (or (:help options)
-          (seq arguments)) (do (.println System/out (usage summary))
+          (seq arguments)) (do (print-console (usage summary))
                                true)
-      errors (do (.println System/err (error-msg errors))
+      errors (do (print-console :err (error-msg errors))
                  false)
       :else options)))

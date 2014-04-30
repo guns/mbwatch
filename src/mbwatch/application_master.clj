@@ -25,10 +25,11 @@
                                         sig-notify-all]]
             [mbwatch.config :refer [->Config DEFAULT-MBWATCHRC-PATH]]
             [mbwatch.config.mbsyncrc :refer [DEFAULT-MBSYNCRC-PATH]]
-            [mbwatch.console :refer [tty? with-console-input]]
+            [mbwatch.console :refer [print-console tty? with-console-input]]
             [mbwatch.events :refer [->UserCommandFeedback]]
-            [mbwatch.logging :refer [->LogItem DEBUG Loggable
-                                     log-with-timestamp!]]
+            [mbwatch.logging :refer [->LogItem log-with-timestamp!]]
+            [mbwatch.logging.levels :refer [DEBUG]]
+            [mbwatch.logging.protocols :refer [Loggable]]
             [mbwatch.types :as t :refer [atom-of]]
             [schema.core :as s :refer [Any maybe]])
   (:import (clojure.lang IFn Keyword)
@@ -60,7 +61,7 @@
                 (when (.get status)
                   ;; User closed input stream; let the main thread know that
                   ;; we are done
-                  (.println System/err "Goodbye!")
+                  (print-console :err "Goodbye!")
                   (.set status false)
                   (sig-notify-all status))))]
       (assoc this :exit-fn
@@ -102,14 +103,14 @@
    command            :- CommandSchema]
   (case (:opcode command)
     ;; Handle top-level commands directly
-    :app/help (do (.println System/err OPCODE-HELP)
+    :app/help (do (print-console :err OPCODE-HELP)
                   true)
     :app/clear (do (let [{:keys [cache-atom log-chan]} @(:application application-master)]
                      (when cache-atom
                        (swap! cache-atom empty)
                        (put! log-chan (->UserCommandFeedback :app/clear))))
                    true)
-    :app/status (do (.println System/err (status-table @(:application application-master)))
+    :app/status (do (print-console :err (status-table @(:application application-master)))
                     true)
     ; :app/reload
     ; :app/restart
