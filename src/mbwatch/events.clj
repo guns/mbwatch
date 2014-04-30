@@ -38,6 +38,10 @@
                           (if (seq notify-map)
                             (str "Now notifying on: " (join-mbmap notify-map))
                             "Notifications disabled."))]
+   :blacklist/Δ [NOTICE (fn [blacklist-map]
+                          (if (seq blacklist-map)
+                            (str "Never notifying on: " (join-mbmap blacklist-map))
+                            "Blacklist disabled."))]
    :conn/period [NOTICE (fn [{:keys [period]}]
                           (if (zero? period)
                             "Connection polling disabled."

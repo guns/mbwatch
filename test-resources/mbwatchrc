@@ -1,6 +1,7 @@
 idle = home:INBOX work:INBOX
-; sync = home work
-notify = work:clojure school:INBOX
+sync = home work school
+notify = home:INBOX work:INBOX,clojure school:INBOX
+blacklist = SPAM
 notify-cmd = notify - --audio="/home/guns/.sounds/new-message.mp3"
 conn-period = 0
 sync-period = 10m

@@ -9,7 +9,7 @@
   "
   (:require [clojure.core.async :refer [<!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
-            [clojure.set :refer [intersection]]
+            [clojure.set :refer [difference intersection]]
             [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
             [mbwatch.command :refer [CommandSchema]]
@@ -27,7 +27,7 @@
             [mbwatch.time :refer [dt->ms]]
             [mbwatch.types :as t :refer [MBMap MBMapAtom VOID Word]]
             [mbwatch.util :refer [case+ when-seq]]
-            [schema.core :as s :refer [Int defschema either maybe]])
+            [schema.core :as s :refer [Int defschema either enum maybe]])
   (:import (clojure.lang IFn)
            (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
@@ -58,18 +58,21 @@
               (string/join \newline ss)))))
 
 (s/defn ^:private sync-event->new-messages-by-box :- (maybe {String [MimeMessage]})
-  [notify-map :- MBMap
-   event      :- MbsyncEventStop]
+  [event         :- MbsyncEventStop
+   notify-map    :- MBMap
+   blacklist-map :- MBMap]
   (let [{:keys [mbchan mboxes maildir start]} event]
     (when (and maildir (contains? notify-map mbchan))
       (let [notify-mboxes (notify-map mbchan)
+            blacklist-mboxes (blacklist-map mbchan)
             ;; TODO: Filter by `Patterns`?
             mboxes (if (seq mboxes)
                      mboxes
                      (get-all-mboxes maildir))
-            bs (if (empty? notify-mboxes)
-                 mboxes
-                 (intersection mboxes notify-mboxes))
+            bs (-> (if (empty? notify-mboxes)
+                     mboxes
+                     (intersection mboxes notify-mboxes))
+                   (difference blacklist-mboxes))
             timestamp (dt->ms start)]
         (reduce
           (fn [m b]
@@ -79,11 +82,13 @@
           {} bs)))))
 
 (s/defn ^:private find-new-messages :- (maybe NewMessageNotification)
-  [notify-map :- MBMap
-   events     :- [MbsyncEventStop]]
+  [events        :- [MbsyncEventStop]
+   notify-map    :- MBMap
+   blacklist-map :- MBMap]
   (let [m (reduce
             (fn [m ev]
-              (let [bs->msgs (sync-event->new-messages-by-box notify-map ev)]
+              (let [bs->msgs (sync-event->new-messages-by-box
+                               ev notify-map blacklist-map)]
                 (cond-> m
                   (seq bs->msgs) (assoc (:mbchan ev) bs->msgs))))
             {} events)]
@@ -125,6 +130,7 @@
 (t/defrecord NewMessageNotificationService
   [notify-command       :- String
    notify-map-atom      :- MBMapAtom
+   blacklist-map-atom   :- MBMapAtom
    mbchan->Maildirstore :- {Word Maildirstore}
    log-chan-in          :- ReadPort
    log-chan-out         :- WritePort
@@ -163,68 +169,85 @@
 (s/defn ->NewMessageNotificationService :- NewMessageNotificationService
   [notify-command       :- String
    notify-map           :- MBMap
+   blacklist-map        :- MBMap
    mbchan->Maildirstore :- {Word Maildirstore}
    log-chan-in          :- ReadPort]
   (strict-map->NewMessageNotificationService
     {:notify-command notify-command
      :notify-map-atom (atom notify-map)
+     :blacklist-map-atom (atom blacklist-map)
      :mbchan->Maildirstore mbchan->Maildirstore
      :log-chan-in log-chan-in
      :log-chan-out (chan CHAN-SIZE) ; OPEN log-chan-out
      :status (AtomicBoolean. true)
      :exit-fn nil}))
 
-(s/defn ^:private alter-notify-map-atom! :- VOID
+(s/defn ^:private alter-mbmap-atom! :- VOID
   [alter-fn       :- IFn
    notify-service :- NewMessageNotificationService
+   keyword        :- (enum :notify-map-atom :blacklist-map-atom)
    merge-fn       :- (maybe IFn)
    command        :- CommandSchema]
-  (let [{:keys [notify-map-atom mbchan->Maildirstore log-chan-out]} notify-service
+  (let [{:keys [mbchan->Maildirstore log-chan-out]} notify-service
         {:keys [payload]} command
+        mbmap-atom (get notify-service keyword)
         ;; Flatten mboxes
         notify-map (flatten-mbmap payload mbchan->Maildirstore)
-        old-map @notify-map-atom
+        old-map @mbmap-atom
         new-map (if merge-fn
-                  (alter-fn notify-map-atom merge-fn notify-map)
-                  (alter-fn notify-map-atom notify-map))]
+                  (alter-fn mbmap-atom merge-fn notify-map)
+                  (alter-fn mbmap-atom notify-map))]
     (when-not (= old-map new-map)
-      (put! log-chan-out (->UserCommandFeedback :notify/Δ new-map)))
+      (let [fbtype ({:notify-map-atom :notify/Δ
+                     :blacklist-map-atom :blacklist/Δ} keyword)]
+        (put! log-chan-out (->UserCommandFeedback fbtype new-map))))
     nil))
 
 (s/defn ^:private process-command :- SyncRequestMap
   [command        :- CommandSchema
    sync-req-map   :- SyncRequestMap
    notify-service :- NewMessageNotificationService]
-  (case+ (:opcode command)
-    :sync (let [{:keys [id payload]} command]
-            (assoc sync-req-map id {:countdown (count payload) :events []}))
-    [:idle/set
-     :sync/set] (let [[_ Δ+] (mbmap-diff @(:notify-map-atom notify-service)
-                                         (:payload command))]
-                  (alter-notify-map-atom!
-                    swap! notify-service mbmap-merge (assoc command :payload Δ+))
-                  sync-req-map)
-    [:idle/add
-     :sync/add
-     :notify/add] (do (alter-notify-map-atom!
-                        swap! notify-service mbmap-merge command)
-                      sync-req-map)
-    :notify/remove (do (alter-notify-map-atom!
-                         swap! notify-service mbmap-disj command)
-                       sync-req-map)
-    :notify/set (do (alter-notify-map-atom!
-                      reset! notify-service nil command)
-                    sync-req-map)
-    :notify/clear (do (alter-notify-map-atom!
-                        swap! notify-service (fn [m _] (empty m)) command)
-                      sync-req-map)
-    sync-req-map))
+  (if (= :sync (:opcode command))
+    (let [{:keys [id payload]} command]
+      (assoc sync-req-map id {:countdown (count payload) :events []}))
+    ;; No other commands effect the sync-req-map
+    (do
+      (case+ (:opcode command)
+        [:idle/set
+         :sync/set] (let [[_ Δ+] (mbmap-diff @(:notify-map-atom notify-service)
+                                  (:payload command))]
+                      (alter-mbmap-atom!
+                        swap! notify-service :notify-map-atom
+                        mbmap-merge (assoc command :payload Δ+)))
+        [:idle/add
+         :sync/add
+         :notify/add] (alter-mbmap-atom!
+                        swap! notify-service :notify-map-atom
+                        mbmap-merge command)
+        :notify/remove (alter-mbmap-atom!
+                         swap! notify-service :notify-map-atom
+                         mbmap-disj command)
+        :notify/set (alter-mbmap-atom!
+                      reset! notify-service :notify-map-atom
+                      nil command)
+        :notify/clear (alter-mbmap-atom!
+                        swap! notify-service :notify-map-atom
+                        (fn [m _] (empty m)) command)
+        :blacklist/set (alter-mbmap-atom!
+                         reset! notify-service :blacklist-map-atom
+                         nil command)
+        :blacklist/clear (alter-mbmap-atom!
+                           swap! notify-service :blacklist-map-atom
+                           (fn [m _] (empty m)) command)
+        nil)
+      sync-req-map)))
 
 (s/defn ^:private notify-events! :- VOID
   [notify-service :- NewMessageNotificationService
    events         :- [MbsyncEventStop]]
-  (let [{:keys [log-chan-out notify-command notify-map-atom]} notify-service]
-    (when-some [note (find-new-messages @notify-map-atom events)]
+  (let [{:keys [log-chan-out notify-command notify-map-atom
+                blacklist-map-atom]} notify-service]
+    (when-some [note (find-new-messages events @notify-map-atom @blacklist-map-atom)]
       (put! log-chan-out note)
       (when-seq [cmd notify-command]
         (notify! cmd note)))))

@@ -55,6 +55,12 @@
       :parse-fn parse-mbline
       :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge v))
       :validate [mbmap? "Bad mbsync argument format"]]
+     ["-b" "--blacklist MBSYNC-ARGS" "Mailboxes to never notify on"
+      :default {}
+      :default-desc ""
+      :parse-fn parse-mbline
+      :assoc-fn (fn [m k v] (update-in m [k] mbmap-merge v))
+      :validate [mbmap? "Bad mbsync argument format"]]
      ["-l" "--log-level LEVEL" log-level-desc
       :default INFO
       :default-desc "INFO"
@@ -123,6 +129,7 @@
    idle            :- MBMap+
    sync            :- MBMap
    notify          :- MBMap
+   blacklist       :- MBMap
    log-level       :- Int
    config          :- String
    mbwatch-config  :- String

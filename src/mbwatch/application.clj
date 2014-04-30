@@ -150,6 +150,7 @@
         notification-service (->NewMessageNotificationService
                                (:notify-cmd config)
                                (:notify config)
+                               (:blacklist config)
                                (-> config :mbsyncrc :mbchan->Maildirstore)
                                log-chan-0)
         log-chan-1 (:log-chan-out notification-service)
@@ -195,6 +196,7 @@
          ["idle" (join-mbmap @(:idle-map-atom idle-master))]
          ["sync" (join-mbmap @(:sync-req-atom sync-timer))]
          ["notify" (join-mbmap @(:notify-map-atom notification-service))]
+         ["blacklist" (join-mbmap @(:blacklist-map-atom notification-service))]
          ["conn-period" (timer-status @(:timer-atom connection-watcher))]
          ["sync-period" (timer-status @(:timer-atom sync-timer))]
          ["cache-passwords" (str (some? cache-atom))]]
