@@ -36,13 +36,11 @@
             [schema.core :as s :refer [Any Int defschema either maybe]])
   (:import (clojure.lang IFn)
            (com.sun.mail.imap IMAPFolder IMAPStore)
-           (com.sun.mail.util MailConnectException)
            (java.util Properties)
            (java.util.concurrent.atomic AtomicBoolean)
            (javax.mail AuthenticationFailedException Folder
                        FolderNotFoundException MessagingException Session)
            (javax.mail.event MessageCountListener)
-           (javax.net.ssl SSLException)
            (mbwatch.events IMAPConnectionEvent)
            (org.joda.time DateTime)))
 
@@ -182,10 +180,12 @@
       (catch AuthenticationFailedException _
         (log :badauth)
         (remove-worker! idle-worker))
-      (catch SSLException _
+      (catch MessagingException e
+        (log :failure (str e))
         (remove-worker! idle-worker))
-      (catch MailConnectException e (log :failure (str e))) ;; TODO: Do we want this?
-      (catch MessagingException e (log :failure (str e)))
+      (catch IllegalStateException e
+        (log :failure (str e))
+        (remove-worker! idle-worker))
       (finally
         (log :stop)
         (if (.isConnected store)
