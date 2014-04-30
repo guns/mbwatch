@@ -350,6 +350,9 @@
                      (put! log-chan (->UserCommandFeedback
                                       :conn/period @(:timer-atom connection-watcher))))
                    command)
+    :conn/clear (let [{:keys [connections-atom]} connection-watcher]
+                  (swap! connections-atom empty)
+                  command)
     :conn/remove (let [{:keys [connections-atom]} connection-watcher]
                    (when-seq [mbchans (:payload command)]
                      (apply swap! connections-atom dissoc mbchans))

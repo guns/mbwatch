@@ -28,6 +28,7 @@
 
 (def ^:private USER-COMMAND-FEEDBACK-MAP
   {:parse-error [WARNING (fn [msg] msg)]
+   :conn/clear  [NOTICE (fn [_] "Cleared watched connections")]
    :app/clear   [NOTICE (fn [_] "Cleared password cache")]
    :sync/Δ      [NOTICE (fn [sync-req]
                           (if (seq sync-req)

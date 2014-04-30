@@ -32,6 +32,7 @@
          :app/restart   (OpcodeMeta. VOID      "RESTART"       "Restart application")
          :app/quit      (OpcodeMeta. VOID      "quit"          "Quit application")
 
+         :conn/clear    (OpcodeMeta. VOID      "conn clear"    "Clear registered connections")
          :conn/remove   (OpcodeMeta. #{String} "conn remove"   "Remove channels from registered connections")
          :conn/period   (OpcodeMeta. Int       "conn period"   "Set connection check period")
          :conn/trigger  (OpcodeMeta. VOID      "conn trigger"  "Re-check connections")
