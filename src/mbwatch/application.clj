@@ -158,7 +158,7 @@
         logging-service (->LoggingService
                           (:log-level config)
                           (->ConsoleLogger System/out
-                                           (when (tty?) (get-default-colors))
+                                           (get-default-colors)
                                            (if (>= (:log-level config) DEBUG)
                                              MILLIS-TIMESTAMP-FORMAT
                                              TIMESTAMP-FORMAT))

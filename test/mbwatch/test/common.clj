@@ -1,7 +1,7 @@
 (ns mbwatch.test.common
   (:require [clojure.core.async :refer [<!!]]
             [clojure.test.check.generators :as g :refer [elements fmap]])
-  (:import (java.io File)))
+  (:import (java.io ByteArrayOutputStream File PrintStream)))
 
 (defn set-of [gen]
   (fmap (partial into #{}) (g/vector gen)))
@@ -40,3 +40,18 @@
        ~@body
        (finally
          (.delete ~tmp-sym)))))
+
+(defmacro with-system-output
+  {:requires [PrintStream ByteArrayOutputStream]}
+  [& body]
+  `(let [[out# err#] [System/out System/err]
+         out-os# (ByteArrayOutputStream.)
+         err-os# (ByteArrayOutputStream.)]
+     (try
+       (System/setOut (PrintStream. out-os# true))
+       (System/setErr (PrintStream. err-os# true))
+       (let [v# (do ~@body)]
+         [(str out-os#) (str err-os#) v#])
+       (finally
+         (System/setOut out#)
+         (System/setErr err#)))))

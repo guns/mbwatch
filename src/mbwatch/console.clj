@@ -2,7 +2,8 @@
   (:require [clojure.java.shell :refer [sh]]
             [clojure.string :as string]
             [mbwatch.logging :refer [IItemLogger]]
-            [schema.core :as s :refer [Any Int either maybe]])
+            [mbwatch.types :refer [VOID]]
+            [schema.core :as s :refer [Any Int either enum maybe]])
   (:import (clojure.lang Keyword)
            (java.io BufferedReader InputStreamReader)
            (org.joda.time DateTime)
@@ -60,22 +61,24 @@
     (catch Throwable _
       8)))
 
-(s/defn get-default-colors :- [[Keyword]]
-  []
-  (let [c256 (= (tty-color-count) 256)]
-    [[:red :inverse :bold]        ; EMERG
-     [:red :inverse]              ; ALERT
-     [:red :bold]                 ; CRIT
-     [:red]                       ; ERR
-     [:magenta]                   ; WARNING
-     (if c256 [:fg83] [:green])   ; NOTICE
-     (if c256 [:fg218] [:yellow]) ; INFO
-     (if c256 [:fg81] [:cyan])    ; DEBUG
-     ]))
-
 (s/defn tty? :- Boolean
   []
   (boolean (System/console)))
+
+(s/defn get-default-colors :- [[Keyword]]
+  ([]
+   (get-default-colors (tty-color-count)))
+  ([color-count :- Int]
+   (let [c256 (= color-count 256)]
+     [[:red :inverse :bold]        ; EMERG
+      [:red :inverse]              ; ALERT
+      [:red :bold]                 ; CRIT
+      [:red]                       ; ERR
+      [:magenta]                   ; WARNING
+      (if c256 [:fg83] [:green])   ; NOTICE
+      (if c256 [:fg218] [:yellow]) ; INFO
+      (if c256 [:fg81] [:cyan])    ; DEBUG
+      ])))
 
 (s/defn ^:private sgr-join :- String
   [styles :- (either String [Any])]
@@ -89,6 +92,25 @@
   (if (seq sgr-string)
     (str "\033[" sgr-string "m" msg "\033[0m")
     msg))
+
+(def ^:private simple-colors
+  (when (tty?)
+    (mapv sgr-join (get-default-colors 8))))
+
+(s/defn print-console :- VOID
+  "Unsynchronized, direct print to System/out and System/err."
+  ([msg]
+   (print-console nil :out msg))
+  ([stream msg]
+   (print-console nil stream msg))
+  ([level  :- (maybe Int)
+    stream :- (enum :out :err)
+    msg    :- String]
+   (let [os (if (= stream :out) System/out System/err)]
+     (.append os "\r")
+     (.println os (if level
+                    (wrap msg (get simple-colors level))
+                    msg)))))
 
 (deftype ConsoleLogger [^Appendable stream colors ^DateTimeFormatter dt-formatter]
 
@@ -109,7 +131,7 @@
   ([stream       :- Appendable
     colors       :- [Any]
     dt-formatter :- DateTimeFormatter]
-   (ConsoleLogger. stream (mapv sgr-join colors) dt-formatter)))
+   (ConsoleLogger. stream (when (tty?) (mapv sgr-join colors)) dt-formatter)))
 
 (s/defn console-reader :- BufferedReader
   "Returns System/in as a buffered character reader."
