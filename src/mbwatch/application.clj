@@ -114,29 +114,29 @@
   (let [connections-atom (atom {})
         cache-atom (when (:cache-passwords config) (atom {}))
         ;; Command pipeline
-        sync-timer (->SyncTimer (-> config :sync)
+        sync-timer (->SyncTimer (:sync config)
                                 cmd-chan
-                                (-> config :sync-period))
+                                (:sync-period config))
         cmd-chan-0 (:cmd-chan-in sync-timer)
         cmd-chan-1 (:cmd-chan-out sync-timer)
         ;; ->
         idle-master (->IDLEMaster (-> config :mbsyncrc :mbchan->IMAPCredential)
-                                  (-> config :idle)
+                                  (:idle config)
                                   cache-atom
                                   connections-atom
-                                  (-> config :imap-timeout)
+                                  (:imap-timeout config)
                                   cmd-chan-1)
         cmd-chan-2 (:cmd-chan-out idle-master)
         ;; ->
         connection-watcher (->ConnectionWatcher
                              connections-atom
                              (-> config :mbsyncrc :mbchan->IMAPCredential)
-                             (-> config :conn-period)
-                             (-> config :conn-timeout)
+                             (:conn-period config)
+                             (:conn-timeout config)
                              cmd-chan-2)
         cmd-chan-3 (:cmd-chan-out connection-watcher)
         ;; ->
-        mbsync-master (->MbsyncMaster (-> config :mbsyncrc)
+        mbsync-master (->MbsyncMaster (:mbsyncrc config)
                                       cache-atom
                                       cmd-chan-3)
         ;; Logging pipeline
@@ -147,21 +147,21 @@
                        (conj log-chan)
                        (async/merge CHAN-SIZE))
         notification-service (->NewMessageNotificationService
-                               (-> config :notify-cmd)
-                               (-> config :notify)
+                               (:notify-cmd config)
+                               (:notify config)
                                log-chan-0)
         log-chan-1 (:log-chan-out notification-service)
         ;; ->
         logging-service (->LoggingService
-                          (-> config :log-level)
+                          (:log-level config)
                           (->ConsoleLogger System/out
                                            (get-default-colors)
-                                           (if (>= (-> config :log-level) DEBUG)
+                                           (if (>= (:log-level config) DEBUG)
                                              MILLIS-TIMESTAMP-FORMAT
                                              TIMESTAMP-FORMAT))
                           log-chan-1)]
     ;; Initial sync
-    (put! cmd-chan (->Command :sync (-> config :sync)))
+    (put! cmd-chan (->Command :sync (:sync config)))
     (Application. cmd-chan
                   log-chan
                   cache-atom
