@@ -1,7 +1,8 @@
 (ns mbwatch.events
   "Loggable event records. Components implementing the Lifecycle protocol
    provide their own Loggable implementations."
-  (:require [mbwatch.config.mbsyncrc :refer [Maildirstore]]
+  (:require [clojure.string :as string]
+            [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [defloggable]]
             [mbwatch.logging.levels :refer [ERR INFO NOTICE WARNING]]
             [mbwatch.logging.protocols :refer [Loggable]]
@@ -138,17 +139,14 @@
           Δt (human-duration start stop)
           msg (if (zero? status)
                 (format "Finished `mbsync %s` in %s." mbarg Δt)
-                (let [buf (StringBuilder.)
-                      fail (if (<= level ERR)
+                (let [fail (if (<= level ERR)
                              (format "FAILURE: `mbsync %s` aborted in %s with status %d."
                                      mbarg Δt status)
                              (format "FAILURE: `mbsync %s` terminated after %s with status %d."
                                      mbarg Δt status))]
-                  (.append buf fail)
-                  (when error
-                    (.append buf \newline)
-                    (.append buf error))
-                  (str buf)))]
+                  (if error
+                    (string/join \newline [fail error])
+                    fail)))]
       (LogItem. level stop msg))))
 
 (do (alter-meta! #'strict-map->MbsyncEventStop dissoc :private)
