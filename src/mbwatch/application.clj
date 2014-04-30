@@ -62,7 +62,8 @@
             [mbwatch.config]
             [mbwatch.connection-watcher :refer [->ConnectionWatcher]]
             [mbwatch.console :refer [->ConsoleLogger MILLIS-TIMESTAMP-FORMAT
-                                     TIMESTAMP-FORMAT get-default-colors]]
+                                     TIMESTAMP-FORMAT get-default-colors
+                                     tty?]]
             [mbwatch.imap :refer [->IDLEMaster]]
             [mbwatch.logging :refer [->LoggingService DEBUG]]
             [mbwatch.mbmap :refer [join-mbentry join-mbmap]]
@@ -155,7 +156,7 @@
         logging-service (->LoggingService
                           (:log-level config)
                           (->ConsoleLogger System/out
-                                           (get-default-colors)
+                                           (when (tty?) (get-default-colors))
                                            (if (>= (:log-level config) DEBUG)
                                              MILLIS-TIMESTAMP-FORMAT
                                              TIMESTAMP-FORMAT))
