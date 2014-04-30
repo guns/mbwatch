@@ -32,24 +32,27 @@
          :app/restart   (OpcodeMeta. VOID      "RESTART"       "Restart application")
          :app/quit      (OpcodeMeta. VOID      "quit"          "Quit application")
 
-         :conn/clear    (OpcodeMeta. VOID      "conn clear"    "Clear registered connections")
          :conn/remove   (OpcodeMeta. #{String} "conn remove"   "Remove channels from registered connections")
+         :conn/clear    (OpcodeMeta. VOID      "conn clear"    "Clear registered connections")
          :conn/period   (OpcodeMeta. Int       "conn period"   "Set connection check period")
          :conn/trigger  (OpcodeMeta. VOID      "conn trigger"  "Re-check connections")
 
          :idle/add      (OpcodeMeta. MBMap+    "idle add"      "Add to watched mboxes")
          :idle/remove   (OpcodeMeta. MBMap     "idle remove"   "Remove from watched mboxes")
          :idle/set      (OpcodeMeta. MBMap+    "idle set"      "Set watched mboxes")
+         :idle/clear    (OpcodeMeta. VOID      "idle clear"    "Clear watched mboxes")
          :idle/restart  (OpcodeMeta. VOID      "idle RESTART"  "Restart IMAP connections")
 
          :notify/add    (OpcodeMeta. MBMap     "notify add"    "Add to notification mboxes")
          :notify/remove (OpcodeMeta. MBMap     "notify remove" "Remove from notification mboxes")
          :notify/set    (OpcodeMeta. MBMap     "notify set"    "Set notification mboxes")
+         :notify/clear  (OpcodeMeta. VOID      "notify clear"  "Clear notification mboxes")
 
          :sync          (OpcodeMeta. MBMap     "SYNC"          "Synchronize given mailboxes")
          :sync/add      (OpcodeMeta. MBMap     "sync add"      "Add to periodic sync request")
          :sync/remove   (OpcodeMeta. MBMap     "sync remove"   "Remove from periodic sync request")
          :sync/set      (OpcodeMeta. MBMap     "sync set"      "Set periodic sync request")
+         :sync/clear    (OpcodeMeta. VOID      "sync clear"    "Clear periodic sync request")
          :sync/period   (OpcodeMeta. Int       "sync period"   "Set sync period")
          :sync/term     (OpcodeMeta. VOID      "TERMINATE"     "Terminate running mbsync processes")
          :sync/trigger  (OpcodeMeta. VOID      "trigger"       "Trigger periodic sync")]]
@@ -142,15 +145,17 @@
           VOID (if (seq args)
                  (str op-str " takes no arguments")
                  (->Command op nil))
-          MBMap (->Command op (parse-mbline (string/join \space args)))
+          MBMap (if (empty? args)
+                  (str op-str " expects arguments of the form channel:box,…")
+                  (->Command op (parse-mbline (string/join \space args))))
           MBMap+ (let [mbmap (parse-mbline (string/join \space args))]
-                   (if (nil? (s/check MBMap+ mbmap))
-                     (->Command op mbmap)
-                     (str op-str " requires arguments in the form of channel:box[,…]")))
-          Int (if (or (not= (count args) 1))
-                (str op-str " expects a single time argument")
+                   (if (or (empty? args) (s/check MBMap+ mbmap))
+                     (str op-str " requires arguments in the form of channel:box[,…]")
+                     (->Command op mbmap)))
+          Int (if (empty? args)
+                (str op-str " expects a time argument")
                 (try
-                  (->Command op (parse-ms (first args)))
+                  (->Command op (parse-ms (string/join \space args)))
                   (catch Throwable e
                     (str e))))
           #{String} (->Command op (set args)))))))

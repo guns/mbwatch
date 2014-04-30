@@ -215,6 +215,9 @@
     :notify/set (do (alter-notify-map-atom!
                       reset! notify-service nil command)
                     sync-req-map)
+    :notify/clear (do (alter-notify-map-atom!
+                        swap! notify-service (fn [m _] (empty m)) command)
+                      sync-req-map)
     sync-req-map))
 
 (s/defn ^:private notify-events! :- VOID

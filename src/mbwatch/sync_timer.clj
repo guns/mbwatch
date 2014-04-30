@@ -126,5 +126,7 @@
                    swap! sync-timer mbmap-disj command)
     :sync/set (alter-sync-req-atom!
                 reset! sync-timer nil command)
+    :sync/clear (alter-sync-req-atom!
+                  swap! sync-timer (fn [m _] (empty m)) command)
     nil)
   nil)
