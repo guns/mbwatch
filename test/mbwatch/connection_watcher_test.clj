@@ -1,5 +1,5 @@
 (ns mbwatch.connection-watcher-test
-  (:require [clojure.test :refer [is testing]]
+  (:require [clojure.test :refer [is]]
             [schema.test :refer [deftest]]))
 
 (deftest test-private-behavior
