@@ -46,7 +46,7 @@
 
   (start [this]
     (log-with-timestamp! (:log-chan @application) this)
-    (reset! application (comp/start @application)) ; START Application
+    (swap! application comp/start) ; START Application
     (let [f (future-catch-print
               (when (tty?)
                 (try
