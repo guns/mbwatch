@@ -2,7 +2,8 @@
   (:require [clojure.core :as cc]
             [schema.core :as s :refer [Schema both defschema eq maybe one
                                        pair pred validate]])
-  (:import (clojure.lang Atom IPersistentMap Symbol))
+  (:import (clojure.lang Atom IPersistentMap Symbol)
+           (java.util.regex Pattern))
   (:refer-clojure :exclude [defrecord]))
 
 (defmacro defrecord
@@ -82,6 +83,10 @@
 
 (defschema ConnectionMapAtom
   (atom-of ConnectionMap "ConnectionMapAtom"))
+
+(defschema NotifyPatterns
+  "mbchan {header-name #{Pattern}}. header-name of nil means search the body."
+  {String {(maybe String) #{Pattern}}})
 
 (defschema MapAtom
   (atom-of IPersistentMap "MapAtom"))
