@@ -12,14 +12,14 @@
 (def ^:const DEBUG   7) ; /* debug-level messages */
 
 (def NAME->LEVEL
-  {'EMERG   EMERG
-   'ALERT   ALERT
-   'CRIT    CRIT
-   'ERR     ERR
-   'WARNING WARNING
-   'NOTICE  NOTICE
-   'INFO    INFO
-   'DEBUG   DEBUG})
+  {"EMERG"   EMERG
+   "ALERT"   ALERT
+   "CRIT"    CRIT
+   "ERR"     ERR
+   "WARNING" WARNING
+   "NOTICE"  NOTICE
+   "INFO"    INFO
+   "DEBUG"   DEBUG})
 
 (def LEVEL->NAME
   (map-invert NAME->LEVEL))
