@@ -160,8 +160,11 @@
                            #(if (seq %)
                               %
                               (mbmap-merge (:idle options) (:sync options))))
-        ;; Flatten notify-map
-        options (update-in options [:notify]
-                           #(flatten-mbmap % (:mbchan->Maildirstore mbsyncrc)))]
+        ;; Flatten notify-map and blacklist-map
+        options (reduce
+                  (fn [m k]
+                    (update-in
+                      m [k] #(flatten-mbmap % (:mbchan->Maildirstore mbsyncrc))))
+                  options [:notify :blacklist])]
     (strict-map->Config
       (assoc options :mbsyncrc mbsyncrc))))

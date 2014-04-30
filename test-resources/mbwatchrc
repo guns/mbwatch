@@ -1,7 +1,7 @@
-idle = home:INBOX work:INBOX
-sync = home work school
-notify = home:INBOX work:INBOX,clojure school:INBOX
-blacklist = SPAM
+idle = FOO-chan:INBOX BAR-chan:INBOX
+sync = FOO-chan BAR-chan
+notify = FOO-chan:INBOX,clojure BAR-chan
+blacklist = FOO-chan:[Gmail]/Spam BAR-chan:SPAM
 notify-cmd = notify - --audio="/home/guns/.sounds/new-message.mp3"
 conn-period = 0
 sync-period = 10m

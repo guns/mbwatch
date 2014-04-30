@@ -13,10 +13,10 @@
                 sync-period conn-timeout imap-timeout]}
         (->Config {} (io/resource "mbsyncrc") (io/resource "mbwatchrc"))]
     (is (validate Mbsyncrc mbsyncrc))
-    (is (= idle {"home" #{"INBOX"} "work" #{"INBOX"}}))
-    (is (= sync {"home" #{} "work" #{} "school" #{}}))
-    (is (= notify {"home" #{"INBOX"} "work" #{"INBOX" "clojure"} "school" #{"INBOX"}}))
-    (is (= blacklist {"SPAM" #{}}))
+    (is (= idle {"FOO-chan" #{"INBOX"} "BAR-chan" #{"INBOX"}}))
+    (is (= sync {"FOO-chan" #{} "BAR-chan" #{}}))
+    (is (= notify {"FOO-chan" #{"INBOX" "clojure"} "BAR-chan" #{}}))
+    (is (= blacklist {"FOO-chan" #{"[Gmail].Spam"} "BAR-chan" #{"SPAM"}}))
     (is (= notify-cmd "notify - --audio=\"/home/guns/.sounds/new-message.mp3\""))
     (is (= conn-period 0))
     (is (= sync-period (* 10 60 1000)))
