@@ -1,15 +1,14 @@
 (ns mbwatch.util-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer [is]]
-            [mbwatch.util :refer [case+ chomp class-name dequote istr=
+            [mbwatch.util :refer [chomp class-name dequote istr=
                                   multi-row-entry parse-kv-string url-for
                                   when-seq zero-or-min]]
             [schema.test :refer [deftest]]))
 
 (deftest test-macros
   (is (nil? (when-seq [x []] x)))
-  (is (= [1] (when-seq [x [1]] x)))
-  (is (= :BINGO (case+ :foo [:foo :bar] :BINGO))))
+  (is (= [1] (when-seq [x [1]] x))))
 
 (deftest test-tables
   (is (= (multi-row-entry "Foo" ["bar" "baz"] ["Alice" "Bob"])

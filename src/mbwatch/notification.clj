@@ -27,7 +27,7 @@
             [mbwatch.process :as process]
             [mbwatch.time :refer [dt->ms]]
             [mbwatch.types :as t :refer [MBMap MBMapAtom VOID Word]]
-            [mbwatch.util :refer [case+ when-seq]]
+            [mbwatch.util :refer [when-seq]]
             [schema.core :as s :refer [Int defschema either enum maybe]])
   (:import (clojure.lang IFn)
            (java.io StringWriter)
@@ -213,16 +213,16 @@
       (assoc sync-req-map id {:countdown (count payload) :events []}))
     ;; No other commands effect the sync-req-map
     (do
-      (case+ (:opcode command)
-        [:idle/set
-         :sync/set] (let [[_ Δ+] (mbmap-diff @(:notify-map-atom notify-service)
+      (case (:opcode command)
+        (:idle/set
+         :sync/set) (let [[_ Δ+] (mbmap-diff @(:notify-map-atom notify-service)
                                   (:payload command))]
                       (alter-mbmap-atom!
                         swap! notify-service :notify-map-atom
                         mbmap-merge (assoc command :payload Δ+)))
-        [:idle/add
+        (:idle/add
          :sync/add
-         :notify/add] (alter-mbmap-atom!
+         :notify/add) (alter-mbmap-atom!
                         swap! notify-service :notify-map-atom
                         mbmap-merge command)
         :notify/remove (alter-mbmap-atom!
