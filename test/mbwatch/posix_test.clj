@@ -2,7 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.test :refer [is testing]]
             [mbwatch.posix :refer [create-dir create-file expand-user-path
-                                   mode->permset parse-passwd]]
+                                   mode->permset parse-passwd remove-dir]]
             [schema.test :refer [deftest]])
   (:import (java.nio.file Files LinkOption)
            (java.nio.file.attribute PosixFilePermission)))
@@ -27,7 +27,7 @@
            PosixFilePermission/GROUP_EXECUTE
            PosixFilePermission/OTHERS_WRITE})))
 
-(deftest test-file-creation
+(deftest test-file-handling
   (testing "create-file"
     (let [f (io/file "/tmp" (str `test-file-creation#))]
       (try
@@ -67,4 +67,10 @@
                  PosixFilePermission/GROUP_EXECUTE}))
         (finally
           (.delete d₁)
-          (.delete d₀))))))
+          (.delete d₀)))))
+  (testing "remove-dir"
+    (let [dir (create-dir (io/file "/tmp" (str `test-dir-creation#) (str `test-dir-creation#)) 0700)
+          root (.getParentFile dir)]
+      (create-file (io/file dir "testfile") 0600)
+      (remove-dir root)
+      (is (not (.exists root))))))

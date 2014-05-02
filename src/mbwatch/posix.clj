@@ -84,3 +84,13 @@
     (.mkdir d)
     (Files/setPosixFilePermissions (.toPath d) (mode->permset mode))
     d))
+
+(s/defn remove-dir :- Boolean
+  "Recursively delete a directory tree."
+  [path :- Coercions]
+  (let [dir (io/file path)]
+    (doseq [^File f (.listFiles dir)]
+      (when (.isDirectory f)
+        (remove-dir f))
+      (.delete f))
+    (.delete dir)))
