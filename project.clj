@@ -15,7 +15,6 @@
                  [clj-shellwords "1.0.1"]]
   :profiles {:dev {:dependencies [[org.clojure/test.check "0.5.7"]]
                    :plugins [[jonase/eastwood "RELEASE"]]
-                   :jvm-opts ["-Djavax.net.ssl.trustStore=test-resources/gmail.ks"]
                    :source-paths ["dev"]
                    :resource-paths ["test-resources"]
                    :eastwood {:exclude-linters [:redefd-vars]}}
