@@ -1,7 +1,12 @@
 (ns mbwatch.posix
-  (:require [clojure.string :as string]
+  "Sundry POSIX-related functions."
+  (:require [clojure.java.io :as io :refer [Coercions]]
+            [clojure.string :as string]
             [mbwatch.types :as t]
-            [schema.core :as s :refer [Int]]))
+            [schema.core :as s :refer [Int]])
+  (:import (java.io File)
+           (java.nio.file Files StandardOpenOption)
+           (java.nio.file.attribute PosixFilePermission)))
 
 ;; cf. /usr/include/pwd.h: struct passwd
 (t/defrecord Passwd
@@ -44,3 +49,38 @@
           (str dir (subs path i))
           path)))
     path))
+
+(s/defn mode->permset :- #{PosixFilePermission}
+  [mode :- Int]
+  (let [ps (PosixFilePermission/values)]
+    (reduce
+      (fn [s n]
+        (if (pos? (bit-and mode (bit-shift-left 1 n)))
+          (conj s (aget ps (- 8 n)))
+          s))
+      #{} (range 9))))
+
+(s/defn create-file :- File
+  "Create a new file with given permissions. If the file already exists,
+   truncate it and reset its permissions to mode."
+  [path :- Coercions
+   mode :- Int]
+  (let [f (io/file path)
+        p (.toPath f)
+        opts (into-array StandardOpenOption [StandardOpenOption/CREATE
+                                             StandardOpenOption/WRITE])]
+    (with-open [bc (Files/newByteChannel p opts)]
+      (Files/setPosixFilePermissions p (mode->permset mode))
+      (.truncate bc 0))
+    f))
+
+(s/defn create-dir :- File
+  "Like create-file, but creates a directory tree. Only the leaf directory is
+   created with the given file mode."
+  [path :- Coercions
+   mode :- Int]
+  (let [d (io/file path)]
+    (io/make-parents d)
+    (.mkdir d)
+    (Files/setPosixFilePermissions (.toPath d) (mode->permset mode))
+    d))
