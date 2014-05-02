@@ -166,8 +166,8 @@
         scheme (if ssl? "imaps" "imap")
         url (cond-> (url-for scheme host user port)
               label (str label))
-        store (-> (make-properties timeout cert)
-                  (Session/getDefaultInstance)
+        store (-> (make-properties timeout)
+                  (Session/getInstance)
                   (.getStore scheme))
         log (fn log
               ([type] (log type nil))
