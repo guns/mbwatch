@@ -241,8 +241,7 @@
         ;; We don't want to spam the server with requests to a folder that
         ;; does not exist, so tell the IDLEMaster to remove this worker
         (remove-worker! idle-worker)
-        (sig-wait (:status idle-worker))
-        nil))))
+        (sig-wait (:status idle-worker))))))
 
 (declare process-command)
 (declare start-workers)
