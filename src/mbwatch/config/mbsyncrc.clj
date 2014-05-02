@@ -4,7 +4,7 @@
             [mbwatch.concurrent :refer [synchronized-sh]]
             [mbwatch.console :refer [print-console]]
             [mbwatch.logging.levels :refer [CRIT]]
-            [mbwatch.passwd :refer [expand-user-path parse-passwd]]
+            [mbwatch.posix :refer [expand-user-path parse-passwd]]
             [mbwatch.types :as t :refer [FilteredLine LowerCaseWord
                                          PortNumber Word tuple]]
             [mbwatch.util :refer [chomp dequote istr=]]

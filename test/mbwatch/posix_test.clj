@@ -1,6 +1,6 @@
-(ns mbwatch.passwd-test
+(ns mbwatch.posix-test
   (:require [clojure.test :refer [is]]
-            [mbwatch.passwd :refer [expand-user-path parse-passwd]]
+            [mbwatch.posix :refer [expand-user-path parse-passwd]]
             [schema.test :refer [deftest]]))
 
 (def PASSWD-BUF
@@ -8,8 +8,8 @@
 
 (deftest test-parse-passwd
   (is (= (parse-passwd PASSWD-BUF)
-         {"root" #mbwatch.passwd.Passwd{:name "root" :passwd "x" :uid 0    :gid 0    :gecos ""   :dir "/root"      :shell "/bin/bash"}
-          "guns" #mbwatch.passwd.Passwd{:name "guns" :passwd "x" :uid 1000 :gid 1000 :gecos ":)" :dir "/home/guns" :shell "/bin/bash"}})))
+         {"root" #mbwatch.posix.Passwd{:name "root" :passwd "x" :uid 0    :gid 0    :gecos ""   :dir "/root"      :shell "/bin/bash"}
+          "guns" #mbwatch.posix.Passwd{:name "guns" :passwd "x" :uid 1000 :gid 1000 :gecos ":)" :dir "/home/guns" :shell "/bin/bash"}})))
 
 (deftest test-expand-user-path
   (let [passwd (parse-passwd PASSWD-BUF)]

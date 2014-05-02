@@ -1,8 +1,9 @@
-(ns mbwatch.passwd
+(ns mbwatch.posix
   (:require [clojure.string :as string]
             [mbwatch.types :as t]
             [schema.core :as s :refer [Int]]))
 
+;; cf. /usr/include/pwd.h: struct passwd
 (t/defrecord Passwd
   [name   :- String
    passwd :- String
