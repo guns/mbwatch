@@ -35,7 +35,7 @@
 (defmacro with-tempfile
   {:requires [File]}
   [tmp-sym & body]
-  `(let [~tmp-sym (File/createTempFile "slamhound_test" ".clj")]
+  `(let [~tmp-sym (File/createTempFile "mbwatch_test" ".clj")]
      (try
        ~@body
        (finally
