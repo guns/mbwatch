@@ -8,12 +8,12 @@
            (java.security KeyStore)
            (java.security.cert Certificate CertificateFactory)))
 
-(s/defn ^:private ->Certificate :- Certificate
+(s/defn ^:private make-certificate :- Certificate
   [x509-cert-path :- Coercions]
   (with-open [crt (io/input-stream x509-cert-path)]
     (.generateCertificate (CertificateFactory/getInstance "X.509") crt)))
 
-(s/defn ^:private ->KeyStore :- KeyStore
+(s/defn ^:private make-keystore :- KeyStore
   [cert :- Certificate]
   (doto (KeyStore/getInstance (KeyStore/getDefaultType))
     (.load nil (char-array 0))
@@ -31,6 +31,6 @@
    input-cert-path :- Coercions]
   (with-open [f (io/output-stream (create-file output-ks-path 0600))]
     (->> input-cert-path
-         ->Certificate
-         ->KeyStore
+         make-certificate
+         make-keystore
          (write-keystore! f))))

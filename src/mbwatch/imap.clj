@@ -49,8 +49,8 @@
 (def ^:private ^:const CONNECTION-POOL-SIZE "16")
 (def ^:private ^:const IDLE-PERIOD (* 20 60 1000))
 
-(s/defn ^:private ->IMAPProperties :- Properties
-  "Return a copy of system properties with mail.imap(s) entries."
+(s/defn ^:private make-properties :- Properties
+  "Return a copy of system properties configured for IMAP communication."
   [timeout :- Int]
   (let [props ^Properties (.clone (System/getProperties))
         t (str timeout)]
@@ -166,7 +166,7 @@
         scheme (if ssl? "imaps" "imap")
         url (cond-> (url-for scheme host user port)
               label (str label))
-        store (-> (->IMAPProperties timeout)
+        store (-> (make-properties timeout cert)
                   (Session/getDefaultInstance)
                   (.getStore scheme))
         log (fn log
