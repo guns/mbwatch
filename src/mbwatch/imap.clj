@@ -181,13 +181,16 @@
       ;; remove the worker in these cases
       (catch AuthenticationFailedException _
         (log :badauth)
-        (remove-worker! idle-worker))
+        (remove-worker! idle-worker)
+        (sig-wait (:status idle-worker)))
       (catch MessagingException e
         (log :failure (str e))
-        (remove-worker! idle-worker))
+        (remove-worker! idle-worker)
+        (sig-wait (:status idle-worker)))
       (catch IllegalStateException e
         (log :failure (str e))
-        (remove-worker! idle-worker))
+        (remove-worker! idle-worker)
+        (sig-wait (:status idle-worker)))
       (finally
         (log :stop)
         (if (.isConnected store)
@@ -238,6 +241,7 @@
         ;; We don't want to spam the server with requests to a folder that
         ;; does not exist, so tell the IDLEMaster to remove this worker
         (remove-worker! idle-worker)
+        (sig-wait (:status idle-worker))
         nil))))
 
 (declare process-command)
