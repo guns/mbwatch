@@ -24,7 +24,8 @@
                         "user" "foo@example.com"
                         "useimaps" "yes"
                         "requiressl" "yes"
-                        "passcmd" "\"cat test-resources/foo@example.com.pass\""}
+                        "passcmd" "\"cat test-resources/foo@example.com.pass\""
+                        "certificatefile" "\"test-resources/gmail.crt\""}
             "BAR-imap" {"host" "imap.example.com"
                         "user" "bar@example.com"
                         "port" "993"
@@ -63,11 +64,13 @@
                         :user "foo@example.com"
                         :port 993
                         :pass "cat test-resources/foo@example.com.pass"
+                        :cert "test-resources/gmail.crt"
                         :ssl? true}
             "BAR-chan" {:host "imap.example.com"
                         :user "bar@example.com"
                         :port 993
                         :pass (seq (.getBytes "H'|&z]0pIcU2?T/(<!zaIq[wW\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\""))
+                        :cert nil
                         :ssl? false}}))
     (is (= (-> mbsyncrc :mbchan->Maildirstore)
            {"FOO-chan" {:inbox "test-resources/maildir/foo-mdir/INBOX"

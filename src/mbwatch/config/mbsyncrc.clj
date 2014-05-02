@@ -10,7 +10,8 @@
             [mbwatch.util :refer [chomp dequote istr=]]
             [schema.core :as s :refer [defschema either enum eq maybe one
                                        optional-key]])
-  (:import (clojure.lang IFn)))
+  (:import (clojure.lang IFn)
+           (mbwatch.posix Passwd)))
 
 (def ^:const DEFAULT-MBSYNCRC-PATH
   "Default path of mbsyncrc."
@@ -53,6 +54,7 @@
    :user String
    :pass (either String ; PassCmd
                  bytes) ; Plaintext password, stored as a byte-array
+   :cert (maybe String)
    :ssl? Boolean})
 
 (defschema Maildirstore
@@ -108,40 +110,44 @@
   "Extract credentials from an IMAPStore key-value map. Plaintext passwords
    (bad user! bad!) are stored as a byte-array to prevent leaking via
    stacktraces."
-  [imap :- {LowerCaseWord FilteredLine}]
+  [imap   :- {LowerCaseWord FilteredLine}
+   passwd :- {String Passwd}]
   (let [v (comp dequote imap)
         ;; Only disable SSL if the user insists
         secure? (not (and (istr= (imap "useimaps") "no")
                           (istr= (imap "requiressl") "no")))]
-    (-> (cond-> {:ssl? secure?}
+    (-> (cond-> {:ssl? secure? :cert nil}
           (imap "host") (assoc :host (v "host"))
           (imap "port") (assoc :port (Integer/parseInt (v "port")))
           (imap "user") (assoc :user (v "user"))
           (imap "pass") (assoc :pass (.getBytes ^String (v "pass")))
-          (imap "passcmd") (assoc :pass (v "passcmd"))) ; PassCmd is preferred
+          (imap "passcmd") (assoc :pass (v "passcmd")) ; PassCmd is preferred
+          (imap "certificatefile") (assoc :cert (expand-user-path
+                                                  passwd (v "certificatefile"))))
         (update-in [:user] #(or % (System/getProperty "user.name")))
         (update-in [:port] #(or % (if (= (imap "useimaps") "no") IMAP-PORT IMAPS-PORT))))))
 
 (s/defn ^:private map-credentials :- {Word IMAPCredential}
   "Extract credentials from IMAPStore sections."
-  [imapstores :- MapSectionValue]
+  [imapstores :- MapSectionValue
+   passwd     :- {String Passwd}]
   (reduce-kv
     (fn [m store-name imap]
-      (assoc m store-name (parse-credentials imap)))
+      (assoc m store-name (parse-credentials imap passwd)))
     {} imapstores))
 
 (s/defn ^:private map-maildirstores :- {Word Maildirstore}
-  [stores :- MapSectionValue]
-  (let [passwd-map (parse-passwd (slurp "/etc/passwd"))]
-    (reduce-kv
-      (fn [m store-name mdirmap]
-        (assoc m store-name
-               {:inbox (expand-user-path
-                         passwd-map (or (mdirmap "inbox") DEFAULT-MBSYNC-INBOX))
-                :path (expand-user-path
-                        passwd-map (mdirmap "path"))
-                :flatten (mdirmap "flatten")}))
-      {} stores)))
+  [stores :- MapSectionValue
+   passwd :- {String Passwd}]
+  (reduce-kv
+    (fn [m store-name mdirmap]
+      (assoc m store-name
+             {:inbox (expand-user-path
+                       passwd (or (mdirmap "inbox") DEFAULT-MBSYNC-INBOX))
+              :path (expand-user-path
+                      passwd (mdirmap "path"))
+              :flatten (mdirmap "flatten")}))
+    {} stores))
 
 (s/defn ^:private get-store-name :- String
   [s :- String]
@@ -224,14 +230,15 @@
 
 (s/defn parse-mbsyncrc :- Mbsyncrc
   [s :- String]
-  (let [sections (parse-tokens (tokenize s))
-        imapname->IMAPCredential (map-credentials (:imapstore sections))
+  (let [passwd (parse-passwd (slurp "/etc/passwd"))
+        sections (parse-tokens (tokenize s))
+        imapname->IMAPCredential (map-credentials (:imapstore sections) passwd)
         mbchan->IMAPCredential (map-master-credentials
                                  (:channel sections)
                                  imapname->IMAPCredential)
         mbchan->Maildirstore (map-slave-maildirstores
                                (:channel sections)
-                               (map-maildirstores (:maildirstore sections)))]
+                               (map-maildirstores (:maildirstore sections) passwd))]
     (strict-map->Mbsyncrc
       {:render-fn #(render sections imapname->IMAPCredential)
        :sections sections
