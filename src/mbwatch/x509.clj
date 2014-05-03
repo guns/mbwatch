@@ -5,9 +5,6 @@
            (java.security.cert CertificateFactory X509Certificate)
            (javax.net.ssl SSLContext SSLSocketFactory TrustManagerFactory)))
 
-(def ^:private TrustManagerArray
-  (Class/forName "[Ljavax.net.ssl.TrustManager;"))
-
 (s/defn ^:private self-signed? :- Boolean
   [x509-cert :- X509Certificate]
   (= (.getSubjectX500Principal x509-cert)
@@ -26,7 +23,7 @@
       (.setCertificateEntry ks (str i) (nth x509-certs i)))
     ks))
 
-(s/defn ^:private make-trust-managers :- TrustManagerArray
+(s/defn ^:private make-trust-managers :- (Class/forName "[Ljavax.net.ssl.TrustManager;")
   [x509-cert-file :- Coercions]
   (let [tmf (TrustManagerFactory/getInstance
               (TrustManagerFactory/getDefaultAlgorithm))]
