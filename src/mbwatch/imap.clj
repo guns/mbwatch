@@ -35,6 +35,7 @@
                                          MBMap+Atom MBTuple MapAtom VOID
                                          Word]]
             [mbwatch.util :refer [url-for]]
+            [mbwatch.x509 :refer [ssl-socket-factory]]
             [schema.core :as s :refer [Any Int defschema either maybe]])
   (:import (clojure.lang IFn)
            (com.sun.mail.imap IMAPFolder IMAPStore)
@@ -51,14 +52,18 @@
 
 (s/defn ^:private make-properties :- Properties
   "Return a copy of system properties configured for IMAP communication."
-  [timeout :- Int]
+  [timeout   :- Int
+   cert-path :- (maybe String)]
   (let [props ^Properties (.clone (System/getProperties))
+        sf (when cert-path
+             (ssl-socket-factory cert-path))
         t (str timeout)]
     (doseq [[k v] [["connectiontimeout" t] ; Socket connect
                    ["timeout" t]           ; Socket read
                    ["writetimeout" t]      ; Socket write (+1 thread used)
                    ["connectionpooltimeout" t]
                    ["connectionpoolsize" CONNECTION-POOL-SIZE]
+                   ["ssl.socketFactory" sf]
                    ["ssl.checkserveridentity" "true"]]]
       (when (some? v)
         (.put props (str "mail.imap." k) v)
@@ -164,11 +169,11 @@
    label       :- Any
    f           :- IFn]
   (let [{:keys [mbchan imap-credential cache-atom log-chan timeout]} idle-worker
-        {:keys [host port user pass ssl?]} imap-credential
+        {:keys [host port user pass cert ssl?]} imap-credential
         scheme (if ssl? "imaps" "imap")
         url (cond-> (url-for scheme host user port)
               label (str label))
-        store (-> (make-properties timeout)
+        store (-> (make-properties timeout cert)
                   (Session/getInstance)
                   (.getStore scheme))
         log (fn log
