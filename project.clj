@@ -21,7 +21,7 @@
                    :jvm-opts ~(when (= (System/getenv "DEBUG") "1")
                                 ["-Dmail.debug=true"
                                  "-Djava.security.debug=certpath"
-                                 "-Djavax.net.debug=trustmanager"])}
+                                 "-Djavax.net.debug=all"])}
              :build {:aot [mbwatch.core]
                      :target-path "target/build"
                      :plugins [[lein-bin "0.3.4"]]
