@@ -17,13 +17,16 @@
                    :plugins [[jonase/eastwood "RELEASE"]]
                    :source-paths ["dev"]
                    :resource-paths ["test-resources"]
-                   :eastwood {:exclude-linters [:redefd-vars]}}
+                   :eastwood {:exclude-linters [:redefd-vars]}
+                   :jvm-opts ~(when (= (System/getenv "DEBUG") "1")
+                                ["-Dmail.debug=true"
+                                 "-Djava.security.debug=certpath"
+                                 "-Djavax.net.debug=trustmanager"])}
              :build {:aot [mbwatch.core]
                      :target-path "target/build"
                      :plugins [[lein-bin "0.3.4"]]
-                     :jvm-opts ~(if-let [jvm-opts (System/getenv "MBWATCH_JVM_OPTS")]
-                                  (clojure.string/split jvm-opts #"\s+")
-                                  [])
+                     :jvm-opts ~(when-let [jvm-opts (System/getenv "MBWATCH_JVM_OPTS")]
+                                  (clojure.string/split jvm-opts #"\s+"))
                      :bin {:name "mbwatch"
                            :bootclasspath true}}}
   :aliases {"BUILD" ["with-profile" "build" "bin"]})
