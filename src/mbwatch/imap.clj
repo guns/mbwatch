@@ -58,9 +58,11 @@
                    ["timeout" t]           ; Socket read
                    ["writetimeout" t]      ; Socket write (+1 thread used)
                    ["connectionpooltimeout" t]
-                   ["connectionpoolsize" CONNECTION-POOL-SIZE]]]
-      (.setProperty props (str "mail.imap" k) v)
-      (.setProperty props (str "mail.imaps" k) v))
+                   ["connectionpoolsize" CONNECTION-POOL-SIZE]
+                   ["ssl.checkserveridentity" "true"]]]
+      (when (some? v)
+        (.put props (str "mail.imap." k) v)
+        (.put props (str "mail.imaps." k) v)))
     props))
 
 (defmacro ^:private with-active-connection
