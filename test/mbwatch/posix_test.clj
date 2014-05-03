@@ -27,50 +27,51 @@
            PosixFilePermission/GROUP_EXECUTE
            PosixFilePermission/OTHERS_WRITE})))
 
-(deftest test-file-handling
-  (testing "create-file"
-    (let [f (io/file "/tmp" (str `test-file-creation#))]
-      (try
-        (is (not (.exists f)))
-        (create-file f 0700)
-        (is (.exists f))
-        (is (= (Files/getPosixFilePermissions (.toPath f) (make-array LinkOption 0))
-               #{PosixFilePermission/OWNER_READ
-                 PosixFilePermission/OWNER_WRITE
-                 PosixFilePermission/OWNER_EXECUTE}))
-        (create-file f 0444)
-        (is (= (Files/getPosixFilePermissions (.toPath f) (make-array LinkOption 0))
-               #{PosixFilePermission/OWNER_READ
-                 PosixFilePermission/GROUP_READ
-                 PosixFilePermission/OTHERS_READ}))
-        (finally
-          (.delete f)))))
-  (testing "create-dir"
-    (let [d₁ (io/file "/tmp" (str `test-dir-creation#) (str `test-dir-creation#))
-          d₀ (.getParentFile d₁)]
-      (try
-        (is (not (.exists d₀)))
-        (is (not (.exists d₁)))
-        (create-dir d₁ 0700)
-        (is (.exists d₀))
-        (is (.exists d₁))
-        (is (= (Files/getPosixFilePermissions (.toPath d₁) (make-array LinkOption 0))
-               #{PosixFilePermission/OWNER_READ
-                 PosixFilePermission/OWNER_WRITE
-                 PosixFilePermission/OWNER_EXECUTE}))
-        (create-dir d₁ 0750)
-        (is (= (Files/getPosixFilePermissions (.toPath d₁) (make-array LinkOption 0))
-               #{PosixFilePermission/OWNER_READ
-                 PosixFilePermission/OWNER_WRITE
-                 PosixFilePermission/OWNER_EXECUTE
-                 PosixFilePermission/GROUP_READ
-                 PosixFilePermission/GROUP_EXECUTE}))
-        (finally
-          (.delete d₁)
-          (.delete d₀)))))
-  (testing "remove-dir"
-    (let [dir (create-dir (io/file "/tmp" (str `test-dir-creation#) (str `test-dir-creation#)) 0700)
-          root (.getParentFile dir)]
-      (create-file (io/file dir "testfile") 0600)
-      (remove-dir root)
-      (is (not (.exists root))))))
+(deftest test-create-file
+  (let [f (io/file "/tmp" (str `test-file-creation#))]
+    (try
+      (is (not (.exists f)))
+      (create-file f 0700)
+      (is (.exists f))
+      (is (= (Files/getPosixFilePermissions (.toPath f) (make-array LinkOption 0))
+             #{PosixFilePermission/OWNER_READ
+               PosixFilePermission/OWNER_WRITE
+               PosixFilePermission/OWNER_EXECUTE}))
+      (create-file f 0444)
+      (is (= (Files/getPosixFilePermissions (.toPath f) (make-array LinkOption 0))
+             #{PosixFilePermission/OWNER_READ
+               PosixFilePermission/GROUP_READ
+               PosixFilePermission/OTHERS_READ}))
+      (finally
+        (.delete f)))))
+
+(deftest test-create-dir
+  (let [d₁ (io/file "/tmp" (str `test-dir-creation#) (str `test-dir-creation#))
+        d₀ (.getParentFile d₁)]
+    (try
+      (is (not (.exists d₀)))
+      (is (not (.exists d₁)))
+      (create-dir d₁ 0700)
+      (is (.exists d₀))
+      (is (.exists d₁))
+      (is (= (Files/getPosixFilePermissions (.toPath d₁) (make-array LinkOption 0))
+             #{PosixFilePermission/OWNER_READ
+               PosixFilePermission/OWNER_WRITE
+               PosixFilePermission/OWNER_EXECUTE}))
+      (create-dir d₁ 0750)
+      (is (= (Files/getPosixFilePermissions (.toPath d₁) (make-array LinkOption 0))
+             #{PosixFilePermission/OWNER_READ
+               PosixFilePermission/OWNER_WRITE
+               PosixFilePermission/OWNER_EXECUTE
+               PosixFilePermission/GROUP_READ
+               PosixFilePermission/GROUP_EXECUTE}))
+      (finally
+        (.delete d₁)
+        (.delete d₀)))))
+
+(deftest test-remove-dir
+  (let [dir (create-dir (io/file "/tmp" (str `test-dir-creation#) (str `test-dir-creation#)) 0700)
+        root (.getParentFile dir)]
+    (create-file (io/file dir "testfile") 0600)
+    (remove-dir root)
+    (is (not (.exists root)))))

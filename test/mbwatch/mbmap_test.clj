@@ -3,7 +3,8 @@
             [mbwatch.mbmap :refer [join-mbentry join-mbmap mbmap->mbtuples
                                    mbmap-diff mbmap-diff+ mbmap-disj
                                    mbmap-intersection mbmap-merge
-                                   mbmap-merge+ mbtuples->mbmap parse-mbargs]]
+                                   mbmap-merge+ mbtuples->mbmap parse-mbargs
+                                   parse-mbline]]
             [schema.test :refer [deftest]]))
 
 (deftest test-parse-mbargs
@@ -12,6 +13,11 @@
           "empty" #{}
           "also-empty" #{}
           "quux" #{"INBOX"}})))
+
+(deftest test-parse-mbline
+  (is (= (parse-mbline "foo:'bar baz' bar:baz\\ foo")
+         {"foo" #{"bar baz"}
+          "bar" #{"baz foo"}})))
 
 (deftest test-join-mbentry
   (is (= "foo" (join-mbentry "foo" #{})))

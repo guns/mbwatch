@@ -2,12 +2,14 @@
   (:require [clojure.core.async :refer [<!! >!! chan close!]]
             [clojure.test :refer [is]]
             [com.stuartsierra.component :as comp]
-            [mbwatch.logging :refer [->LogItem ->LoggingService
+            [mbwatch.logging :refer [->LogItem ->LoggingService defloggable
                                      log-with-timestamp!]]
             [mbwatch.logging.levels :refer [DEBUG NOTICE WARNING]]
-            [mbwatch.logging.protocols :refer [ILogger Loggable log-item]]
+            [mbwatch.logging.protocols :refer [ILogger Loggable log-item
+                                               log-level]]
             [schema.test :refer [deftest]])
-  (:import (mbwatch.logging LogItem)
+  (:import (clojure.lang Keyword)
+           (mbwatch.logging LogItem)
            (org.joda.time DateTime)))
 
 (deftest test-log-with-timestamp!
@@ -23,6 +25,17 @@
     (is (zero? level))
     (is (instance? DateTime timestamp))
     (is (= "Hello from ->LogItem." message))))
+
+(defloggable TestRecord DEBUG
+  [type :- Keyword]
+  (case type
+    :foo "FOO"))
+
+(deftest test-defloggable
+  (let [r (->TestRecord :foo)]
+    (is (instance? DateTime (:timestamp r)))
+    (is (= (log-level r) DEBUG))
+    (is (= "FOO" (:message (log-item r))))))
 
 (deftest test-LoggingService
   (let [sink (atom [])

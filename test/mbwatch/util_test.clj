@@ -1,7 +1,7 @@
 (ns mbwatch.util-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer [is]]
-            [mbwatch.util :refer [chomp class-name dequote istr=
+            [mbwatch.util :refer [chomp class-name dequote istr= make-table
                                   multi-row-entry parse-kv-string url-for
                                   when-seq zero-or-min]]
             [schema.test :refer [deftest]]))
@@ -11,6 +11,15 @@
   (is (= [1] (when-seq [x [1]] x))))
 
 (deftest test-tables
+  (is (= (make-table ["name" "address" "number"]
+                     [["Alice" "1234 Main St." "1234"]
+                      ["Bob" "1236 Main St." "4321"]
+                      ["Carol" "SCREW YOU" "XXXX"]])
+         (str "name  | address       | number\n"
+              "------+---------------+-------\n"
+              "Alice | 1234 Main St. | 1234  \n"
+              "Bob   | 1236 Main St. | 4321  \n"
+              "Carol | SCREW YOU     | XXXX  ")))
   (is (= (multi-row-entry "Foo" ["bar" "baz"] ["Alice" "Bob"])
          [["Foo" "bar" "Alice"] ["" "baz" "Bob"]])))
 

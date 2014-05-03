@@ -16,31 +16,12 @@
   "Global lock for synchronized-sh."
   (Object.))
 
-(s/defn shutdown-future :- Boolean
-  "Wait for a future for timeout ms, then cancel it. Returns true if the
-   future completed without intervention."
-  [f       :- Future
-   timeout :- Int]
-  (if (deref f timeout false)
-    true
-    (do (future-cancel f)
-        false)))
-
 (defmacro future-catch-print
   {:requires [#'catch-print]}
   [& body]
   `(future
      (catch-print
        ~@body)))
-
-(s/defn pmapv :- [Any]
-  "An eager version of pmap. Spawns a thread for _every_ element in coll. Use
-   for parallel IO."
-  [f    :- IFn
-   coll :- Any]
-  (->> coll
-       (mapv #(future-catch-print (f %)))
-       (mapv deref)))
 
 (defmacro future-loop
   {:requires [#'catch-print]}
@@ -57,6 +38,25 @@
      (catch-print
        (loop ~bindings
          ~@body))))
+
+(s/defn shutdown-future :- Boolean
+  "Wait for a future for timeout ms, then cancel it. Returns true if the
+   future completed without intervention."
+  [f       :- Future
+   timeout :- Int]
+  (if (= ::timeout (deref f timeout ::timeout))
+    (do (future-cancel f)
+        false)
+    true))
+
+(s/defn pmapv :- [Any]
+  "An eager version of pmap. Spawns a thread for _every_ element in coll. Use
+   for parallel IO."
+  [f    :- IFn
+   coll :- Any]
+  (->> coll
+       (mapv #(future-catch-print (f %)))
+       (mapv deref)))
 
 (s/defn sig-wait :- VOID
   ([lock :- Object]

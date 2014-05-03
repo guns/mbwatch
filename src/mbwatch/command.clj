@@ -33,11 +33,6 @@
          :app/restart     (OpcodeMeta. VOID      "RESTART"         "Restart application")
          :app/quit        (OpcodeMeta. VOID      "quit"            "Quit application")
 
-         :conn/remove     (OpcodeMeta. #{String} "conn remove"     "Remove channels from registered connections")
-         :conn/clear      (OpcodeMeta. VOID      "conn clear"      "Clear registered connections")
-         :conn/period     (OpcodeMeta. Int       "conn period"     "Set connection check period")
-         :conn/trigger    (OpcodeMeta. VOID      "conn trigger"    "Re-check connections")
-
          :idle/add        (OpcodeMeta. MBMap+    "idle add"        "Add to watched mboxes")
          :idle/remove     (OpcodeMeta. MBMap     "idle remove"     "Remove from watched mboxes")
          :idle/set        (OpcodeMeta. MBMap+    "idle set"        "Set watched mboxes")
@@ -58,8 +53,13 @@
          :sync/set        (OpcodeMeta. MBMap     "sync set"        "Set periodic sync request")
          :sync/clear      (OpcodeMeta. VOID      "sync clear"      "Clear periodic sync request")
          :sync/period     (OpcodeMeta. Int       "sync period"     "Set sync period")
+         :sync/trigger    (OpcodeMeta. VOID      "trigger"         "Trigger periodic sync")
          :sync/term       (OpcodeMeta. VOID      "TERMINATE"       "Terminate running mbsync processes")
-         :sync/trigger    (OpcodeMeta. VOID      "trigger"         "Trigger periodic sync")]]
+
+         :conn/remove     (OpcodeMeta. #{String} "conn remove"     "Remove channels from registered connections")
+         :conn/clear      (OpcodeMeta. VOID      "conn clear"      "Clear registered connections")
+         :conn/period     (OpcodeMeta. Int       "conn period"     "Set connection check period")
+         :conn/trigger    (OpcodeMeta. VOID      "conn trigger"    "Re-check connections")]]
 
   (def OPCODE-HELP
     (str (make-table

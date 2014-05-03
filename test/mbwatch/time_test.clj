@@ -24,4 +24,5 @@
                         1000
                         1))
          (parse-ms "1.5d1h 1.5m1s\t1ms")))
-  (is (= -1000 (parse-ms "-1s"))))
+  (is (= -1000 (parse-ms "-1s")))
+  (is (thrown? IllegalArgumentException (parse-ms "1f"))))

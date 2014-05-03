@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.test :refer [is]]
             [mbwatch.config.mbsyncrc :refer [get-password parse-mbsyncrc]]
+            [mbwatch.test.common :refer [with-system-output]]
             [mbwatch.util :refer [chomp]]
             [schema.test :refer [deftest]]))
 
@@ -10,7 +11,9 @@
          (chomp (slurp (io/resource "foo@example.com.pass")))))
   (is (= (get-password (.getBytes "correct horse battery staple"))
          "correct horse battery staple"))
-  (is (= "" (get-password "echo >&2 testing get-password; false"))))
+  (let [[o e v] (with-system-output (get-password "echo >&2 testing get-password; false"))]
+    (is (= "" o v))
+    (is (re-find #"testing get-password" e))))
 
 (deftest test-parse
   (let [mbsyncrc (parse-mbsyncrc (slurp (io/resource "mbsyncrc")))]
@@ -59,19 +62,6 @@
                             "expunge" "Both"}}))
     (is (= (-> mbsyncrc :mbchans)
            #{"FOO-chan" "BAR-chan" "FOO-BAR-chan" "FOO-ROOT-chan"}))
-    (is (= (update-in (-> mbsyncrc :mbchan->IMAPCredential) ["BAR-chan" :pass] seq)
-           {"FOO-chan" {:host "imap.example.com"
-                        :user "foo@example.com"
-                        :port 993
-                        :pass "cat test-resources/foo@example.com.pass"
-                        :cert "test-resources/gmail.crt"
-                        :ssl? true}
-            "BAR-chan" {:host "imap.example.com"
-                        :user "bar@example.com"
-                        :port 993
-                        :pass (seq (.getBytes "H'|&z]0pIcU2?T/(<!zaIq[wW\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\""))
-                        :cert nil
-                        :ssl? false}}))
     (is (= (-> mbsyncrc :mbchan->Maildirstore)
            {"FOO-chan" {:inbox "test-resources/maildir/foo-mdir/INBOX"
                         :path "test-resources/maildir/foo-mdir/"
@@ -84,4 +74,17 @@
                             :flatten nil}
             "FOO-ROOT-chan" {:inbox "/root/Mail/INBOX"
                              :path "/root/Mail/root/"
-                             :flatten nil}}))))
+                             :flatten nil}}))
+    (is (= (update-in (-> mbsyncrc :mbchan->IMAPCredential) ["BAR-chan" :pass] seq)
+           {"FOO-chan" {:host "imap.example.com"
+                        :user "foo@example.com"
+                        :port 993
+                        :pass "cat test-resources/foo@example.com.pass"
+                        :cert "test-resources/gmail.crt"
+                        :ssl? true}
+            "BAR-chan" {:host "imap.example.com"
+                        :user "bar@example.com"
+                        :port 993
+                        :pass (seq (.getBytes "H'|&z]0pIcU2?T/(<!zaIq[wW\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\""))
+                        :cert nil
+                        :ssl? false}}))))

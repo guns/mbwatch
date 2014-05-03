@@ -19,9 +19,9 @@
   (is (= (flatten-mbmap {"foo" #{"bar/baz"}
                          "bar" #{"baz/foo"}
                          "baz" #{"foo/bar"}}
-                        {"foo" {:inbox "" :path "" :flatten "."}
-                         "bar" {:inbox "" :path "" :flatten "_"}
-                         "baz" {:inbox "" :path "" :flatten nil}})
+                        {"foo" {:inbox "inbox" :path "path" :flatten "."}
+                         "bar" {:inbox "inbox" :path "path" :flatten "_"}
+                         "baz" {:inbox "inbox" :path "path" :flatten nil}})
          {"foo" #{"bar.baz"}
           "bar" #{"baz_foo"}
           "baz" #{"foo/bar"}})))

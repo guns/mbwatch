@@ -21,14 +21,16 @@
 (def ^:const DEFAULT-MBWATCHRC-PATH
   (str (System/getProperty "user.home") "/.mbwatchrc"))
 
-(s/defn config-options :- [[Any]]
+(def ^:private default-notify-cmd
+  (delay
+    (if (zero? (:exit (sh "sh" "-c" "command -v notify-send")))
+      "notify-send \"$(cat)\""
+      "")))
+
+(def config-options
   "Default config options as a tools.cli options vector."
-  []
   (let [mbmap? (partial validate MBMap)
         mbmap+? (partial validate MBMap+)
-        notify-cmd (if (zero? (:exit (sh "sh" "-c" "command -v notify-send")))
-                     "notify-send \"$(cat)\""
-                     "")
         log-level-desc (format "%d-%d or one of %s"
                                EMERG DEBUG (string/join ", " (keys NAME->LEVEL)))
         file-is-readable [#(.exists (io/file %)) "File does not exist"
@@ -76,8 +78,7 @@
       :default-desc "~/.mbwatchrc"
       :validate file-is-readable]
      ["-N" "--notify-cmd SHELL-CMD" "Notification command; receives text on stdin"
-      :default notify-cmd
-      :default-desc ""]
+      :default @default-notify-cmd]
      ["-S" "--sync-period TIME" "Time between periodic syncs"
       :default (parse-ms "15m")
       :default-desc "15m"
@@ -114,8 +115,8 @@
                                        (as-> m
                                          (mapv (fn [[k v]]
                                                  (str "--" (name k) \= v)) m))
-                                       (parse-opts (config-options)))
-                                   {:options (get-default-options (config-options))})]
+                                       (parse-opts config-options))
+                                   {:options (get-default-options config-options)})]
     (if errors
       (throw (IllegalArgumentException.
                (format "The following errors occured while parsing %s:\n\n%s\n"

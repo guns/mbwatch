@@ -11,12 +11,6 @@
            (java.io StringWriter)
            (org.joda.time.format DateTimeFormat)))
 
-(defn logger-out [colors log-item]
-  (let [s (StringWriter.)
-        logger (->ConsoleLogger s colors (DateTimeFormat/forPattern "❤"))]
-    (log logger log-item)
-    (str s)))
-
 (defn make-colors [color]
   (vec (take 8 (repeat color))))
 
@@ -35,14 +29,20 @@
     (is (= err "\rbar\n"))))
 
 (deftest test-catch-print
-  (let [[out err _] (with-system-output (catch-print (assert false)))]
-    (is (empty? out))
-    (is (re-find #"\n" err))))
+  (let [[o e v] (with-system-output (catch-print (assert false "TESTING")))]
+    (is (= "" o))
+    (is (re-find #"(?i)failed.*TESTING" e))
+    (is (nil? v))))
 
 (deftest test-ConsoleLogger
-  (is (= "\033[31;48;5;100m\r[❤] Hello world.\n\033[0m"
-         (logger-out (make-colors [:red :bg100]) (log-item "Hello world."))
-         (logger-out (make-colors [31 "48;5;100"]) (log-item "Hello world."))
-         (logger-out (make-colors "31;48;5;100") (log-item "Hello world."))))
-  (is (= "\r[❤] Hello world.\n"
-         (logger-out nil (log-item "Hello world.")))))
+  (letfn [(logger-out [colors log-item]
+            (let [s (StringWriter.)
+                  logger (->ConsoleLogger s colors (DateTimeFormat/forPattern "❤"))]
+              (log logger log-item)
+              (str s)))]
+    (is (= "\033[31;48;5;100m\r[❤] Hello world.\n\033[0m"
+           (logger-out (make-colors [:red :bg100]) (log-item "Hello world."))
+           (logger-out (make-colors [31 "48;5;100"]) (log-item "Hello world."))
+           (logger-out (make-colors "31;48;5;100") (log-item "Hello world."))))
+    (is (= "\r[❤] Hello world.\n"
+           (logger-out nil (log-item "Hello world."))))))

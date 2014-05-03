@@ -6,18 +6,36 @@
             [clojure.test.check.generators :as g :refer [such-that]]
             [clojure.test.check.properties :refer [for-all]]
             [mbwatch.concurrent :refer [->Timer pmapv set-alarm!
-                                        sig-notify-all sig-wait-timer
+                                        shutdown-future sig-notify-all
+                                        sig-wait sig-wait-timer
                                         synchronized-sh update-timer!]]
             [mbwatch.test.common :refer [tol? with-tempfile]]
             [schema.test :refer [deftest]])
   (:import (java.util.concurrent.atomic AtomicBoolean AtomicLong)))
+
+(deftest test-shutdown-future
+  (let [f₁ (future nil)
+        f₂ (future (Thread/sleep 100))
+        s₁ (future (shutdown-future f₁ 50))
+        s₂ (future (shutdown-future f₂ 50))]
+    (is (true? @s₁))
+    (is (false? @s₂))))
 
 (deftest test-pmapv
   (let [t₀ (System/currentTimeMillis)
         vs (pmapv (fn [n] (Thread/sleep 1000) n) (vec (range 256)))]
     (is (tol? 1000 (- (System/currentTimeMillis) t₀)))))
 
-(defspec test-Timer 10000
+(deftest test-sig-fns
+  (let [lock (Object.)
+        f₁ (future (sig-wait lock) :f₁)
+        f₂ (future (sig-wait lock 50) :f₂)]
+    (Thread/sleep 100)
+    (sig-notify-all lock)
+    (is (= :f₁ @f₁))
+    (is (= :f₂ @f₂))))
+
+(defspec test-Timer-ctor 10000
   (for-all [p g/int
             m g/int
             b g/boolean]
