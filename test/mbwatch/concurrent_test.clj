@@ -70,8 +70,8 @@
           _ (future-cancel f)
           Δt (- stop start)
           E_Δt (if (pos? p₁)
-                (max 5 p₁)
-                p₂)
+                 (max 5 p₁)
+                 p₂)
           ΔE_Δt (- Δt E_Δt)]
       (.println System/err
                 (format "p₀ %4d │ p₁ %4d │ p₂ %4d │ update? %5s │ E[Δt] %4d │ Δt %4d │ ΔE[Δt] %2d"

@@ -83,11 +83,11 @@
       (let [s₁ (m₁ mbchan)
             s₂ (m₂ mbchan)
             [Δ- Δ+] (cond (nil? s₁) [nil s₂]
-                     (nil? s₂) [s₁ nil]
-                     (empty? s₁) [nil nil]
-                     (empty? s₂) [nil s₂]
-                     :else [(diff* s₁ s₂)
-                            (diff* s₂ s₁)])]
+                          (nil? s₂) [s₁ nil]
+                          (empty? s₁) [nil nil]
+                          (empty? s₂) [nil s₂]
+                          :else [(diff* s₁ s₂)
+                                 (diff* s₂ s₁)])]
         [(cond-> rem (some? Δ-) (assoc mbchan Δ-))
          (cond-> add (some? Δ+) (assoc mbchan Δ+))]))
     [{} {}] (distinct (mapcat keys [m₁ m₂]))))

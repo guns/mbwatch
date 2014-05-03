@@ -216,7 +216,7 @@
       (case (:opcode command)
         (:idle/set
          :sync/set) (let [[_ Δ+] (mbmap-diff @(:notify-map-atom notify-service)
-                                  (:payload command))]
+                                             (:payload command))]
                       (alter-mbmap-atom!
                         swap! notify-service :notify-map-atom
                         mbmap-merge (assoc command :payload Δ+)))
