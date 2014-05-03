@@ -5,11 +5,6 @@
            (java.security.cert CertificateFactory X509Certificate)
            (javax.net.ssl SSLContext SSLSocketFactory TrustManagerFactory)))
 
-(s/defn ^:private self-signed? :- Boolean
-  [x509-cert :- X509Certificate]
-  (= (.getSubjectX500Principal x509-cert)
-     (.getIssuerX500Principal x509-cert)))
-
 (s/defn ^:private make-certificates :- [X509Certificate]
   [x509-cert-file :- Coercions]
   (with-open [input (io/input-stream x509-cert-file)]
