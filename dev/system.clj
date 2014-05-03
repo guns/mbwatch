@@ -1,6 +1,5 @@
 (ns system
-  (:require [mbwatch.application-master :refer [->ApplicationMaster]]
-            [mbwatch.cli :refer [parse-argv!]]))
+  (:require [mbwatch.application-master :refer [->ApplicationMaster]]))
 
 (defn system []
-  (->ApplicationMaster (parse-argv! [])))
+  (->ApplicationMaster {}))
