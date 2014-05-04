@@ -17,6 +17,8 @@
                 └─────────────┘
   "
   (:require [clojure.core.async :refer [chan close! put!]]
+            [clojure.java.io :as io :refer [Coercions]]
+            [clojure.java.shell :refer [sh]]
             [com.stuartsierra.component :as comp :refer [Lifecycle]]
             [mbwatch.application :refer [->Application status-table]]
             [mbwatch.command :refer [CommandSchema OPCODE-HELP
@@ -31,11 +33,23 @@
             [mbwatch.logging :refer [->LogItem log-with-timestamp!]]
             [mbwatch.logging.levels :refer [DEBUG]]
             [mbwatch.logging.protocols :refer [Loggable]]
+            [mbwatch.posix :refer [create-dir remove-dir]]
             [mbwatch.types :as t :refer [atom-of]]
             [schema.core :as s :refer [Any maybe]])
   (:import (clojure.lang IFn Keyword)
+           (java.io File)
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.application Application)))
+
+(s/defn ^:private create-tempdir :- File
+  []
+  (create-dir (str "/tmp/mbwatch-" (System/getProperty "user.name")) 0700))
+
+(s/defn ^:private create-control-pipe :- (maybe File)
+  [dir :- Coercions]
+  (let [path (io/file dir "control")]
+    (when (zero? (:exit (sh "mkfifo" "-m" "0600" (str path))))
+      path)))
 
 (declare process-command
          process-input)
@@ -50,23 +64,35 @@
   (start [this]
     (log-with-timestamp! (:log-chan @application) this)
     (swap! application comp/start) ; START Application
-    (let [f (future-catch-print
+    (let [tempdir (create-tempdir) ; CREATE tempdir
+          c (future-catch-print
               (when (tty?)
                 (try
                   (with-reader-input [line (console-reader)]
                     (process-input this line))
                   (catch InterruptedException _)) ; We are expecting this
                 (when (.get status)
-                  ;; User closed input stream; let the main thread know that
-                  ;; we are done
+                  ;; User signaled EOF at the console (i.e. Control-D). Let
+                  ;; the main thread know that we are done.
                   (print-console :err "Goodbye!")
                   (.set status false)
-                  (sig-notify-all status))))]
+                  (sig-notify-all status))))
+          p (future-catch-print
+              (when-some [path (create-control-pipe tempdir)]
+                (try
+                  (loop []
+                    (with-open [pipe (io/reader path)]
+                      (with-reader-input [line pipe]
+                        (process-input this line)))
+                    (recur))
+                  (catch InterruptedException _))))]
       (assoc this :exit-fn
              #(do (.set status false)
                   (close! (:cmd-chan @application)) ; CLOSE cmd-chan
                   (close! (:log-chan @application)) ; CLOSE log-chan
-                  (future-cancel f)                 ; Cancel the read on stdin
+                  (future-cancel c)                 ; Cancel the read on stdin
+                  (future-cancel p)                 ; Cancel the read on the control pipe
+                  (remove-dir tempdir)              ; DELETE tempdir
                   (comp/stop @application)))))      ; STOP Application
 
   (stop [this]
