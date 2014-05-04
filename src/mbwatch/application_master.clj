@@ -25,7 +25,8 @@
                                         sig-notify-all]]
             [mbwatch.config :refer [->Config DEFAULT-MBWATCHRC-PATH]]
             [mbwatch.config.mbsyncrc :refer [DEFAULT-MBSYNCRC-PATH]]
-            [mbwatch.console :refer [print-console tty? with-console-input]]
+            [mbwatch.console :refer [console-reader print-console tty?
+                                     with-reader-input]]
             [mbwatch.events :refer [->UserCommandFeedback]]
             [mbwatch.logging :refer [->LogItem log-with-timestamp!]]
             [mbwatch.logging.levels :refer [DEBUG]]
@@ -51,7 +52,7 @@
     (let [f (future-catch-print
               (when (tty?)
                 (try
-                  (with-console-input line
+                  (with-reader-input [line (console-reader)]
                     (let [cmd (parse-command-input line)]
                       (if (string? cmd)
                         (put! (:log-chan @application)

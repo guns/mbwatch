@@ -160,24 +160,23 @@
    calling thread. While the future wrapping .readLine will be cancelled,
    the actual read thread will stay alive until it receives input or the
    underlying source is closed, raising an IOException."
-  [rdr-sym line-sym & body]
-  `(let [f# (future (.readLine ~rdr-sym))]
+  {:requires [BufferedReader]}
+  [[line-sym rdr] & body]
+  `(let [f# (future (.readLine ^BufferedReader ~rdr))]
      (try
        (let [~line-sym @f#]
          ~@body)
        (finally
          (future-cancel f#)))))
 
-(defmacro with-console-input
-  "Execute body repeatedly with input line bound to line-sym. Returns
-   immediately if System/in is not a console. Exits if input line is nil
-   (stream closed) or if the body returns nil."
-  {:requires [BufferedReader console-reader tty?]}
-  [line-sym & body]
-  `(when (tty?)
-     (let [rdr# ^BufferedReader (console-reader)]
-       (loop []
-         (when (some? (with-read-line rdr# ~line-sym
-                        (when (some? ~line-sym)
-                          (do ~@body))))
-           (recur))))))
+(defmacro with-reader-input
+  "Execute body repeatedly with reader input line bound to line-sym. Exits if
+   input line is nil (stream closed) or if the body returns nil."
+  {:requires [BufferedReader]}
+  [[line-sym rdr] & body]
+  `(let [^BufferedReader rdr# ~rdr]
+     (loop []
+       (when (some? (with-read-line [~line-sym rdr#]
+                      (when (some? ~line-sym)
+                        (do ~@body))))
+         (recur)))))
