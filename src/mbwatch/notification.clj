@@ -6,7 +6,46 @@
                       ┌───────────────────────────────┐
      ─── Loggable ──▶ │ NewMessageNotificationService ├──── Loggable ──▶
                       └───────────────────────────────┘
-  "
+
+   Messages are selected for notification by the following algorithm:
+
+                                 ┌─────────┐
+                                 │ Message │
+                                 └────┬────┘
+                                      │
+                                      ▼
+                             ┌─────────────────┐
+                             │ From IMAP IDLE? ├──── yes ──▶ NOTIFY
+                             └────────┬────────┘
+                                      │ no
+                                      ▼
+                              ┌───────────────┐
+                              │ In blacklist? ├───── yes ──▶ skip
+                              └───────┬───────┘
+                                      │ no
+                                      ▼
+                                 ┌──────────┐
+          skip  ◀─── :none ──────┤ Strategy ├────── :all ──▶ NOTIFY
+                                 └────┬─────┘
+                                      │ :match
+                                      ▼
+                           ┌─────────────────────┐
+                           │ Matches references? ├── yes ──▶ NOTIFY
+                           └──────────┬──────────┘
+                                      │ no
+                                      ▼
+                              ┌───────────────┐
+                              │ In whitelist? ├───── yes ──▶ NOTIFY
+                              └───────┬───────┘
+                                      │ no
+                                      ▼
+                            ┌───────────────────┐
+                            │ Matches patterns? ├─── yes ──▶ NOTIFY
+                            └─────────┬─────────┘
+                                      │
+                                      ▼
+                                     skip
+   "
   (:require [clojure.core.async :refer [<!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
             [clojure.set :refer [difference intersection]]
@@ -26,12 +65,13 @@
             [mbwatch.process :as process]
             [mbwatch.time :refer [dt->ms]]
             [mbwatch.types :as t :refer [MBMap MBMapAtom Maildirstore VOID
-                                         Word]]
+                                         Word tuple]]
             [mbwatch.util :refer [when-seq]]
             [schema.core :as s :refer [Int defschema either enum maybe]])
   (:import (clojure.lang IFn)
            (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
+           (java.util.regex Pattern)
            (javax.mail.internet MimeMessage)
            (mbwatch.command Command)
            (mbwatch.events MbsyncEventStop MbsyncUnknownChannelError
@@ -40,6 +80,14 @@
 (def ^:private ^:const MAX-SENDERS-SHOWN
   "TODO: Make configurable?"
   8)
+
+(t/defrecord NotifySpec
+  [strategy   :- (enum :all :none :match)
+   idle-mbmap :- MBMap
+   blacklist  :- MBMap
+   whitelist  :- MBMap
+   references :- #{String}
+   patterns   :- #{(tuple String Pattern)}])
 
 (s/defn ^:private format-msg :- (maybe String)
   [messages :- [MimeMessage]]

@@ -100,10 +100,6 @@
 (defschema ConnectionMapAtom
   (atom-of ConnectionMap "ConnectionMapAtom"))
 
-(defschema NotifyPatterns
-  "mbchan {header-name #{Pattern}}. header-name of nil means search the body."
-  {String {(maybe String) #{Pattern}}})
-
 (defschema MapAtom
   (atom-of IPersistentMap "MapAtom"))
 
