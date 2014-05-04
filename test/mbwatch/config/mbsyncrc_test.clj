@@ -28,7 +28,7 @@
                         "useimaps" "yes"
                         "requiressl" "yes"
                         "passcmd" "\"cat test-resources/foo@example.com.pass\""
-                        "certificatefile" "\"test-resources/gmail.crt\""}
+                        "certificatefile" "\"test-resources/example.com.crt\""}
             "BAR-imap" {"host" "imap.example.com"
                         "user" "bar@example.com"
                         "port" "993"
@@ -80,7 +80,7 @@
                         :user "foo@example.com"
                         :port 993
                         :pass "cat test-resources/foo@example.com.pass"
-                        :cert "test-resources/gmail.crt"
+                        :cert "test-resources/example.com.crt"
                         :ssl? true}
             "BAR-chan" {:host "imap.example.com"
                         :user "bar@example.com"

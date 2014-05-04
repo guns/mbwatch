@@ -15,7 +15,7 @@ User foo@example.com
 UseIMAPS yes
 RequireSSL yes
 PassCmd "cat test-resources/foo@example.com.pass"
-CertificateFile "test-resources/gmail.crt"
+CertificateFile "test-resources/example.com.crt"
 
 IMAPStore BAR-imap
 Host imap.example.com
