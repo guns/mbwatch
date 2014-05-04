@@ -82,8 +82,8 @@
          (sig-wait ~status)
          (recur)))))
 
-(declare with-imap-connection)
-(declare idle!)
+(declare with-imap-connection
+         idle!)
 
 (t/defrecord IDLEWorker
   [mbchan           :- String
@@ -250,9 +250,9 @@
         (remove-worker! idle-worker)
         (sig-wait (:status idle-worker))))))
 
-(declare process-command)
-(declare start-workers)
-(declare stop-workers!)
+(declare process-command
+         start-workers
+         stop-workers!)
 
 (t/defrecord IDLEMaster
   [mbchan->IMAPCredential :- {Word IMAPCredential}

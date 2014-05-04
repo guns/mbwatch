@@ -37,8 +37,8 @@
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.application Application)))
 
-(declare process-command)
-(declare process-input)
+(declare process-command
+         process-input)
 
 (t/defrecord ApplicationMaster
   [application :- (atom-of Application "ApplicationAtom")

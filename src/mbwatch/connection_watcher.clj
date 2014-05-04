@@ -147,8 +147,8 @@
           (put! log-chan (->PendingSyncsEvent :release release))
           (put! cmd-chan-out (->Command :sync release)))))))
 
-(declare filter-command)
-(declare watch-connections!)
+(declare filter-command
+         watch-connections!)
 
 (t/defrecord ConnectionWatcher
   [mbchan->IMAPCredential :- {Word IMAPCredential}
