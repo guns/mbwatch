@@ -56,12 +56,11 @@
    cert-path :- (maybe String)]
   (let [props ^Properties (.clone (System/getProperties))
         sf (when cert-path
-             (ssl-socket-factory cert-path))
-        t timeout]
-    (doseq [[k v] [["connectiontimeout" t] ; Socket connect
-                   ["timeout" t]           ; Socket read
-                   ["writetimeout" t]      ; Socket write (+1 thread used)
-                   ["connectionpooltimeout" t]
+             (ssl-socket-factory cert-path))]
+    (doseq [[k v] [["connectiontimeout" timeout] ; Socket connect
+                   ["timeout" timeout]           ; Socket read
+                   ["writetimeout" timeout]      ; Socket write (+1 thread used)
+                   ["connectionpooltimeout" timeout]
                    ["connectionpoolsize" CONNECTION-POOL-SIZE]
                    ["ssl.socketFactory" sf]
                    ["ssl.checkserveridentity" true]
