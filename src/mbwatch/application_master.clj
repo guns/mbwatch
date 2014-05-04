@@ -38,6 +38,7 @@
            (mbwatch.application Application)))
 
 (declare process-command)
+(declare process-input)
 
 (t/defrecord ApplicationMaster
   [application :- (atom-of Application "ApplicationAtom")
@@ -53,11 +54,7 @@
               (when (tty?)
                 (try
                   (with-reader-input [line (console-reader)]
-                    (let [cmd (parse-command-input line)]
-                      (if (string? cmd)
-                        (put! (:log-chan @application)
-                              (->UserCommandFeedback :parse-error cmd))
-                        (process-command this cmd))))
+                    (process-input this line))
                   (catch InterruptedException _)) ; We are expecting this
                 (when (.get status)
                   ;; User closed input stream; let the main thread know that
@@ -99,7 +96,16 @@
        :status (AtomicBoolean. true)
        :exit-fn nil})))
 
-(s/defn ^:private process-command :- Any
+(s/defn ^:private process-input :- (maybe Boolean)
+  [application-master :- ApplicationMaster
+   line               :- String]
+  (let [cmd (parse-command-input line)]
+    (if (string? cmd)
+      (put! (:log-chan @(:application application-master))
+            (->UserCommandFeedback :parse-error cmd))
+      (process-command application-master cmd))))
+
+(s/defn ^:private process-command :- (maybe Boolean)
   [application-master :- ApplicationMaster
    command            :- CommandSchema]
   (case (:opcode command)
