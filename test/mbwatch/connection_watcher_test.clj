@@ -21,8 +21,8 @@
               (-> #'mbwatch.connection-watcher/update-connections-for-sync
                   (apply args)
                   ((juxt identity (comp :mbwatch.connection-watcher/sync-req meta)))))
-        up {:host "example.com" :port 80 :user "test" :pass "test" :ssl? true}
-        down {:host "IDENT-PORT.example.com" :port 113 :user "test" :pass "test" :ssl? true}
+        up {:host "example.com" :port 80 :user "test" :pass "test" :ssl? true :cert nil}
+        down {:host "IDENT-PORT.example.com" :port 113 :user "test" :pass "test" :ssl? true :cert nil}
         all-up {"a" up "b" up}
         all-down {"a" down "b" down}
         mixed {"a" up "b" down}]
