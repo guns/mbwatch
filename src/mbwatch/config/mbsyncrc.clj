@@ -5,10 +5,11 @@
             [mbwatch.console :refer [print-console]]
             [mbwatch.logging.levels :refer [CRIT]]
             [mbwatch.posix :refer [expand-user-path parse-passwd]]
-            [mbwatch.types :as t :refer [FilteredLine LowerCaseWord
-                                         PortNumber Word tuple]]
+            [mbwatch.types :as t :refer [FilteredLine IMAPCredential
+                                         LowerCaseWord Maildirstore Word
+                                         tuple]]
             [mbwatch.util :refer [chomp dequote istr=]]
-            [schema.core :as s :refer [defschema either enum eq maybe one
+            [schema.core :as s :refer [defschema either enum eq one
                                        optional-key]])
   (:import (clojure.lang IFn)
            (mbwatch.posix Passwd)))
@@ -47,20 +48,6 @@
    (optional-key :imapstore)    MapSectionValue
    (optional-key :maildirstore) MapSectionValue
    (optional-key :channel)      MapSectionValue})
-
-(defschema IMAPCredential
-  {:host String
-   :port PortNumber
-   :user String
-   :pass (either String ; PassCmd
-                 bytes) ; Plaintext password, stored as a byte-array
-   :cert (maybe String)
-   :ssl? Boolean})
-
-(defschema Maildirstore
-  {:inbox   FilteredLine
-   :path    FilteredLine
-   :flatten (maybe FilteredLine)})
 
 (s/defn ^:private paragraphs :- [[String]]
   [s :- String]

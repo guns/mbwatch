@@ -36,7 +36,6 @@
                                         shutdown-future sig-notify-all
                                         sig-wait-timer thread-loop
                                         update-timer!]]
-            [mbwatch.config.mbsyncrc :refer [IMAPCredential]]
             [mbwatch.console :refer [catch-print]]
             [mbwatch.events :refer [->PendingSyncsEvent ->TimeJumpEvent
                                     ->UserCommandFeedback]]
@@ -46,7 +45,8 @@
             [mbwatch.network :refer [reachable?]]
             [mbwatch.time :refer [human-duration]]
             [mbwatch.types :as t :refer [ConnectionMap ConnectionMapAtom
-                                         MBMap VOID Word tuple]]
+                                         IMAPCredential MBMap VOID Word
+                                         tuple]]
             [mbwatch.util :refer [when-seq]]
             [schema.core :as s :refer [Int either maybe pair pred validate]])
   (:import (clojure.lang IFn)

@@ -15,7 +15,6 @@
             [mbwatch.command :refer [CommandSchema]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
                                         thread-loop]]
-            [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.events :refer [->NewMessageNotification
                                     ->UserCommandFeedback]]
             [mbwatch.logging :refer [->LogItem log-with-timestamp!]]
@@ -26,7 +25,8 @@
             [mbwatch.mbmap :refer [mbmap-diff mbmap-disj mbmap-merge]]
             [mbwatch.process :as process]
             [mbwatch.time :refer [dt->ms]]
-            [mbwatch.types :as t :refer [MBMap MBMapAtom VOID Word]]
+            [mbwatch.types :as t :refer [MBMap MBMapAtom Maildirstore VOID
+                                         Word]]
             [mbwatch.util :refer [when-seq]]
             [schema.core :as s :refer [Int defschema either enum maybe]])
   (:import (clojure.lang IFn)

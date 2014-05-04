@@ -2,8 +2,7 @@
   (:require [clojure.java.io :as io :refer [Coercions]]
             [clojure.set :refer [subset?]]
             [clojure.string :as string]
-            [mbwatch.config.mbsyncrc :refer [Maildirstore]]
-            [mbwatch.types :refer [MBMap Word]]
+            [mbwatch.types :refer [MBMap Maildirstore Word]]
             [schema.core :as s :refer [maybe]])
   (:import (java.io File FileInputStream)
            (javax.mail Session)

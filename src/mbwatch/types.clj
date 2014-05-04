@@ -1,7 +1,7 @@
 (ns mbwatch.types
   (:require [clojure.core :as cc]
-            [schema.core :as s :refer [Schema both defschema eq maybe one
-                                       pair pred validate]])
+            [schema.core :as s :refer [Schema both defschema either eq maybe
+                                       one pair pred validate]])
   (:import (clojure.lang Atom IPersistentMap Symbol)
            (java.util.regex Pattern))
   (:refer-clojure :exclude [defrecord]))
@@ -59,6 +59,20 @@
 
 (defschema PortNumber
   (pred #(and (integer? %) (< 0 % 0x10000)) "PortNumber"))
+
+(defschema IMAPCredential
+  {:host String
+   :port PortNumber
+   :user String
+   :pass (either String ; PassCmd
+                 bytes) ; Plaintext password, stored as a byte-array
+   :cert (maybe String)
+   :ssl? Boolean})
+
+(defschema Maildirstore
+  {:inbox   FilteredLine
+   :path    FilteredLine
+   :flatten (maybe FilteredLine)})
 
 (defschema MBMap
   {String #{String}})

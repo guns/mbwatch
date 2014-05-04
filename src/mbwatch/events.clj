@@ -2,13 +2,12 @@
   "Loggable event records. Components implementing the Lifecycle protocol
    provide their own Loggable implementations."
   (:require [clojure.string :as string]
-            [mbwatch.config.mbsyncrc :refer [Maildirstore]]
             [mbwatch.logging :refer [defloggable]]
             [mbwatch.logging.levels :refer [ERR INFO NOTICE WARNING]]
             [mbwatch.logging.protocols :refer [Loggable]]
             [mbwatch.mbmap :refer [join-mbentry join-mbmap]]
             [mbwatch.time :refer [human-duration]]
-            [mbwatch.types :as t :refer [MBMap]]
+            [mbwatch.types :as t :refer [MBMap Maildirstore]]
             [schema.core :as s :refer [Any Int enum maybe]])
   (:import (javax.mail.internet MimeMessage)
            (mbwatch.logging LogItem)

@@ -31,7 +31,7 @@
             [mbwatch.command :refer [CommandSchema]]
             [mbwatch.concurrent :refer [CHAN-SIZE pmapv sig-notify-all
                                         thread-loop]]
-            [mbwatch.config.mbsyncrc :refer [Maildirstore]]
+            [mbwatch.config.mbsyncrc]
             [mbwatch.events :refer [->MbsyncUnknownChannelError
                                     strict-map->MbsyncEventStart
                                     strict-map->MbsyncEventStop]]
@@ -40,7 +40,8 @@
             [mbwatch.logging.protocols :refer [Loggable]]
             [mbwatch.mbmap :refer [join-mbentry]]
             [mbwatch.process :as process]
-            [mbwatch.types :as t :refer [MBMap MapAtom VOID atom-of]]
+            [mbwatch.types :as t :refer [MBMap Maildirstore MapAtom VOID
+                                         atom-of]]
             [schema.core :as s :refer [Int defschema maybe]])
   (:import (clojure.lang IFn)
            (java.io StringWriter)
