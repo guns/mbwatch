@@ -78,7 +78,7 @@
          "\n* TIME UNIT: One of d, h, m, s, ms; minutes are the default unit"
          "\n* Commands may be abbreviated: `i a home:INBOX` -> `idle add home:INBOX`"))
 
-  (def ^:private OPCODE-TABLE (apply hash-map t)))
+  (def OPCODE-TABLE (apply hash-map t)))
 
 (def ^:private USER-COMMAND-TRIE
   (reduce-kv
