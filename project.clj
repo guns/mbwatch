@@ -27,6 +27,6 @@
                      :plugins [[lein-bin "0.3.4"]]
                      :jvm-opts ~(when-let [jvm-opts (System/getenv "MBWATCH_JVM_OPTS")]
                                   (clojure.string/split jvm-opts #"\s+"))
-                     :bin {:name "mbwatch"
+                     :bin {:name "mbwatch-daemon"
                            :bootclasspath true}}}
   :aliases {"BUILD" ["with-profile" "build" "bin"]})
