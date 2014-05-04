@@ -43,7 +43,7 @@
   (is (= (get-all-mboxes {:path "test-resources/maildir/foo-mdir"
                           :inbox "test-resources/maildir/foo-mdir/INBOX"
                           :flatten nil})
-         #{"INBOX" "clojure"})))
+         #{"INBOX" "test"})))
 
 (deftest test-new-messages
   (is (= (count (new-messages TEST-MDIR 0))
