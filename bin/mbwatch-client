@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+
+# -*- COMMAND HELP -*-
+read -r -d '' HELP <<'ENDOFHELP'
+Command         | Arguments          | Description
+----------------+--------------------+--------------------------------------------
+help            |                    | This help menu
+CLEAR           |                    | Clear password cache
+INFO            |                    | Print application status
+reload          |                    | Reload configuration
+RESTART         |                    | Restart application
+quit            |                    | Quit application
+idle add        | channel:box[,…]    | Add to watched mboxes
+idle remove     | channel[:box,…]    | Remove from watched mboxes
+idle set        | channel:box[,…]    | Set watched mboxes
+idle clear      |                    | Clear watched mboxes
+idle RESTART    |                    | Restart IMAP connections
+notify add      | channel[:box,…]    | Add to notification mboxes
+notify remove   | channel[:box,…]    | Remove from notification mboxes
+notify set      | channel[:box,…]    | Set notification mboxes
+notify clear    |                    | Clear notification mboxes
+blacklist set   | channel[:box,…]    | Set notification blacklist
+blacklist clear |                    | Clear notification blacklist
+SYNC            | channel[:box,…]    | Synchronize given mailboxes
+sync add        | channel[:box,…]    | Add to periodic sync request
+sync remove     | channel[:box,…]    | Remove from periodic sync request
+sync set        | channel[:box,…]    | Set periodic sync request
+sync clear      |                    | Clear periodic sync request
+sync period     | Number + TIME UNIT | Set sync period
+trigger         |                    | Trigger periodic sync
+TERMINATE       |                    | Terminate running mbsync processes
+conn remove     | channel …          | Remove channels from registered connections
+conn clear      |                    | Clear registered connections
+conn period     | Number + TIME UNIT | Set connection check period
+conn trigger    |                    | Re-check connections
+
+* TIME UNIT: One of d, h, m, s, ms; minutes are the default unit
+* Commands may be abbreviated: `i a home:INBOX` -> `idle add home:INBOX`
+ENDOFHELP
+
+CONTROL="/tmp/mbwatch-$USER/control"
+
+main() {
+    if [[ ! -w "$CONTROL" ]]; then
+        echo "No control pipe available. Run \"mbwatch-daemon\" to start mbwatch." >&2
+        exit 1
+    elif (($# < 1)); then
+        echo "$HELP"
+        exit 1
+    fi
+
+    local OPTIND OPTARG opt
+    while getopts :h opt; do
+        case $opt in
+        h) echo "$HELP"; exit;;
+        esac
+    done
+    shift $((OPTIND-1))
+
+    echo "$@" > "$CONTROL"
+}
+
+main "$@"
