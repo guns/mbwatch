@@ -104,7 +104,7 @@
   (atom-of IPersistentMap "MapAtom"))
 
 (defschema PosInt
-  (both Int (pred #(<= 0 %) "n ≥ 0")))
+  (both Int (pred #(>= % 0) "n ≥ 0")))
 
 (defschema TrieNode
   (both IRadix {PosInt IRadix}))
