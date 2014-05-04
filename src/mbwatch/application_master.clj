@@ -34,7 +34,7 @@
             [mbwatch.logging.levels :refer [DEBUG]]
             [mbwatch.logging.protocols :refer [Loggable]]
             [mbwatch.posix :refer [create-dir remove-dir]]
-            [mbwatch.types :as t :refer [atom-of]]
+            [mbwatch.types :as t :refer [VOID atom-of]]
             [schema.core :as s :refer [Any maybe]])
   (:import (clojure.lang IFn Keyword)
            (java.io File)
@@ -50,6 +50,11 @@
   (let [path (io/file dir "control")]
     (when (zero? (:exit (sh "mkfifo" "-m" "0600" (str path))))
       path)))
+
+(s/defn ^:private sig-exit :- VOID
+  [status :- AtomicBoolean]
+  (.set status false)
+  (sig-notify-all status))
 
 (declare process-command
          process-input)
@@ -72,11 +77,9 @@
                     (process-input this line))
                   (catch InterruptedException _)) ; We are expecting this
                 (when (.get status)
-                  ;; User signaled EOF at the console (i.e. Control-D). Let
-                  ;; the main thread know that we are done.
+                  ;; User signaled EOF at the console (i.e. Control-D)
                   (print-console :err "Goodbye!")
-                  (.set status false)
-                  (sig-notify-all status))))
+                  (sig-exit status))))
           p (future-catch-print
               (when-some [path (create-control-pipe tempdir)]
                 (try
@@ -147,7 +150,7 @@
                     true)
     ; :app/reload
     ; :app/restart
-    :app/quit nil
+    :app/quit (sig-exit (:status application-master))
     ;; Convey everything else
     (do
       (put! (-> application-master :application deref :cmd-chan) command)
