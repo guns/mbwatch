@@ -1,8 +1,10 @@
 (ns mbwatch.types
   (:require [clojure.core :as cc]
-            [schema.core :as s :refer [Schema both defschema either eq maybe
-                                       one pair pred validate]])
+            [immutable-int-map]
+            [schema.core :as s :refer [Int Schema both defschema either eq
+                                       maybe one pair pred validate]])
   (:import (clojure.lang Atom IPersistentMap Symbol)
+           (immutable_int_map IRadix)
            (java.util.regex Pattern))
   (:refer-clojure :exclude [defrecord]))
 
@@ -104,3 +106,9 @@
 
 (defschema MapAtom
   (atom-of IPersistentMap "MapAtom"))
+
+(defschema PosInt
+  (both Int (pred #(<= 0 %) "n ≥ 0")))
+
+(defschema TrieNode
+  (both IRadix {PosInt IRadix}))
