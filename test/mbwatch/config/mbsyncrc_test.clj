@@ -2,7 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.test :refer [is]]
             [mbwatch.config.mbsyncrc :refer [get-password parse-mbsyncrc]]
-            [mbwatch.test.common :refer [with-system-output]]
+            [mbwatch.test.common :refer [with-output]]
             [mbwatch.types :refer [strict-map->IMAPCredential
                                    strict-map->Maildirstore]]
             [mbwatch.util :refer [chomp]]
@@ -13,7 +13,7 @@
          (chomp (slurp (io/resource "foo@example.com.pass")))))
   (is (= (get-password (.getBytes "correct horse battery staple"))
          "correct horse battery staple"))
-  (let [[o e v] (with-system-output (get-password "echo >&2 testing get-password; false"))]
+  (let [[o e v] (with-output (get-password "echo >&2 testing get-password; false"))]
     (is (= "" o v))
     (is (re-find #"testing get-password" e))))
 

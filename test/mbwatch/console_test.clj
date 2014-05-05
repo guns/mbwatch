@@ -4,7 +4,7 @@
                                      get-default-colors print-console]]
             [mbwatch.logging.levels :refer [NOTICE]]
             [mbwatch.logging.protocols :refer [log log-item]]
-            [mbwatch.test.common :refer [with-system-output]]
+            [mbwatch.test.common :refer [with-output]]
             [schema.core :refer [validate]]
             [schema.test :refer [deftest]])
   (:import (clojure.lang Keyword)
@@ -21,7 +21,7 @@
   (is (= (count (get-default-colors 0)) 8)))
 
 (deftest test-print-console
-  (let [[out err _] (with-system-output
+  (let [[out err _] (with-output
                       (print-console "foo")
                       (print-console :err "bar")
                       (print-console NOTICE :out "baz"))]
@@ -29,7 +29,7 @@
     (is (= err "\rbar\n"))))
 
 (deftest test-catch-print
-  (let [[o e v] (with-system-output (catch-print (assert false "TESTING")))]
+  (let [[o e v] (with-output (catch-print (assert false "TESTING")))]
     (is (= "" o))
     (is (re-find #"(?i)failed.*TESTING" e))
     (is (nil? v))))

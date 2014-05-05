@@ -41,7 +41,7 @@
        (finally
          (.delete ~tmp-sym)))))
 
-(defmacro with-system-output
+(defmacro with-output
   {:requires [PrintStream ByteArrayOutputStream]}
   [& body]
   `(let [[out# err#] [System/out System/err]
