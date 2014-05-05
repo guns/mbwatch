@@ -38,10 +38,10 @@
                         "requiressl" "no"
                         "pass" "\"H'|&z]0pIcU2?T/(<!zaIq[wW\\\\PnDvb%%I,_n7*)'yJLqoTfcu>bYn1:xYc\\\"\""}}))
     (is (= (-> mbsyncrc :sections :maildirstore)
-           {"FOO-mdir" {"inbox" "test-resources/maildir/foo-mdir/INBOX"
-                        "path" "test-resources/maildir/foo-mdir/"
+           {"FOO-mdir" {"inbox" "test-resources/Maildirs/foo-mdir/INBOX"
+                        "path" "test-resources/Maildirs/foo-mdir/"
                         "flatten" "."}
-            "BAR-mdir" {"path" "test-resources/maildir/bar-mdir/"}
+            "BAR-mdir" {"path" "test-resources/Maildirs/bar-mdir/"}
             "ROOT-mdir" {"inbox" "~root/Mail/INBOX"
                          "path" "~root/Mail/root/"}}))
     (is (= (-> mbsyncrc :sections :channel)
@@ -66,16 +66,16 @@
            #{"FOO-chan" "BAR-chan" "FOO-BAR-chan" "FOO-ROOT-chan"}))
     (is (= (-> mbsyncrc :mbchan->Maildirstore)
            {"FOO-chan" (strict-map->Maildirstore
-                         {:inbox "test-resources/maildir/foo-mdir/INBOX"
-                          :path "test-resources/maildir/foo-mdir/"
+                         {:inbox "test-resources/Maildirs/foo-mdir/INBOX"
+                          :path "test-resources/Maildirs/foo-mdir/"
                           :flatten "."})
             "BAR-chan" (strict-map->Maildirstore
                          {:inbox "/home/guns/Maildir"
-                          :path "test-resources/maildir/bar-mdir/"
+                          :path "test-resources/Maildirs/bar-mdir/"
                           :flatten nil})
             "FOO-BAR-chan" (strict-map->Maildirstore
                              {:inbox "/home/guns/Maildir"
-                              :path "test-resources/maildir/bar-mdir/"
+                              :path "test-resources/Maildirs/bar-mdir/"
                               :flatten nil})
             "FOO-ROOT-chan" (strict-map->Maildirstore
                               {:inbox "/root/Mail/INBOX"

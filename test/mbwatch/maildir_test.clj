@@ -3,11 +3,12 @@
             [mbwatch.maildir :refer [flatten-mbmap flatten-mbox
                                      get-all-mboxes get-mdir new-messages
                                      senders]]
+            [mbwatch.types :refer [strict-map->Maildirstore]]
             [schema.test :refer [deftest]])
   (:import (java.io File)))
 
 (def ^String TEST-MDIR
-  "test-resources/maildir/foo-mdir/INBOX")
+  "test-resources/Maildirs/foo-mdir/INBOX")
 
 (deftest test-flatten-mbox
   (is (= (flatten-mbox "foo/bar/baz" ".")
@@ -19,17 +20,21 @@
   (is (= (flatten-mbmap {"foo" #{"bar/baz"}
                          "bar" #{"baz/foo"}
                          "baz" #{"foo/bar"}}
-                        {"foo" {:inbox "inbox" :path "path" :flatten "."}
-                         "bar" {:inbox "inbox" :path "path" :flatten "_"}
-                         "baz" {:inbox "inbox" :path "path" :flatten nil}})
+                        {"foo" (strict-map->Maildirstore
+                                 {:inbox "inbox" :path "path" :flatten "."})
+                         "bar" (strict-map->Maildirstore
+                                 {:inbox "inbox" :path "path" :flatten "_"})
+                         "baz" (strict-map->Maildirstore
+                                 {:inbox "inbox" :path "path" :flatten nil})})
          {"foo" #{"bar.baz"}
           "bar" #{"baz_foo"}
           "baz" #{"foo/bar"}})))
 
 (deftest test-get-mdir
-  (let [maildir {:inbox "/home/user/Mail/INBOX"
-                 :path "/home/user/Mail/gmail"
-                 :flatten "."}]
+  (let [maildir (strict-map->Maildirstore
+                  {:inbox "/home/user/Mail/INBOX"
+                   :path "/home/user/Mail/gmail"
+                   :flatten "."})]
     (is (= (get-mdir maildir "INBOX")
            "/home/user/Mail/INBOX"))
     (is (= (get-mdir maildir "clojure")
@@ -40,9 +45,10 @@
            "/home/user/Mail/gmail/[Gmail]/Sent Mail"))))
 
 (deftest test-get-all-mboxes
-  (is (= (get-all-mboxes {:path "test-resources/maildir/foo-mdir"
-                          :inbox "test-resources/maildir/foo-mdir/INBOX"
-                          :flatten nil})
+  (is (= (get-all-mboxes (strict-map->Maildirstore
+                           {:path "test-resources/Maildirs/foo-mdir"
+                            :inbox "test-resources/Maildirs/foo-mdir/INBOX"
+                            :flatten nil}))
          #{"INBOX" "test"})))
 
 (deftest test-new-messages

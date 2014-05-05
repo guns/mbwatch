@@ -18,12 +18,12 @@ useimaps yes
 user foo@example.com
 
 maildirstore BAR-mdir
-path test-resources/maildir/bar-mdir/
+path test-resources/Maildirs/bar-mdir/
 
 maildirstore FOO-mdir
 flatten .
-inbox test-resources/maildir/foo-mdir/INBOX
-path test-resources/maildir/foo-mdir/
+inbox test-resources/Maildirs/foo-mdir/INBOX
+path test-resources/Maildirs/foo-mdir/
 
 maildirstore ROOT-mdir
 inbox ~root/Mail/INBOX
