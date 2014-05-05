@@ -6,40 +6,6 @@
                       ┌───────────────────────────────┐
      ─── Loggable ──▶ │ NewMessageNotificationService ├──── Loggable ──▶
                       └───────────────────────────────┘
-
-   Messages are selected for notification by the following algorithm:
-
-                                 ┌─────────┐
-                                 │ Message │
-                                 └────┬────┘
-                                      │
-                                      ▼
-                              ┌───────────────┐
-                              │ In blacklist? ├───── yes ──▶ skip
-                              └───────┬───────┘
-                                      │ no
-                                      ▼
-                                 ┌──────────┐
-          skip  ◀─── :none ──────┤ Strategy ├────── :all ──▶ NOTIFY
-                                 └────┬─────┘
-                                      │ :match
-                                      ▼
-                           ┌─────────────────────┐
-                           │ Matches references? ├── yes ──▶ NOTIFY
-                           └──────────┬──────────┘
-                                      │ no
-                                      ▼
-                              ┌───────────────┐
-                              │ In whitelist? ├───── yes ──▶ NOTIFY
-                              └───────┬───────┘
-                                      │ no
-                                      ▼
-                            ┌───────────────────┐
-                            │ Matches patterns? ├─── yes ──▶ NOTIFY
-                            └─────────┬─────────┘
-                                      │
-                                      ▼
-                                     skip
    "
   (:require [clojure.core.async :refer [<!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
@@ -155,7 +121,8 @@
                      conj-event? (conj event))]
         (if (zero? countdown)
           (do (future-catch-print
-                (search-and-notify! notify-service events))
+                (let [{:keys [notify-spec-atom notify-cmd log-chan-out]} notify-service]
+                  (search-and-notify! events @notify-spec-atom notify-cmd log-chan-out)))
               (dissoc sync-req-map id))
           (assoc sync-req-map id {:countdown countdown :events events})))
       sync-req-map)))
