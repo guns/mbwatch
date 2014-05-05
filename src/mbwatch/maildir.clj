@@ -2,11 +2,12 @@
   (:require [clojure.java.io :as io :refer [Coercions]]
             [clojure.set :refer [subset?]]
             [clojure.string :as string]
-            [mbwatch.types :refer [MBMap Maildirstore Word]]
+            [mbwatch.types :refer [MBMap Word]]
             [schema.core :as s :refer [maybe]])
   (:import (java.io File FileInputStream)
            (javax.mail Session)
-           (javax.mail.internet MimeMessage MimeUtility)))
+           (javax.mail.internet MimeMessage MimeUtility)
+           (mbwatch.types Maildirstore)))
 
 (s/defn ^:private message :- MimeMessage
   [file :- File]

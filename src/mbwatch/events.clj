@@ -7,10 +7,11 @@
             [mbwatch.logging.protocols :refer [Loggable]]
             [mbwatch.mbmap :refer [join-mbentry join-mbmap]]
             [mbwatch.time :refer [human-duration]]
-            [mbwatch.types :as t :refer [MBMap Maildirstore]]
+            [mbwatch.types :as t :refer [MBMap]]
             [schema.core :as s :refer [Any Int enum maybe]])
   (:import (javax.mail.internet MimeMessage)
            (mbwatch.logging LogItem)
+           (mbwatch.types Maildirstore)
            (org.joda.time DateTime)))
 
 (def ^:private CONNECTION-EVENT-MAP

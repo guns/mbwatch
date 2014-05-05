@@ -5,14 +5,15 @@
             [mbwatch.console :refer [print-console]]
             [mbwatch.logging.levels :refer [CRIT]]
             [mbwatch.posix :refer [expand-user-path parse-passwd]]
-            [mbwatch.types :as t :refer [FilteredLine IMAPCredential
-                                         LowerCaseWord Maildirstore Word
-                                         tuple]]
+            [mbwatch.types :as t :refer [FilteredLine LowerCaseWord Word
+                                         strict-map->IMAPCredential
+                                         strict-map->Maildirstore tuple]]
             [mbwatch.util :refer [chomp dequote istr=]]
             [schema.core :as s :refer [defschema either enum eq one
                                        optional-key]])
   (:import (clojure.lang IFn)
-           (mbwatch.posix Passwd)))
+           (mbwatch.posix Passwd)
+           (mbwatch.types IMAPCredential Maildirstore)))
 
 (def ^:const DEFAULT-MBSYNCRC-PATH
   "Default path of mbsyncrc."
@@ -112,7 +113,8 @@
           (imap "certificatefile") (assoc :cert (expand-user-path
                                                   passwd (v "certificatefile"))))
         (update-in [:user] #(or % (System/getProperty "user.name")))
-        (update-in [:port] #(or % (if (= (imap "useimaps") "no") IMAP-PORT IMAPS-PORT))))))
+        (update-in [:port] #(or % (if (= (imap "useimaps") "no") IMAP-PORT IMAPS-PORT)))
+        strict-map->IMAPCredential)))
 
 (s/defn ^:private map-credentials :- {Word IMAPCredential}
   "Extract credentials from IMAPStore sections."
@@ -129,11 +131,12 @@
   (reduce-kv
     (fn [m store-name mdirmap]
       (assoc m store-name
-             {:inbox (expand-user-path
-                       passwd (or (mdirmap "inbox") DEFAULT-MBSYNC-INBOX))
-              :path (expand-user-path
-                      passwd (mdirmap "path"))
-              :flatten (mdirmap "flatten")}))
+             (strict-map->Maildirstore
+               {:inbox (expand-user-path
+                         passwd (or (mdirmap "inbox") DEFAULT-MBSYNC-INBOX))
+                :path (expand-user-path
+                        passwd (mdirmap "path"))
+                :flatten (mdirmap "flatten")})))
     {} stores))
 
 (s/defn ^:private get-store-name :- String

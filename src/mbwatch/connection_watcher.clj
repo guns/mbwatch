@@ -45,13 +45,13 @@
             [mbwatch.network :refer [reachable?]]
             [mbwatch.time :refer [human-duration]]
             [mbwatch.types :as t :refer [ConnectionMap ConnectionMapAtom
-                                         IMAPCredential MBMap VOID Word
-                                         tuple]]
+                                         MBMap VOID Word tuple]]
             [mbwatch.util :refer [when-seq]]
             [schema.core :as s :refer [Int either maybe pair pred validate]])
   (:import (clojure.lang IFn)
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.events ConnectionEvent)
+           (mbwatch.types IMAPCredential)
            (org.joda.time DateTime)))
 
 (def ^:const MIN-POS-PERIOD 5000)

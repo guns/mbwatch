@@ -40,14 +40,14 @@
             [mbwatch.logging.protocols :refer [Loggable]]
             [mbwatch.mbmap :refer [join-mbentry]]
             [mbwatch.process :as process]
-            [mbwatch.types :as t :refer [MBMap Maildirstore MapAtom VOID
-                                         atom-of]]
+            [mbwatch.types :as t :refer [MBMap MapAtom VOID atom-of]]
             [schema.core :as s :refer [Int defschema maybe]])
   (:import (clojure.lang IFn)
            (java.io StringWriter)
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.config.mbsyncrc Mbsyncrc)
            (mbwatch.events MbsyncEventStart)
+           (mbwatch.types Maildirstore)
            (org.joda.time DateTime)))
 
 (def ^:private ^:const MBSYNC-TIMEOUT

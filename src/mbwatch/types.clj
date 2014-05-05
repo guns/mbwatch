@@ -63,20 +63,6 @@
 (defschema PortNumber
   (pred #(and (integer? %) (< 0 % 0x10000)) "PortNumber"))
 
-(defschema IMAPCredential
-  {:host String
-   :port PortNumber
-   :user String
-   :pass (either String ; PassCmd
-                 bytes) ; Plaintext password, stored as a byte-array
-   :cert (maybe String)
-   :ssl? Boolean})
-
-(defschema Maildirstore
-  {:inbox   FilteredLine
-   :path    FilteredLine
-   :flatten (maybe FilteredLine)})
-
 (defschema MBMap
   {String #{String}})
 
@@ -94,6 +80,34 @@
   (pair String "mbchan"
         String "mbox"))
 
+(defrecord IMAPCredential
+  [host :- String
+   port :- PortNumber
+   user :- String
+   ;; PassCmd (String) or plaintext password, stored as a byte-array
+   pass :- (either String bytes)
+   cert :- (maybe String)
+   ssl? :- Boolean])
+
+(defrecord Maildirstore
+  [inbox   :- FilteredLine
+   path    :- FilteredLine
+   flatten :- (maybe FilteredLine)])
+
+(defrecord NotifySpec
+  [strategy   :- (enum :all :none :match)
+   blacklist  :- MBMap
+   whitelist  :- MBMap
+   references :- #{String}
+   patterns   :- #{(tuple String Pattern)}])
+
+(do (alter-meta! #'strict-map->IMAPCredential dissoc :private)
+    (alter-meta! #'strict-map->Maildirstore dissoc :private)
+    (alter-meta! #'strict-map->NotifySpec dissoc :private))
+
+(defschema NotifySpecAtom
+  (atom-of NotifySpec "NotifySpecAtom"))
+
 (defschema ConnectionMap
   {String {:status Boolean
            :pending-syncs (maybe #{String})}})
@@ -109,15 +123,3 @@
 
 (defschema TrieNode
   (both IRadix {PosInt (recursive #'TrieNode)}))
-
-(defrecord NotifySpec
-  [strategy   :- (enum :all :none :match)
-   blacklist  :- MBMap
-   whitelist  :- MBMap
-   references :- #{String}
-   patterns   :- #{(tuple String Pattern)}])
-
-(alter-meta! #'strict-map->NotifySpec dissoc :private)
-
-(defschema NotifySpecAtom
-  (atom-of NotifySpec "NotifySpecAtom"))

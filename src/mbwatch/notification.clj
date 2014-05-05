@@ -53,15 +53,14 @@
             [mbwatch.logging.levels :refer [DEBUG]]
             [mbwatch.logging.protocols :refer [Loggable]]
             [mbwatch.notification.search :refer [search-and-notify!]]
-            [mbwatch.types :as t :refer [Maildirstore NotifySpecAtom PosInt
-                                         Word]]
+            [mbwatch.types :as t :refer [NotifySpecAtom PosInt Word]]
             [schema.core :as s :refer [both defschema maybe]])
   (:import (clojure.lang IFn)
            (immutable_int_map IRadix)
            (java.util.concurrent.atomic AtomicBoolean)
            (mbwatch.command Command)
            (mbwatch.events MbsyncEventStop MbsyncUnknownChannelError)
-           (mbwatch.types NotifySpec)))
+           (mbwatch.types Maildirstore NotifySpec)))
 
 (def ^:private ^:const MAX-SENDERS-SHOWN
   "TODO: Make configurable?"

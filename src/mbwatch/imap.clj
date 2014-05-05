@@ -31,9 +31,9 @@
             [mbwatch.logging.protocols :refer [Loggable]]
             [mbwatch.mbmap :refer [mbmap->mbtuples mbmap-diff+ mbmap-disj
                                    mbmap-merge+ mbtuples->mbmap]]
-            [mbwatch.types :as t :refer [ConnectionMapAtom IMAPCredential
-                                         MBMap MBMap+ MBMap+Atom MBTuple
-                                         MapAtom VOID Word]]
+            [mbwatch.types :as t :refer [ConnectionMapAtom MBMap MBMap+
+                                         MBMap+Atom MBTuple MapAtom VOID
+                                         Word]]
             [mbwatch.util :refer [url-for]]
             [mbwatch.x509 :refer [ssl-socket-factory]]
             [schema.core :as s :refer [Any Int defschema either maybe]])
@@ -45,6 +45,7 @@
                        FolderNotFoundException MessagingException Session)
            (javax.mail.event MessageCountListener)
            (mbwatch.events IMAPConnectionEvent)
+           (mbwatch.types IMAPCredential)
            (org.joda.time DateTime)))
 
 (def ^:private ^:const CONNECTION-POOL-SIZE 16)
