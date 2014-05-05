@@ -36,16 +36,16 @@
           (.write out 0x00))))
     (catch Throwable _)))
 
-(defmacro with-server
-  [[& host-port-syms] & body]
+(defmacro with-server [[& host-port-syms] & body]
   (let [[host port & host-port-syms] host-port-syms]
     (if port
-      `(let [~host ~(.getHostName TEST-SERVER) ~port (~next-server-port)
+      `(let [~host ~(.getHostName TEST-SERVER)
+             ~port (~next-server-port)
              f# (future (listen ~port))]
          (try
            (with-server ~host-port-syms
              ~@body)
            (finally
-             (poison-server ~port)
+             (~poison-server ~port)
              (future-cancel f#))))
       `(do ~@body))))
