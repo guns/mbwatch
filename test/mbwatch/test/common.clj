@@ -19,10 +19,6 @@
        g/vector
        (fmap (partial into {}))))
 
-(def COMMAND-GEN
-  ;; FIXME
-  )
-
 (defn chanv [ch]
   (into [] (take-while some? (repeatedly #(<!! ch)))))
 
