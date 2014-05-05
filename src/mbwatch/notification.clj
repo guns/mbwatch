@@ -14,11 +14,6 @@
                                  └────┬────┘
                                       │
                                       ▼
-                             ┌─────────────────┐
-                             │ From IMAP IDLE? ├──── yes ──▶ NOTIFY
-                             └────────┬────────┘
-                                      │ no
-                                      ▼
                               ┌───────────────┐
                               │ In blacklist? ├───── yes ──▶ skip
                               └───────┬───────┘
@@ -48,127 +43,34 @@
    "
   (:require [clojure.core.async :refer [<!! chan close! put!]]
             [clojure.core.async.impl.protocols :refer [ReadPort WritePort]]
-            [clojure.set :refer [difference intersection]]
-            [clojure.string :as string]
             [com.stuartsierra.component :refer [Lifecycle]]
+            [immutable-int-map :refer [int-map]]
             [mbwatch.command :refer [CommandSchema]]
             [mbwatch.concurrent :refer [CHAN-SIZE future-catch-print
                                         thread-loop]]
-            [mbwatch.events :refer [->NewMessageNotification
-                                    ->UserCommandFeedback]]
+            [mbwatch.events]
             [mbwatch.logging :refer [->LogItem log-with-timestamp!]]
             [mbwatch.logging.levels :refer [DEBUG]]
             [mbwatch.logging.protocols :refer [Loggable]]
-            [mbwatch.maildir :refer [flatten-mbmap get-all-mboxes get-mdir
-                                     new-messages senders]]
-            [mbwatch.mbmap :refer [mbmap-diff mbmap-disj mbmap-merge]]
-            [mbwatch.process :as process]
-            [mbwatch.time :refer [dt->ms]]
-            [mbwatch.types :as t :refer [MBMap MBMapAtom Maildirstore VOID
-                                         Word tuple]]
-            [mbwatch.util :refer [when-seq]]
-            [schema.core :as s :refer [Int defschema either enum maybe]])
+            [mbwatch.notification.search :refer [search-and-notify!]]
+            [mbwatch.types :as t :refer [Maildirstore NotifySpecAtom PosInt
+                                         Word]]
+            [schema.core :as s :refer [both defschema maybe]])
   (:import (clojure.lang IFn)
-           (java.io StringWriter)
+           (immutable_int_map IRadix)
            (java.util.concurrent.atomic AtomicBoolean)
-           (java.util.regex Pattern)
-           (javax.mail.internet MimeMessage)
            (mbwatch.command Command)
-           (mbwatch.events MbsyncEventStop MbsyncUnknownChannelError
-                           NewMessageNotification)))
+           (mbwatch.events MbsyncEventStop MbsyncUnknownChannelError)
+           (mbwatch.types NotifySpec)))
 
 (def ^:private ^:const MAX-SENDERS-SHOWN
   "TODO: Make configurable?"
   8)
 
-(t/defrecord NotifySpec
-  [strategy   :- (enum :all :none :match)
-   idle-mbmap :- MBMap
-   blacklist  :- MBMap
-   whitelist  :- MBMap
-   references :- #{String}
-   patterns   :- #{(tuple String Pattern)}])
-
-(s/defn ^:private format-msg :- (maybe String)
-  [messages :- [MimeMessage]]
-  (let [msg-count (count messages)
-        ss (senders messages)
-        n+ (- (count ss) MAX-SENDERS-SHOWN)
-        ss (if (pos? n+)
-             (conj (subvec ss 0 MAX-SENDERS-SHOWN)
-                   (format "… and %d other%s"
-                           n+
-                           (if (= n+ 1) "" \s)))
-             ss)]
-    (when (pos? msg-count)
-      (format "%d new message%s from:\n%s"
-              msg-count
-              (if (= msg-count 1) "" \s)
-              (string/join \newline ss)))))
-
-(s/defn ^:private sync-event->new-messages-by-box :- (maybe {String [MimeMessage]})
-  [event         :- MbsyncEventStop
-   notify-map    :- MBMap
-   blacklist-map :- MBMap]
-  (let [{:keys [mbchan mboxes maildir start]} event]
-    (when (and maildir (contains? notify-map mbchan))
-      (let [notify-mboxes (notify-map mbchan)
-            blacklist-mboxes (blacklist-map mbchan)
-            ;; TODO: Filter by `Patterns`?
-            mboxes (if (seq mboxes)
-                     mboxes
-                     (get-all-mboxes maildir))
-            bs (-> (if (empty? notify-mboxes)
-                     mboxes
-                     (intersection mboxes notify-mboxes))
-                   (difference blacklist-mboxes))
-            timestamp (dt->ms start)]
-        (reduce
-          (fn [m b]
-            (let [msgs (new-messages (get-mdir maildir b) timestamp)]
-              (cond-> m
-                (seq msgs) (assoc b msgs))))
-          {} bs)))))
-
-(s/defn ^:private find-new-messages :- (maybe NewMessageNotification)
-  [events        :- [MbsyncEventStop]
-   notify-map    :- MBMap
-   blacklist-map :- MBMap]
-  (let [m (reduce
-            (fn [m ev]
-              (let [bs->msgs (sync-event->new-messages-by-box
-                               ev notify-map blacklist-map)]
-                (cond-> m
-                  (seq bs->msgs) (assoc (:mbchan ev) bs->msgs))))
-            {} events)]
-    (when (seq m)
-      (->NewMessageNotification m))))
-
-(s/defn ^:private notify! :- VOID
-  [notify-command :- String
-   notification   :- NewMessageNotification]
-  (let [msgs (mapcat
-               (fn [[mbchan mbox->messages]]
-                 (map
-                   (fn [[mbox messages]]
-                     (format "[%s/%s]\t%s" mbchan mbox (format-msg messages)))
-                   (sort mbox->messages)))
-               (sort (:mbchan->mbox->messages notification)))
-        proc (process/spawn
-               "bash" "-c" notify-command :in (string/join "\n\n" msgs))]
-    (when-not (zero? (.waitFor proc))
-      (let [ebuf (StringWriter.)
-            _ (process/dump! proc :err ebuf)
-            emsg (str ebuf)
-            emsg (format "`%s` failed with status %d.%s"
-                         notify-command
-                         (.exitValue proc)
-                         (if (seq emsg) (str "\n" emsg) ""))]
-        (throw (RuntimeException. emsg))))))
-
 (defschema ^:private SyncRequestMap
-  {Int {:countdown Int
-        :events [MbsyncEventStop]}})
+  (both IRadix
+        {PosInt {:countdown PosInt
+                 :events [MbsyncEventStop]}}))
 
 (defprotocol ^:private INotification
   (^:private
@@ -177,9 +79,8 @@
      necessary."))
 
 (t/defrecord NewMessageNotificationService
-  [notify-command       :- String
-   notify-map-atom      :- MBMapAtom
-   blacklist-map-atom   :- MBMapAtom
+  [notify-cmd           :- String
+   notify-spec-atom     :- NotifySpecAtom
    mbchan->Maildirstore :- {Word Maildirstore}
    log-chan-in          :- ReadPort
    log-chan-out         :- WritePort
@@ -190,7 +91,7 @@
 
   (start [this]
     (log-with-timestamp! log-chan-out this)
-    (let [c (thread-loop [sync-req-map {}]
+    (let [c (thread-loop [sync-req-map (int-map)]
               (when (.get status)
                 (when-some [obj (<!! log-chan-in)]
                   ;; Pass through ASAP
@@ -211,46 +112,22 @@
   (log-level [_] DEBUG)
 
   (log-item [this]
-    (->LogItem this (if exit-fn
-                      "↓ Stopping NewMessageNotificationService"
-                      "↑ Starting NewMessageNotificationService"))))
+    (->LogItem this (format "%s NewMessageNotificationService"
+                            (if exit-fn "↓ Stopping " "↑ Starting ")))))
 
 (s/defn ->NewMessageNotificationService :- NewMessageNotificationService
-  [notify-command       :- String
-   notify-map           :- MBMap
-   blacklist-map        :- MBMap
+  [notify-cmd           :- String
+   notify-spec          :- NotifySpec
    mbchan->Maildirstore :- {Word Maildirstore}
    log-chan-in          :- ReadPort]
   (strict-map->NewMessageNotificationService
-    {:notify-command notify-command
-     :notify-map-atom (atom notify-map)
-     :blacklist-map-atom (atom blacklist-map)
+    {:notify-command notify-cmd
+     :notify-spec-atom (atom notify-spec)
      :mbchan->Maildirstore mbchan->Maildirstore
      :log-chan-in log-chan-in
      :log-chan-out (chan CHAN-SIZE) ; OPEN log-chan-out
      :status (AtomicBoolean. true)
      :exit-fn nil}))
-
-(s/defn ^:private alter-mbmap-atom! :- VOID
-  [alter-fn       :- IFn
-   notify-service :- NewMessageNotificationService
-   keyword        :- (enum :notify-map-atom :blacklist-map-atom)
-   merge-fn       :- (maybe IFn)
-   command        :- CommandSchema]
-  (let [{:keys [mbchan->Maildirstore log-chan-out]} notify-service
-        {:keys [payload]} command
-        mbmap-atom (get notify-service keyword)
-        ;; Flatten mboxes
-        notify-map (flatten-mbmap payload mbchan->Maildirstore)
-        old-map @mbmap-atom
-        new-map (if merge-fn
-                  (alter-fn mbmap-atom merge-fn notify-map)
-                  (alter-fn mbmap-atom notify-map))]
-    (when-not (= old-map new-map)
-      (let [fbtype ({:notify-map-atom :notify/Δ
-                     :blacklist-map-atom :blacklist/Δ} keyword)]
-        (put! log-chan-out (->UserCommandFeedback fbtype new-map))))
-    nil))
 
 (s/defn ^:private process-command :- SyncRequestMap
   [command        :- CommandSchema
@@ -262,47 +139,12 @@
     ;; No other commands effect the sync-req-map
     (do
       (case (:opcode command)
-        (:idle/set
-         :sync/set) (let [[_ Δ+] (mbmap-diff @(:notify-map-atom notify-service)
-                                             (:payload command))]
-                      (alter-mbmap-atom!
-                        swap! notify-service :notify-map-atom
-                        mbmap-merge (assoc command :payload Δ+)))
-        (:idle/add
-         :sync/add
-         :notify/add) (alter-mbmap-atom!
-                        swap! notify-service :notify-map-atom
-                        mbmap-merge command)
-        :notify/remove (alter-mbmap-atom!
-                         swap! notify-service :notify-map-atom
-                         mbmap-disj command)
-        :notify/set (alter-mbmap-atom!
-                      reset! notify-service :notify-map-atom
-                      nil command)
-        :notify/clear (alter-mbmap-atom!
-                        swap! notify-service :notify-map-atom
-                        (fn [m _] (empty m)) command)
-        :blacklist/set (alter-mbmap-atom!
-                         reset! notify-service :blacklist-map-atom
-                         nil command)
-        :blacklist/clear (alter-mbmap-atom!
-                           swap! notify-service :blacklist-map-atom
-                           (fn [m _] (empty m)) command)
+        ;; :notify/whitelist, etc
         nil)
       sync-req-map)))
 
-(s/defn ^:private notify-events! :- VOID
-  [notify-service :- NewMessageNotificationService
-   events         :- [MbsyncEventStop]]
-  (let [{:keys [log-chan-out notify-command notify-map-atom
-                blacklist-map-atom]} notify-service]
-    (when-some [note (find-new-messages events @notify-map-atom @blacklist-map-atom)]
-      (put! log-chan-out note)
-      (when-seq [cmd notify-command]
-        (notify! cmd note)))))
-
 (s/defn ^:private process-stop-event :- SyncRequestMap
-  [event          :- (either MbsyncEventStop MbsyncUnknownChannelError)
+  [event          :- INotification
    sync-req-map   :- SyncRequestMap
    notify-service :- NewMessageNotificationService
    conj-event?    :- Boolean]
@@ -314,7 +156,7 @@
                      conj-event? (conj event))]
         (if (zero? countdown)
           (do (future-catch-print
-                (notify-events! notify-service events))
+                (search-and-notify! notify-service events))
               (dissoc sync-req-map id))
           (assoc sync-req-map id {:countdown countdown :events events})))
       sync-req-map)))

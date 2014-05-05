@@ -1,11 +1,12 @@
 (ns mbwatch.types
   (:require [clojure.core :as cc]
             [immutable-int-map]
-            [schema.core :as s :refer [Int Schema both defschema either eq
-                                       maybe one pair pred recursive
+            [schema.core :as s :refer [Int Schema both defschema either enum
+                                       eq maybe one pair pred recursive
                                        validate]])
   (:import (clojure.lang Atom IPersistentMap Symbol)
-           (immutable_int_map IRadix))
+           (immutable_int_map IRadix)
+           (java.util.regex Pattern))
   (:refer-clojure :exclude [defrecord]))
 
 (defmacro defrecord
@@ -108,3 +109,15 @@
 
 (defschema TrieNode
   (both IRadix {PosInt (recursive #'TrieNode)}))
+
+(defrecord NotifySpec
+  [strategy   :- (enum :all :none :match)
+   blacklist  :- MBMap
+   whitelist  :- MBMap
+   references :- #{String}
+   patterns   :- #{(tuple String Pattern)}])
+
+(alter-meta! #'strict-map->NotifySpec dissoc :private)
+
+(defschema NotifySpecAtom
+  (atom-of NotifySpec "NotifySpecAtom"))
