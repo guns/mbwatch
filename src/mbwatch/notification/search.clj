@@ -51,7 +51,7 @@
   "Select messages that match :references or :patterns in notify-spec."
   [msgs        :- [MimeMessage]
    notify-spec :- NotifySpec]
-  (.println System/err "UNIMPLEMENTED: filter-messages")
+  ;; XXX: Unimplemented
   msgs)
 
 (s/defn ^:private new-messages-by-box :- {String [MimeMessage]}
