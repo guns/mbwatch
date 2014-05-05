@@ -178,7 +178,7 @@
   [timeout :- Int]
   (format "Waiting up to %s for IMAP disconnection" (human-duration timeout)))
 
-(defloggable NewMessageNotification INFO
+(defloggable NewMessageEvent INFO
   [mbchan->mbox->messages :- {String {String [MimeMessage]}}]
   (str
     (reduce
@@ -187,7 +187,7 @@
           (fn [^StringBuilder s [mbox messages]]
             (.append s (format " [%s/%s %d]" mbchan mbox (count messages))))
           s (sort mbox->messages)))
-      (StringBuilder. "NewMessageNotification:") (sort mbchan->mbox->messages))))
+      (StringBuilder. "New messages: ") (sort mbchan->mbox->messages))))
 
 (defloggable PendingSyncsEvent INFO
   [action   :- (enum :pool :release)
