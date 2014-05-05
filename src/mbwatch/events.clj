@@ -3,7 +3,7 @@
    provide their own Loggable implementations."
   (:require [clojure.string :as string]
             [mbwatch.logging :refer [defloggable]]
-            [mbwatch.logging.levels :refer [ERR INFO NOTICE WARNING]]
+            [mbwatch.logging.levels :refer [DEBUG ERR INFO NOTICE WARNING]]
             [mbwatch.logging.protocols :refer [Loggable]]
             [mbwatch.mbmap :refer [join-mbentry join-mbmap]]
             [mbwatch.time :refer [human-duration]]
@@ -177,6 +177,23 @@
 (defloggable IMAPShutdownEvent INFO
   [timeout :- Int]
   (format "Waiting up to %s for IMAP disconnection" (human-duration timeout)))
+
+(t/defrecord NewMessageSearchEvent
+  [events :- [MbsyncEventStop]
+   start  :- DateTime
+   stop   :- (maybe DateTime)]
+
+  Loggable
+
+  (log-level [_] DEBUG)
+
+  (log-item [_]
+    (let [mbchans (string/join ", " (mapv :mbchan events))]
+      (if stop
+        (format "Completed new message search of `%s` in %s"
+                mbchans (human-duration start stop))
+        (format "Searching for new messages in `%s`"
+                mbchans)))))
 
 (defloggable NewMessageEvent INFO
   [mbchan->mbox->messages :- {String {String [MimeMessage]}}]
