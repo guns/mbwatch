@@ -1,7 +1,7 @@
 (ns mbwatch.mbmap
   "Tools for working with MBMap structures: {String #{String}}"
   (:require [clj-shellwords.core :refer [shell-split]]
-            [clojure.set :refer [difference intersection]]
+            [clojure.set :refer [difference intersection subset?]]
             [clojure.string :as string]
             [mbwatch.types :refer [MBMap MBMap+ MBTuple]]
             [schema.core :as s :refer [maybe pair]])
@@ -141,3 +141,18 @@
               (seq mboxes₁) (assoc m mbchan (into (or mboxes₀ #{}) mboxes₁))
               :else (assoc m mbchan #{}))))
     m₁ m₂))
+
+(s/defn mbmap-subset? :- Boolean
+  "Is m₁ a subset of m₂, considering an empty set as universal?"
+  [m₁ :- MBMap
+   m₂ :- MBMap]
+  (reduce-kv
+    (fn [_ k v₁]
+      (let [v₂ (m₂ k)]
+        (if (cond (not (contains? m₂ k)) false
+                  (empty? v₂) true
+                  (empty? v₁) false
+                  :else (subset? v₁ v₂))
+          true
+          (reduced false))))
+    true m₁))

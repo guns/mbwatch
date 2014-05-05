@@ -3,8 +3,8 @@
             [mbwatch.mbmap :refer [join-mbentry join-mbmap mbmap->mbtuples
                                    mbmap-diff mbmap-diff+ mbmap-disj
                                    mbmap-intersection mbmap-merge
-                                   mbmap-merge+ mbtuples->mbmap parse-mbargs
-                                   parse-mbline]]
+                                   mbmap-merge+ mbmap-subset? mbtuples->mbmap
+                                   parse-mbargs parse-mbline]]
             [schema.test :refer [deftest]]))
 
 (deftest test-parse-mbargs
@@ -61,3 +61,10 @@
   (is (= (mbmap-merge {"α" #{"a"} "β" #{} "γ" #{"a"}}
                       {"α" #{} "β" #{"a"} "γ" #{"a" "b"} "Δ" #{"a"}})
          {"α" #{} "β" #{} "γ" #{"a" "b"} "Δ" #{"a"}})))
+
+(deftest test-mbmap-subset?
+  (is (mbmap-subset? {"α" #{"a"}} {"α" #{}}))
+  (is (not (mbmap-subset? {"α" #{"b"}} {"α" #{"a"}})))
+  (is (mbmap-subset? {"α" #{} "β" #{"b"}} {"α" #{} "β" #{"b"}}))
+  (is (not (mbmap-subset? {"α" #{}} {"α" #{"a"}})))
+  (is (not (mbmap-subset? {"α" #{}} {"β" #{}}))))
