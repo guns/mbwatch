@@ -2,10 +2,10 @@
   (:require [clojure.core :as cc]
             [immutable-int-map]
             [schema.core :as s :refer [Int Schema both defschema either eq
-                                       maybe one pair pred validate]])
+                                       maybe one pair pred recursive
+                                       validate]])
   (:import (clojure.lang Atom IPersistentMap Symbol)
-           (immutable_int_map IRadix)
-           (java.util.regex Pattern))
+           (immutable_int_map IRadix))
   (:refer-clojure :exclude [defrecord]))
 
 (defmacro defrecord
@@ -107,4 +107,4 @@
   (both Int (pred #(>= % 0) "n ≥ 0")))
 
 (defschema TrieNode
-  (both IRadix {PosInt IRadix}))
+  (both IRadix {PosInt (recursive #'TrieNode)}))
