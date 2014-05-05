@@ -120,7 +120,7 @@
    mbchan->Maildirstore :- {Word Maildirstore}
    log-chan-in          :- ReadPort]
   (strict-map->NewMessageNotificationService
-    {:notify-command notify-cmd
+    {:notify-cmd notify-cmd
      :notify-spec-atom (atom notify-spec)
      :mbchan->Maildirstore mbchan->Maildirstore
      :log-chan-in log-chan-in
