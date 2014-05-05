@@ -64,7 +64,10 @@
    mtime :- long]
   (->> (io/file mdir "new")
        .listFiles
-       (filter (fn [^File f] (and (.isFile f) (> (.lastModified f) mtime))))
+       (filter (fn [^File f]
+                 (and (.isFile f)
+                      (not (.isHidden f))
+                      (> (.lastModified f) mtime))))
        (sort-by #(- (.lastModified ^File %)))
        (mapv message)))
 

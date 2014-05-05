@@ -54,7 +54,7 @@
 (deftest test-new-messages
   (is (= (count (new-messages TEST-MDIR 0))
          (count (filterv (fn [^File f]
-                           (and (.isFile f) (re-find #"\A[^.]" (.getName f))))
+                           (and (.isFile f) (not (.isHidden f))))
                          (file-seq (File. TEST-MDIR)))))))
 
 (deftest test-senders
