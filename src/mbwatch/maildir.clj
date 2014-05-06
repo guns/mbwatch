@@ -2,24 +2,20 @@
   (:require [clojure.java.io :as io :refer [Coercions]]
             [clojure.set :refer [subset?]]
             [clojure.string :as string]
+            [mbwatch.message :refer [message]]
             [mbwatch.types :refer [MBMap Word]]
             [schema.core :as s :refer [maybe]])
-  (:import (java.io File FileInputStream)
-           (javax.mail Session)
-           (javax.mail.internet MimeMessage MimeUtility)
+  (:import (java.io File)
+           (javax.mail.internet MimeMessage)
            (mbwatch.types Maildirstore)))
-
-(s/defn ^:private message :- MimeMessage
-  [file :- File]
-  (MimeMessage. (Session/getDefaultInstance (System/getProperties))
-                (FileInputStream. file)))
 
 (s/defn ^:private maildir? :- Boolean
   [f :- File]
   (and (.isDirectory f)
        (subset? #{"cur" "new" "tmp"} (set (.list f)))))
 
-(s/defn flatten-mbox :- String
+(s/defn ^:private flatten-mbox :- String
+  "Replace `/` characters in mbox with `flatten` parameter."
   [mbox    :- String
    flatten :- (maybe String)]
   (if flatten
@@ -27,6 +23,7 @@
     mbox))
 
 (s/defn flatten-mbmap :- MBMap
+  "Replace `/` characters in mboxes with :flatten parameter."
   [mbmap                :- MBMap
    mbchan->Maildirstore :- {Word Maildirstore}]
   (reduce-kv
@@ -58,8 +55,7 @@
       mdirs (.listFiles (io/file path)))))
 
 (s/defn new-messages :- [MimeMessage]
-  "Vector of new messages in maildir newer than given timestamp. Messages are
-   sorted in reverse order by timestamp."
+  "Vector of new messages in maildir newer than given timestamp."
   [mdir  :- Coercions
    mtime :- long]
   (->> (io/file mdir "new")
@@ -68,13 +64,4 @@
                  (and (.isFile f)
                       (not (.isHidden f))
                       (> (.lastModified f) mtime))))
-       (sort-by #(- (.lastModified ^File %)))
        (mapv message)))
-
-(s/defn senders :- [String]
-  "Vector of distinct senders in a sequence of MimeMessage objects."
-  [messages :- [MimeMessage]]
-  (->> messages
-       (mapcat #(.getFrom ^MimeMessage %))
-       distinct
-       (mapv #(MimeUtility/decodeText (str %)))))

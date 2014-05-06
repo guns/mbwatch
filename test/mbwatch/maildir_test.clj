@@ -1,8 +1,7 @@
 (ns mbwatch.maildir-test
   (:require [clojure.test :refer [is]]
-            [mbwatch.maildir :refer [flatten-mbmap flatten-mbox
-                                     get-all-mboxes get-mdir new-messages
-                                     senders]]
+            [mbwatch.maildir :refer [flatten-mbmap get-all-mboxes get-mdir
+                                     new-messages]]
             [mbwatch.types :refer [strict-map->Maildirstore]]
             [schema.test :refer [deftest]])
   (:import (java.io File)))
@@ -10,25 +9,19 @@
 (def ^String TEST-MDIR
   "test-resources/Maildirs/foo-mdir/INBOX")
 
-(deftest test-flatten-mbox
-  (is (= (flatten-mbox "foo/bar/baz" ".")
-         "foo.bar.baz"))
-  (is (= (flatten-mbox "foo/bar/baz" nil)
-         "foo/bar/baz")))
-
 (deftest test-flatten-mbmap
-  (is (= (flatten-mbmap {"foo" #{"bar/baz"}
-                         "bar" #{"baz/foo"}
-                         "baz" #{"foo/bar"}}
+  (is (= (flatten-mbmap {"foo" #{"foo/bar/baz"}
+                         "bar" #{"foo/bar/baz"}
+                         "baz" #{"foo/bar/baz"}}
                         {"foo" (strict-map->Maildirstore
                                  {:inbox "inbox" :path "path" :flatten "."})
                          "bar" (strict-map->Maildirstore
                                  {:inbox "inbox" :path "path" :flatten "_"})
                          "baz" (strict-map->Maildirstore
                                  {:inbox "inbox" :path "path" :flatten nil})})
-         {"foo" #{"bar.baz"}
-          "bar" #{"baz_foo"}
-          "baz" #{"foo/bar"}})))
+         {"foo" #{"foo.bar.baz"}
+          "bar" #{"foo_bar_baz"}
+          "baz" #{"foo/bar/baz"}})))
 
 (deftest test-get-mdir
   (let [maildir (strict-map->Maildirstore
@@ -49,15 +42,10 @@
                            {:path "test-resources/Maildirs/foo-mdir"
                             :inbox "test-resources/Maildirs/foo-mdir/INBOX"
                             :flatten nil}))
-         #{"INBOX" "test"})))
+         #{"INBOX" "clojure"})))
 
 (deftest test-new-messages
   (is (= (count (new-messages TEST-MDIR 0))
          (count (filterv (fn [^File f]
                            (and (.isFile f) (not (.isHidden f))))
                          (file-seq (File. TEST-MDIR)))))))
-
-(deftest test-senders
-  (is (= (senders (new-messages TEST-MDIR 0))
-         ["★ ❤ Carol ❤ ★ <carol@example.com>"
-          "Alice <alice@example.com>"])))
