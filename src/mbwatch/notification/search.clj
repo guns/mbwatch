@@ -49,17 +49,17 @@
 
 (s/defn ^:private filter-messages :- [MimeMessage]
   "Select messages that match :references or :patterns in notify-spec."
-  [msgs        :- [MimeMessage]
-   notify-spec :- NotifySpec]
+  [notify-spec :- NotifySpec
+   msgs        :- [MimeMessage]]
   ;; XXX: Unimplemented
-  msgs)
+  nil)
 
 (s/defn ^:private new-messages-by-box :- {String [MimeMessage]}
   "Does not check if notifications are disabled!"
   [event       :- MbsyncEventStop
    notify-spec :- NotifySpec]
   (let [{:keys [mbchan mboxes maildir start]} event
-        {:keys [blacklist whitelist]} notify-spec
+        {:keys [strategy blacklist whitelist]} notify-spec
         timestamp (dt->ms start)
         ;; Expand mboxes now so we can accurately disjoin
         mboxes (if (seq mboxes)
@@ -67,11 +67,14 @@
                  (get-all-mboxes maildir))
         ;; Remove blacklisted mboxes
         {mboxes mbchan} (mbmap-disj {mbchan mboxes} blacklist)
-        ;; We don't want to analyze messages in whitelisted mboxes
-        {mboxes* mbchan} (mbmap-disj {mbchan mboxes} whitelist)]
+        ;; We don't want to analyze messages in whitelisted mboxes or if
+        ;; strategy is :all
+        {mboxes* mbchan} (cond
+                           (= strategy :all) nil
+                           (some? mboxes) (mbmap-disj {mbchan mboxes} whitelist))]
     (reduce
       (fn [m mbox]
-        (let [msgs (cond-> (new-messages (get-mdir maildir mbox) timestamp)
+        (let [msgs (cond->> (new-messages (get-mdir maildir mbox) timestamp)
                      (contains? mboxes* mbox) (filter-messages notify-spec))]
           (cond-> m
             (seq msgs) (assoc mbox msgs))))
