@@ -73,6 +73,8 @@
           c (future-catch-print
               (when (tty?)
                 (try
+                  ;; We do _not_ close console-reader, because that would also
+                  ;; close System/in
                   (with-reader-input [line (console-reader)]
                     (process-input this line))
                   (catch InterruptedException _)) ; We are expecting this

@@ -40,14 +40,14 @@
 (defmacro with-output
   {:requires [PrintStream ByteArrayOutputStream]}
   [& body]
-  `(let [[out# err#] [System/out System/err]
-         out-os# (ByteArrayOutputStream.)
-         err-os# (ByteArrayOutputStream.)]
-     (try
-       (System/setOut (PrintStream. out-os# true))
-       (System/setErr (PrintStream. err-os# true))
-       (let [v# (do ~@body)]
-         [(str out-os#) (str err-os#) v#])
-       (finally
-         (System/setOut out#)
-         (System/setErr err#)))))
+  `(let [[out# err#] [System/out System/err]]
+     (with-open [out-os# (PrintStream. (ByteArrayOutputStream.) true)
+                 err-os# (PrintStream. (ByteArrayOutputStream.) true)]
+       (try
+         (System/setOut out-os#)
+         (System/setErr err-os#)
+         (let [v# (do ~@body)]
+           [(str out-os#) (str err-os#) v#])
+         (finally
+           (System/setOut out#)
+           (System/setErr err#))))))

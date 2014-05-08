@@ -3,11 +3,16 @@
             [immutable-int-map]
             [schema.core :as s :refer [Int Schema both defschema either enum
                                        eq maybe one pair pred recursive
-                                       validate]])
+                                       validate]]
+            [schema.macros :refer [*use-potemkin*]])
   (:import (clojure.lang Atom IPersistentMap Symbol)
            (immutable_int_map IRadix)
            (java.util.regex Pattern))
   (:refer-clojure :exclude [defrecord]))
+
+;; Potemkin's defrecord+ obscures method implementations in the
+;; macroexpansion, defeating static analysis.
+(reset! *use-potemkin* false)
 
 (defmacro defrecord
   "Same as clojure.core/defrecord or schema.core/defrecord, except that the
