@@ -103,7 +103,7 @@
        (URLEncoder/encode user "UTF-8") \@
        (URLEncoder/encode host "UTF-8") \: port))
 
-(s/defn zero-or-min :- long
+(s/defn zero-or-min :- Long
   "{n ∈ ℕ : n = 0, n ≥ min}"
   [n   :- long
    min :- long]

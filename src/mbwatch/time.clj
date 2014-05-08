@@ -22,7 +22,7 @@
     stop  :- ReadableInstant]
    (human-duration (.getMillis (Duration. start stop)))))
 
-(s/defn dt->ms :- long
+(s/defn dt->ms :- Long
   [datetime :- DateTime]
   (.getMillis (Instant. datetime)))
 
@@ -31,7 +31,7 @@
   (IllegalArgumentException.
     (str (pr-str u) " is an unknown time unit. Please use d, h, m, s, or ms.")))
 
-(s/defn parse-ms :- long
+(s/defn parse-ms :- Long
   [s :- String]
   (reduce
     (fn [ms [_ n u]]
