@@ -41,13 +41,15 @@
   {:requires [PrintStream ByteArrayOutputStream]}
   [& body]
   `(let [[out# err#] [System/out System/err]]
-     (with-open [out-os# (PrintStream. (ByteArrayOutputStream.) true)
-                 err-os# (PrintStream. (ByteArrayOutputStream.) true)]
-       (try
-         (System/setOut out-os#)
-         (System/setErr err-os#)
+     (try
+       (with-open [out-os# (ByteArrayOutputStream.)
+                   err-os# (ByteArrayOutputStream.)
+                   out-ps# (PrintStream. out-os# true)
+                   err-ps# (PrintStream. err-os# true)]
+         (System/setOut out-ps#)
+         (System/setErr err-ps#)
          (let [v# (do ~@body)]
-           [(str out-os#) (str err-os#) v#])
-         (finally
-           (System/setOut out#)
-           (System/setErr err#))))))
+           [(str out-os#) (str err-os#) v#]))
+       (finally
+         (System/setOut out#)
+         (System/setErr err#)))))
