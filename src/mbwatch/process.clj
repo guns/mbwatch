@@ -31,7 +31,9 @@
         ;; recalcitrant process.
         sword (future
                 (loop []
-                  (sig-wait lock timeout)
+                  (if (pos? timeout)
+                    (sig-wait lock timeout)
+                    (sig-wait lock))
                   (deliver graceful? false)
                   (.destroy proc)
                   (recur)))]

@@ -28,12 +28,15 @@
 
 (deftest test-sig-fns
   (let [lock (Object.)
-        f₁ (future (sig-wait lock) :f₁)
-        f₂ (future (sig-wait lock 50) :f₂)]
-    (Thread/sleep 100)
+        fs [(future (sig-wait lock) :f₁)
+            (future (sig-wait lock 0) :f₂)
+            (future (sig-wait lock 200) :f₃)]]
+    (Thread/sleep 50)
+    (is (= (map #(deref % 0 nil) fs) [nil :f₂ nil]))
     (sig-notify-all lock)
-    (is (= :f₁ @f₁))
-    (is (= :f₂ @f₂))))
+    (Thread/sleep 50)
+    (mapv future-cancel fs)
+    (is (= (map deref fs) [:f₁ :f₂ :f₃]))))
 
 (defspec test-Timer-ctor 10000
   (for-all [p g/int
