@@ -109,7 +109,7 @@
     stream :- (enum :out :err)
     msg    :- String]
    (let [os (if (= stream :out) System/out System/err)]
-     (.append os "\r")
+     (.print os \return)
      (.println os (if level
                     (wrap msg (get simple-colors level))
                     msg)))))
