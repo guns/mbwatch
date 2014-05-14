@@ -1,19 +1,20 @@
 (ns mbwatch.posix-test
   (:require [clojure.java.io :as io]
-            [clojure.test :refer [is testing]]
+            [clojure.test :refer [is]]
             [mbwatch.posix :refer [create-dir create-file expand-user-path
                                    mode->permset parse-passwd remove-dir]]
             [schema.test :refer [deftest]])
   (:import (java.nio.file Files LinkOption)
-           (java.nio.file.attribute PosixFilePermission)))
+           (java.nio.file.attribute PosixFilePermission)
+           (mbwatch.posix Passwd)))
 
 (def PASSWD-BUF
   "root:x:0:0::/root:/bin/bash\nguns:x:1000:1000:\\:):/home/guns:/bin/bash")
 
 (deftest test-parse-passwd
   (is (= (parse-passwd PASSWD-BUF)
-         {"root" #mbwatch.posix.Passwd{:name "root" :passwd "x" :uid 0    :gid 0    :gecos ""   :dir "/root"      :shell "/bin/bash"}
-          "guns" #mbwatch.posix.Passwd{:name "guns" :passwd "x" :uid 1000 :gid 1000 :gecos ":)" :dir "/home/guns" :shell "/bin/bash"}})))
+         {"root" (Passwd. "root" "x" 0 0 "" "/root" "/bin/bash")
+          "guns" (Passwd. "guns" "x" 1000 1000 ":)" "/home/guns" "/bin/bash")})))
 
 (deftest test-expand-user-path
   (let [passwd (parse-passwd PASSWD-BUF)]
