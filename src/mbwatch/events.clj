@@ -9,9 +9,8 @@
             [mbwatch.time :refer [human-duration]]
             [mbwatch.types :as t :refer [MBMap]]
             [schema.core :as s :refer [Any Int enum maybe]])
-  (:import (javax.mail.internet MimeMessage)
-           (mbwatch.logging LogItem)
-           (mbwatch.types Maildirstore)
+  (:import (mbwatch.logging LogItem)
+           (mbwatch.types Maildirstore NewMessageEventData)
            (org.joda.time DateTime)))
 
 (def ^:private CONNECTION-EVENT-MAP
@@ -196,15 +195,15 @@
                 mbchans)))))
 
 (defloggable NewMessageEvent INFO
-  [mbchan->mbox->messages :- {String {String [MimeMessage]}}]
+  [mbchan->mbox->data :- {String {String NewMessageEventData}}]
   (str
     (reduce
-      (fn [s [mbchan mbox->messages]]
+      (fn [s [mbchan mbox->data]]
         (reduce
-          (fn [^StringBuilder s [mbox messages]]
-            (.append s (format " [%s/%s %d]" mbchan mbox (count messages))))
-          s (sort mbox->messages)))
-      (StringBuilder. "New messages: ") (sort mbchan->mbox->messages))))
+          (fn [^StringBuilder s [mbox {:keys [count]}]]
+            (.append s (format " [%s/%s %d]" mbchan mbox count)))
+          s (sort mbox->data)))
+      (StringBuilder. "New messages: ") (sort mbchan->mbox->data))))
 
 (defloggable PendingSyncsEvent INFO
   [action   :- (enum :pool :release)

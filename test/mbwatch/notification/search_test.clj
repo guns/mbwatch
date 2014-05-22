@@ -36,21 +36,21 @@
                  :flatten "."})}))
 
 (defmacro with-search-results
-  {:requires [#'is #'with-emails #'with-output search-and-notify! MimeMessage MimeUtility]}
+  {:requires [#'is #'with-emails #'with-output search-and-notify! MimeUtility]}
   [[out-sym ids-sym] notify-spec & body]
   `(let [events# [(~stop-event 0)]
          log-chan# (~chan 0x1000)]
      (with-emails [[{:From "Alice <alice@example.com>"
                      :To "Bob <bob@example.com>"
-                     :Date 0 :ID 0}
+                     :Date 0 :Message-ID 0}
                     "Hello Bob."]
                    [{:From "Bob <bob@example.com>"
                      :To "Alice <alice@example.com>"
-                     :Date 1 :ID 1}
+                     :Date 1 :Message-ID 1}
                     "Hello Alice."]
                    [{:From (str (MimeUtility/encodeText "★ ❤ Carol ❤ ★") " <carol@example.com>")
                      :To "Bob <bob@example.com>"
-                     :Date 2 :ID 2}
+                     :Date 2 :Message-ID 2}
                     "Alice sent you a photo, click here!"]]
        (let [[o# e# _#] (with-output
                           (search-and-notify! events# ~notify-spec "cat" log-chan#)
@@ -58,35 +58,35 @@
              ~out-sym o#
              ~ids-sym (-> (~chanv log-chan#)
                           peek
-                          (get-in [:mbchan->mbox->messages "testing" "INBOX"])
-                          (as-> v#
-                            (mapv #(Long/parseLong
-                                     (.getHeader ^MimeMessage % "ID" ""))
-                                  v#))
+                          (get-in [:mbchan->mbox->data "testing" "INBOX" :message-ids])
+                          (as-> v# (mapv #(Long/parseLong %) v#))
                           set)]
          (is (= "" e#))
          ~@body))))
 
 (deftest test-notify-spec
-  (with-search-results [out ids]
+  (with-search-results [_ ids]
     NOTIFY-SPEC
     (is (= ids #{0 1 2})))
-  (with-search-results [out ids]
+  (with-search-results [_ ids]
     (assoc NOTIFY-SPEC :strategy :none)
     (is (= ids #{})))
-  (with-search-results [out ids]
+  (with-search-results [_ ids]
     (assoc NOTIFY-SPEC :blacklist {"testing" #{}})
     (is (= ids #{})))
-  (with-search-results [out ids]
+  (with-search-results [_ ids]
     (assoc NOTIFY-SPEC :blacklist {"testing" #{"INBOX"}})
     (is (= ids #{})))
-  (with-search-results [out ids]
+  (with-search-results [_ ids]
     (assoc NOTIFY-SPEC :blacklist {"testing" #{"UNKNOWN"}})
     (is (= ids #{0 1 2})))
-  (with-search-results [out ids]
+  (with-search-results [_ ids]
     (assoc NOTIFY-SPEC :strategy :match)
     (is (= ids #{})))
-  (with-search-results [out ids]
+  (with-search-results [_ ids]
+    (assoc NOTIFY-SPEC :strategy :match :whitelist {"testing" #{"INBOX"}})
+    (is (= ids #{0 1 2})))
+  (with-search-results [_ ids]
     (assoc NOTIFY-SPEC
            :strategy :match
            :patterns {"from" #{(PatternWrapper. #"(?i)\balice@example\.com\b")}})

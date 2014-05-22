@@ -117,6 +117,11 @@
     (alter-meta! #'strict-map->Maildirstore dissoc :private)
     (alter-meta! #'strict-map->NotifySpec dissoc :private))
 
+(defrecord NewMessageEventData
+  [count       :- Int
+   senders     :- #{String}
+   message-ids :- #{String}])
+
 (defschema NotifySpecAtom
   (atom-of NotifySpec "NotifySpecAtom"))
 

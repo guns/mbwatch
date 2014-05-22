@@ -31,17 +31,17 @@
   (:require [clojure.core.async :refer [put!]]
             [clojure.core.async.impl.protocols :refer [WritePort]]
             [mbwatch.events :refer [->NewMessageEvent]]
-            [mbwatch.maildir :refer [get-all-mboxes get-mdir new-messages]]
+            [mbwatch.maildir :refer [get-all-mboxes get-mdir
+                                     new-message-files]]
             [mbwatch.mbmap :refer [mbmap-disj]]
-            [mbwatch.message :refer [headers senders subject]]
+            [mbwatch.message :refer [headers message senders subject]]
             [mbwatch.time :refer [dt->ms]]
             [mbwatch.types :refer [LowerCaseWord VOID]]
             [schema.core :as s :refer [maybe]])
-  (:import (java.util.regex Pattern)
-           (javax.mail.internet MimeMessage)
+  (:import (javax.mail.internet MimeMessage)
            (mbwatch.events MbsyncEventStop NewMessageEvent
                            NewMessageSearchEvent)
-           (mbwatch.types NotifySpec PatternWrapper)
+           (mbwatch.types NewMessageEventData NotifySpec PatternWrapper)
            (org.joda.time DateTime)))
 
 (s/defn ^:private matches? :- Boolean
@@ -60,7 +60,15 @@
             patterns)
     false))
 
-(s/defn ^:private new-messages-by-box :- {String [MimeMessage]}
+(s/defn ^:private add-new-message :- NewMessageEventData
+  [data :- NewMessageEventData
+   msg  :- MimeMessage]
+  (NewMessageEventData.
+    (inc (.count data))
+    (into (.senders data) (senders msg))
+    (into (.message-ids data) (headers msg "message-id"))))
+
+(s/defn ^:private new-message-data-by-mbox :- {String NewMessageEventData}
   "Does not check if notifications are disabled!"
   [event       :- MbsyncEventStop
    notify-spec :- NotifySpec]
@@ -75,15 +83,23 @@
         {mboxes mbchan} (mbmap-disj {mbchan mboxes} blacklist)
         ;; We don't want to analyze messages in whitelisted mboxes or if
         ;; strategy is :all
-        {mboxes* mbchan} (cond
+        {domatch mbchan} (cond
                            (= strategy :all) nil
                            (some? mboxes) (mbmap-disj {mbchan mboxes} whitelist))]
     (reduce
       (fn [m mbox]
-        (let [msgs (cond->> (new-messages (get-mdir maildir mbox) timestamp)
-                     (contains? mboxes* mbox) (filterv (partial matches? patterns)))]
+        (let [fs (new-message-files (get-mdir maildir mbox) timestamp)
+              data (reduce
+                     (fn [d f]
+                       (let [m (message f)]
+                         (if (contains? domatch mbox)
+                           (if (matches? patterns m)
+                             (add-new-message d m)
+                             d)
+                           (add-new-message d m))))
+                     (NewMessageEventData. 0 #{} #{}) fs)]
           (cond-> m
-            (seq msgs) (assoc mbox msgs))))
+            (pos? (:count data)) (assoc mbox data))))
       {} mboxes)))
 
 (s/defn ^:private find-new-messages :- (maybe NewMessageEvent)
@@ -101,9 +117,9 @@
           ;; too slow, we will conduct the search serially.
           m (reduce
               (fn [m ev]
-                (let [bs->msgs (new-messages-by-box ev notify-spec)]
+                (let [mbox->data (new-message-data-by-mbox ev notify-spec)]
                   (cond-> m
-                    (seq bs->msgs) (assoc (:mbchan ev) bs->msgs))))
+                    (seq mbox->data) (assoc (:mbchan ev) mbox->data))))
               {} events)]
       (put! log-chan (assoc ev :stop (DateTime.)))
       (when (seq m)
