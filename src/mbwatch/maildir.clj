@@ -2,11 +2,9 @@
   (:require [clojure.java.io :as io :refer [Coercions]]
             [clojure.set :refer [subset?]]
             [clojure.string :as string]
-            [mbwatch.message :refer [message]]
             [mbwatch.types :refer [MBMap Word]]
             [schema.core :as s :refer [maybe]])
   (:import (java.io File)
-           (javax.mail.internet MimeMessage)
            (mbwatch.types Maildirstore)))
 
 (s/defn ^:private maildir? :- Boolean
@@ -54,14 +52,13 @@
           s))
       mdirs (.listFiles (io/file path)))))
 
-(s/defn new-messages :- [MimeMessage]
-  "Vector of new messages in maildir newer than given timestamp."
+(s/defn new-message-files :- [File]
+  "Vector of new message files in maildir newer than given timestamp."
   [mdir  :- Coercions
    mtime :- long]
   (->> (io/file mdir "new")
        .listFiles
-       (filter (fn [^File f]
-                 (and (.isFile f)
-                      (not (.isHidden f))
-                      (> (.lastModified f) mtime))))
-       (mapv message)))
+       (filterv (fn [^File f]
+                  (and (.isFile f)
+                       (not (.isHidden f))
+                       (> (.lastModified f) mtime))))))

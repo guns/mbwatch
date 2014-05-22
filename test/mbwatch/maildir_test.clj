@@ -1,7 +1,7 @@
 (ns mbwatch.maildir-test
   (:require [clojure.test :refer [is]]
             [mbwatch.maildir :refer [flatten-mbmap get-all-mboxes get-mdir
-                                     new-messages]]
+                                     new-message-files]]
             [mbwatch.types :refer [strict-map->Maildirstore]]
             [schema.test :refer [deftest]])
   (:import (java.io File)))
@@ -44,8 +44,8 @@
                             :flatten nil}))
          #{"INBOX" "clojure"})))
 
-(deftest test-new-messages
-  (is (= (count (new-messages TEST-MDIR 0))
+(deftest test-new-message-files
+  (is (= (count (new-message-files TEST-MDIR 0))
          (count (filterv (fn [^File f]
                            (and (.isFile f) (not (.isHidden f))))
                          (file-seq (File. TEST-MDIR)))))))
