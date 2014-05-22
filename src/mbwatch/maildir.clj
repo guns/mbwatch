@@ -5,6 +5,7 @@
             [mbwatch.types :refer [MBMap Word]]
             [schema.core :as s :refer [maybe]])
   (:import (java.io File)
+           (java.nio.file Files Path)
            (mbwatch.types Maildirstore)))
 
 (s/defn ^:private maildir? :- Boolean
@@ -53,12 +54,15 @@
       mdirs (.listFiles (io/file path)))))
 
 (s/defn new-message-files :- [File]
-  "Vector of new message files in maildir newer than given timestamp."
+  "Vector of new message files in maildir newer than given timestamp, sorted
+   by most recent first."
   [mdir  :- Coercions
    mtime :- long]
-  (->> (io/file mdir "new")
-       .listFiles
-       (filterv (fn [^File f]
-                  (and (.isFile f)
-                       (not (.isHidden f))
-                       (> (.lastModified f) mtime))))))
+  (with-open [ds (Files/newDirectoryStream (.toPath (io/file mdir "new")))]
+    (->> ds
+         (map #(.toFile ^Path %))
+         (filter (fn [^File f]
+                   (and (.isFile f)
+                        (not (.isHidden f))
+                        (> (.lastModified f) mtime))))
+         (sort-by #(- (.lastModified ^File %))))))

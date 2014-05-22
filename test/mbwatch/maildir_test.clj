@@ -45,7 +45,10 @@
          #{"INBOX" "clojure"})))
 
 (deftest test-new-message-files
-  (is (= (count (new-message-files TEST-MDIR 0))
-         (count (filterv (fn [^File f]
-                           (and (.isFile f) (not (.isHidden f))))
-                         (file-seq (File. TEST-MDIR)))))))
+  (let [fs (filterv (fn [^File f]
+                      (and (.isFile f) (not (.isHidden f))))
+                    (file-seq (File. TEST-MDIR)))]
+    (is (= (count (new-message-files TEST-MDIR 0))
+           (count fs)))
+    (is (= (new-message-files TEST-MDIR 0)
+           (sort-by #(- (.lastModified ^File %)) fs)))))
