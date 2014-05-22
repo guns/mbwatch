@@ -2,8 +2,8 @@
   (:require [clojure.java.io :as io]
             [clojure.test :refer [is]]
             [mbwatch.util :refer [chomp class-name dequote istr= make-table
-                                  multi-row-entry parse-kv-string url-for
-                                  when-seq zero-or-min]]
+                                  multi-row-entry parse-kv-string
+                                  parse-pattern url-for when-seq zero-or-min]]
             [schema.test :refer [deftest]]))
 
 (deftest test-macros
@@ -48,6 +48,12 @@
   (is (empty? (dequote "\"\"")))
   (is (= "ab\\c\"" (dequote "\"ab\\\\c\\\"\"")))
   (is (= "ab\\c" (dequote "ab\\c"))))
+
+(deftest test-parse-pattern
+  (is (= (str #"\b\Qfoo\bar\E\b") (str (parse-pattern "foo\\bar"))))
+  (is (= (str #"(?i)\bfoo\\bar\b|baz") (str (parse-pattern "/(?i)\\bfoo\\\\bar\\b|baz/"))))
+  (is (= (str #"\A.*(\p{Alpha}|/)\z")
+         (str (parse-pattern "/\\A.*(\\p{Alpha}|\\/)\\z/")))))
 
 (deftest test-class-name
   (is (= "String" (class-name ""))))

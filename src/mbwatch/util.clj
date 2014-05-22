@@ -2,7 +2,8 @@
   (:require [clojure.string :as string]
             [schema.core :as s])
   (:import (clojure.lang Keyword)
-           (java.net URLEncoder)))
+           (java.net URLEncoder)
+           (java.util.regex Pattern)))
 
 (defmacro when-seq [[sym form] & body]
   `(let [x# ~form]
@@ -88,6 +89,21 @@
     (if (and (> len 1) (= \" (.charAt s 0) (.charAt s (dec len))))
       (string/replace (subs s 1 (dec len)) #"\\(.)" "$1")
       s)))
+
+(s/defn parse-pattern :- Pattern
+  "Compile an argument into a Pattern.
+
+   If the argument is surrounded by forward slash characters (e.g. /pattern/),
+   it is interpreted as a Pattern _literal_. Otherwise, the arg is converted
+   to a Pattern surrounded by \\b\\Q…\\E\\b."
+  [arg :- String]
+  (let [len (.length arg)]
+    (if (= \/ (.charAt arg 0) (.charAt arg (dec len)))
+      (Pattern/compile (-> arg
+                           (subs 1 (dec len))
+                           ;; Dequote / since users will think it is necessary
+                           (string/replace "\\/" "/")))
+      (Pattern/compile (str "\\b\\Q" arg "\\E\\b")))))
 
 (s/defn class-name :- String
   [obj :- Object]
