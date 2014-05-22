@@ -90,7 +90,7 @@
   (reduce
     (fn [m [stype sname sbody]]
       (if (= stype :general)
-        (update-in m [:general] #(into (or %1 []) %2) sbody)
+        (update-in m [:general] #(into (or % []) sbody))
         (update-in m [stype sname] merge (apply hash-map (apply concat sbody)))))
     {} tokens))
 
@@ -203,8 +203,7 @@
 (s/defn ^:private render :- String
   [sections                 :- Sections
    imapname->IMAPCredential :- {Word IMAPCredential}]
-  (let [s (update-in sections [:imapstore]
-                     #(replace-passcmd % imapname->IMAPCredential))]
+  (let [s (update-in sections [:imapstore] replace-passcmd imapname->IMAPCredential)]
     (string/join \newline (concat (:general s)
                                   [""]
                                   (render-section s :imapstore)
