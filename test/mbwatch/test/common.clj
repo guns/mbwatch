@@ -42,12 +42,10 @@
   [& body]
   `(let [[out# err#] [System/out System/err]]
      (try
-       (with-open [out-os# (ByteArrayOutputStream.)
-                   err-os# (ByteArrayOutputStream.)
-                   out-ps# (PrintStream. out-os# true)
-                   err-ps# (PrintStream. err-os# true)]
-         (System/setOut out-ps#)
-         (System/setErr err-ps#)
+       (let [out-os# (ByteArrayOutputStream.)
+             err-os# (ByteArrayOutputStream.)]
+         (System/setOut (PrintStream. out-os# true))
+         (System/setErr (PrintStream. err-os# true))
          (let [v# (do ~@body)]
            [(str out-os#) (str err-os#) v#]))
        (finally

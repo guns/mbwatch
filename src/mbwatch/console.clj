@@ -122,9 +122,8 @@
      (catch InterruptedException e#
        (print-console ~WARNING :err (str e#)))
      (catch Throwable e#
-       (with-open [os# (new ~ByteArrayOutputStream)
-                   ps# (new ~PrintStream os# true)]
-         (.printStackTrace e# ps#)
+       (let [os# (new ~ByteArrayOutputStream)]
+         (.printStackTrace e# (new ~PrintStream os# true))
          (print-console ~WARNING :err (str os#))))))
 
 (deftype ConsoleLogger [^Appendable stream colors ^DateTimeFormatter dt-formatter]
