@@ -30,19 +30,26 @@
   "
   (:require [clojure.core.async :refer [put!]]
             [clojure.core.async.impl.protocols :refer [WritePort]]
+            [clojure.string :as string]
             [mbwatch.events :refer [->NewMessageEvent]]
             [mbwatch.maildir :refer [get-all-mboxes get-mdir
                                      new-message-files]]
             [mbwatch.mbmap :refer [mbmap-disj]]
             [mbwatch.message :refer [headers message senders subject]]
+            [mbwatch.process :as process]
             [mbwatch.time :refer [dt->ms]]
             [mbwatch.types :refer [LowerCaseWord VOID]]
             [schema.core :as s :refer [maybe]])
-  (:import (javax.mail.internet MimeMessage)
+  (:import (java.io StringWriter)
+           (javax.mail.internet MimeMessage)
            (mbwatch.events MbsyncEventStop NewMessageEvent
                            NewMessageSearchEvent)
            (mbwatch.types NewMessageEventData NotifySpec PatternWrapper)
            (org.joda.time DateTime)))
+
+(def ^:private ^:const MAX-SENDERS-SHOWN
+  "TODO: Make configurable?"
+  8)
 
 (s/defn ^:private matches? :- Boolean
   [patterns :- {LowerCaseWord #{PatternWrapper}}
@@ -97,7 +104,7 @@
                              (add-new-message d m)
                              d)
                            (add-new-message d m))))
-                     (NewMessageEventData. 0 #{} #{}) fs)]
+                     (NewMessageEventData. 0 [] []) fs)]
           (cond-> m
             (pos? (:count data)) (assoc mbox data))))
       {} mboxes)))
@@ -125,10 +132,43 @@
       (when (seq m)
         (->NewMessageEvent m)))))
 
+(s/defn ^:private format-msg :- String
+  [data :- NewMessageEventData]
+  (let [{n :count ss :senders} data
+        ss (vec (distinct senders))
+        n+ (- (count ss) MAX-SENDERS-SHOWN)
+        ss (if (pos? n+)
+             (conj (subvec ss 0 MAX-SENDERS-SHOWN)
+                   (format "… and %d other%s"
+                           n+
+                           (if (= n+ 1) "" \s)))
+             ss)]
+    (format "%d new message%s from:\n%s"
+            n
+            (if (= n 1) "" \s)
+            (string/join \newline ss))))
+
 (s/defn ^:private notify! :- VOID
   [notify-cmd    :- String
    new-msg-event :- NewMessageEvent]
-  )
+  (let [ps (mapcat
+             (fn [[mbchan mbox->data]]
+               (map
+                 (fn [[mbox data]]
+                   (format "[%s/%s]\t%s" mbchan mbox (format-msg data)))
+                 (sort mbox->data)))
+             (sort (:mbchan->mbox->data new-msg-event)))
+        proc (process/spawn
+               "bash" "-c" notify-cmd :in (string/join "\n\n" ps))]
+    (when-not (zero? (.waitFor proc))
+      (let [sw (StringWriter.)
+            _ (process/dump! proc :err sw)
+            emsg (str sw)
+            emsg (format "`%s` failed with status %d.%s"
+                         notify-cmd
+                         (.exitValue proc)
+                         (if (seq emsg) (str "\n" emsg) ""))]
+        (throw (RuntimeException. emsg))))))
 
 (s/defn search-and-notify! :- VOID
   [events      :- [MbsyncEventStop]

@@ -119,8 +119,8 @@
 
 (defrecord NewMessageEventData
   [count       :- Int
-   senders     :- #{String}
-   message-ids :- #{String}])
+   senders     :- [String]
+   message-ids :- [String]])
 
 (defschema NotifySpecAtom
   (atom-of NotifySpec "NotifySpecAtom"))
