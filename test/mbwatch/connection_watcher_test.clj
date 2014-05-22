@@ -1,5 +1,6 @@
 (ns mbwatch.connection-watcher-test
   (:require [clojure.test :refer [is]]
+            [mbwatch.types :refer [strict-map->IMAPCredential]]
             [schema.test :refer [deftest]]))
 
 (deftest test-private-behavior
@@ -21,8 +22,10 @@
               (-> #'mbwatch.connection-watcher/update-connections-for-sync
                   (apply args)
                   ((juxt identity (comp :mbwatch.connection-watcher/sync-req meta)))))
-        up {:host "example.com" :port 80 :user "test" :pass "test" :ssl? true :cert nil}
-        down {:host "IDENT-PORT.example.com" :port 113 :user "test" :pass "test" :ssl? true :cert nil}
+        up (strict-map->IMAPCredential
+             {:host "example.com" :port 80 :user "test" :pass "test" :ssl? true :cert nil})
+        down (strict-map->IMAPCredential
+               {:host "IDENT-PORT.example.com" :port 113 :user "test" :pass "test" :ssl? true :cert nil})
         all-up {"a" up "b" up}
         all-down {"a" down "b" down}
         mixed {"a" up "b" down}]

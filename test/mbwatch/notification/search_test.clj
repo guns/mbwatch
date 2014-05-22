@@ -59,8 +59,7 @@
              ~ids-sym (-> (~chanv log-chan#)
                           peek
                           (get-in [:mbchan->mbox->data "testing" "INBOX" :message-ids])
-                          (as-> v# (mapv #(Long/parseLong %) v#))
-                          set)]
+                          (as-> v# (into #{} (mapv #(Long/parseLong %) v#))))]
          (is (= "" e#))
          ~@body))))
 

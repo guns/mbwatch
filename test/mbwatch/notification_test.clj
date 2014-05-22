@@ -11,8 +11,7 @@
   (strict-map->NotifySpec {:strategy :all
                            :blacklist {}
                            :whitelist {}
-                           :references #{}
-                           :patterns #{}}))
+                           :patterns {}}))
 
 (deftest test-NewMessageNotificationService
   (let [log-chan-in (chan 0xff)

@@ -3,7 +3,7 @@
             [clojure.string :as string]
             [clojure.test :refer [is]]
             [clojure.test.check.clojure-test :refer [defspec]]
-            [clojure.test.check.generators :as g :refer [such-that]]
+            [clojure.test.check.generators :as g :refer [fmap]]
             [clojure.test.check.properties :refer [for-all]]
             [mbwatch.concurrent :refer [->Timer pmapv set-alarm!
                                         shutdown-future sig-notify-all
@@ -52,7 +52,7 @@
         (is (= 0 (:period t) (:alarm t)) "period and alarm are 0")))))
 
 (defspec test-simple-cyclic-timer 10
-  (for-all [p (such-that #(>= % 10) g/nat)]
+  (for-all [p (fmap (partial + 10) g/nat)]
     (let [timer-atom (atom (->Timer p 0 false))
           status (AtomicBoolean. true)
           E_i (quot 1000 p)
@@ -69,9 +69,9 @@
       (is (tol? E_i i) "performs like a simple sleep loop"))))
 
 (defspec test-change-alarm 200
-  (for-all [p₀ (such-that #(or (zero? %) (>= % 10)) g/nat)
+  (for-all [p₀ (fmap #(if (zero? %) 0 (+ % 9)) g/nat)
             p₁ g/int
-            p₂ (such-that #(>= % 10) g/nat)]
+            p₂ (fmap (partial + 10) g/nat)]
     (let [start (System/currentTimeMillis)
           timer-atom (atom (->Timer p₀ 0 false))
           update? (promise)
