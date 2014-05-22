@@ -9,7 +9,8 @@
             [mbwatch.types :refer [strict-map->Maildirstore
                                    strict-map->NotifySpec]]
             [schema.test :refer [deftest]])
-  (:import (javax.mail.internet MimeMessage)
+  (:import (javax.mail.internet MimeMessage MimeUtility)
+           (mbwatch.types PatternWrapper)
            (org.joda.time DateTime)))
 
 (def NOTIFY-SPEC
@@ -17,8 +18,7 @@
     {:strategy :all
      :blacklist {}
      :whitelist {}
-     :references #{}
-     :patterns #{}}))
+     :patterns {}}))
 
 (defn stop-event [timestamp]
   (strict-map->MbsyncEventStop
@@ -36,13 +36,22 @@
                  :flatten "."})}))
 
 (defmacro with-search-results
-  {:requires [#'is #'with-emails #'with-output search-and-notify! MimeMessage]}
+  {:requires [#'is #'with-emails #'with-output search-and-notify! MimeMessage MimeUtility]}
   [[out-sym ids-sym] notify-spec & body]
   `(let [events# [(~stop-event 0)]
          log-chan# (~chan 0x1000)]
-     (with-emails [[{:From "Alice" :To "Bob" :Date 0 :ID 0} "Hello Bob."]
-                   [{:From "Bob" :To "Alice" :Date 1 :ID 1} "Hello Alice."]
-                   [{:From "Carol" :To "Bob" :Date 2 :ID 2} "Alice sent you a photo, click here!"]]
+     (with-emails [[{:From "Alice <alice@example.com>"
+                     :To "Bob <bob@example.com>"
+                     :Date 0 :ID 0}
+                    "Hello Bob."]
+                   [{:From "Bob <bob@example.com>"
+                     :To "Alice <alice@example.com>"
+                     :Date 1 :ID 1}
+                    "Hello Alice."]
+                   [{:From (str (MimeUtility/encodeText "★ ❤ Carol ❤ ★") " <carol@example.com>")
+                     :To "Bob <bob@example.com>"
+                     :Date 2 :ID 2}
+                    "Alice sent you a photo, click here!"]]
        (let [[o# e# _#] (with-output
                           (search-and-notify! events# ~notify-spec "cat" log-chan#)
                           (~close! log-chan#))
@@ -58,7 +67,7 @@
          (is (= "" e#))
          ~@body))))
 
-(deftest test-coarse-filters
+(deftest test-notify-spec
   (with-search-results [out ids]
     NOTIFY-SPEC
     (is (= ids #{0 1 2})))
@@ -76,4 +85,9 @@
     (is (= ids #{0 1 2})))
   (with-search-results [out ids]
     (assoc NOTIFY-SPEC :strategy :match)
-    (is (= ids #{}))))
+    (is (= ids #{})))
+  (with-search-results [out ids]
+    (assoc NOTIFY-SPEC
+           :strategy :match
+           :patterns {"from" #{(PatternWrapper. #"(?i)\balice@example\.com\b")}})
+    (is (= ids #{0}))))

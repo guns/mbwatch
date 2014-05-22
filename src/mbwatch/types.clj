@@ -99,12 +99,19 @@
    path    :- FilteredLine
    flatten :- (maybe FilteredLine)])
 
+(deftype PatternWrapper [^Pattern pattern]
+  ;; This provides value-equality for Patterns
+  Object
+
+  (toString [_] (.toString pattern))
+  (equals [_ obj] (.equals (.toString pattern) (.toString obj)))
+  (hashCode [_] (.hashCode (.toString pattern))))
+
 (defrecord NotifySpec
-  [strategy   :- (enum :all :none :match)
-   blacklist  :- MBMap
-   whitelist  :- MBMap
-   references :- #{String}
-   patterns   :- #{(tuple String Pattern)}])
+  [strategy  :- (enum :all :none :match)
+   blacklist :- MBMap
+   whitelist :- MBMap
+   patterns  :- {LowerCaseWord #{PatternWrapper}}])
 
 (do (alter-meta! #'strict-map->IMAPCredential dissoc :private)
     (alter-meta! #'strict-map->Maildirstore dissoc :private)

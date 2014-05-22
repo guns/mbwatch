@@ -21,11 +21,6 @@
                         └─────────┬─────────┘
                                   │ no
                                   ▼
-                       ┌─────────────────────┐
-                       │ Matches references? ├── yes ──▶ NOTIFY
-                       └──────────┬──────────┘
-                                  │ no
-                                  ▼
                         ┌───────────────────┐
                         │ Matches patterns? ├─── yes ──▶ NOTIFY
                         └─────────┬─────────┘
@@ -38,28 +33,39 @@
             [mbwatch.events :refer [->NewMessageEvent]]
             [mbwatch.maildir :refer [get-all-mboxes get-mdir new-messages]]
             [mbwatch.mbmap :refer [mbmap-disj]]
+            [mbwatch.message :refer [headers senders subject]]
             [mbwatch.time :refer [dt->ms]]
-            [mbwatch.types :refer [VOID]]
+            [mbwatch.types :refer [LowerCaseWord VOID]]
             [schema.core :as s :refer [maybe]])
-  (:import (javax.mail.internet MimeMessage)
+  (:import (java.util.regex Pattern)
+           (javax.mail.internet MimeMessage)
            (mbwatch.events MbsyncEventStop NewMessageEvent
                            NewMessageSearchEvent)
-           (mbwatch.types NotifySpec)
+           (mbwatch.types NotifySpec PatternWrapper)
            (org.joda.time DateTime)))
 
-(s/defn ^:private filter-messages :- [MimeMessage]
-  "Select messages that match :references or :patterns in notify-spec."
-  [notify-spec :- NotifySpec
-   msgs        :- [MimeMessage]]
-  ;; XXX: Unimplemented
-  nil)
+(s/defn ^:private matches? :- Boolean
+  [patterns :- {LowerCaseWord #{PatternWrapper}}
+   message  :- MimeMessage]
+  (if (seq patterns)
+    (every? (fn [[name pws]]
+              (let [ps (map #(.pattern ^PatternWrapper %) pws)]
+                (case name
+                  "subject" (let [s (subject message)]
+                              (every? #(re-find % s) ps))
+                  "from" (let [ss (senders message)]
+                           (every? (fn [s] (every? #(re-find % s) ps)) ss))
+                  (let [hs (headers message name)]
+                    (every? (fn [h] (every? #(re-find % h) ps)) hs)))))
+            patterns)
+    false))
 
 (s/defn ^:private new-messages-by-box :- {String [MimeMessage]}
   "Does not check if notifications are disabled!"
   [event       :- MbsyncEventStop
    notify-spec :- NotifySpec]
   (let [{:keys [mbchan mboxes maildir start]} event
-        {:keys [strategy blacklist whitelist]} notify-spec
+        {:keys [strategy blacklist whitelist patterns]} notify-spec
         timestamp (dt->ms start)
         ;; Expand mboxes now so we can accurately disjoin
         mboxes (if (seq mboxes)
@@ -75,7 +81,7 @@
     (reduce
       (fn [m mbox]
         (let [msgs (cond->> (new-messages (get-mdir maildir mbox) timestamp)
-                     (contains? mboxes* mbox) (filter-messages notify-spec))]
+                     (contains? mboxes* mbox) (filterv (partial matches? patterns)))]
           (cond-> m
             (seq msgs) (assoc mbox msgs))))
       {} mboxes)))
