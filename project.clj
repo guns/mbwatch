@@ -4,7 +4,7 @@
   :license {:name "MIT License"
             :url "http://opensource.org/licenses/MIT"}
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [org.clojure/core.async "0.1.301.0-deb34a-alpha"]
+                 [org.clojure/core.async "0.1.303.0-886421-alpha"]
                  [org.clojure/tools.cli "0.3.2-SNAPSHOT"]
                  [com.sun.mail/imap "1.5.2"]
                  [com.sun.mail/mailapi "1.5.2"]
@@ -13,7 +13,7 @@
                  [joda-time/joda-time "2.3"]
                  [immutable-int-map "0.1.0"]
                  [clj-shellwords "1.0.1"]]
-  :profiles {:dev {:dependencies [[org.clojure/test.check "0.5.7"]]
+  :profiles {:dev {:dependencies [[org.clojure/test.check "0.5.8"]]
                    :plugins [[jonase/eastwood "RELEASE"]]
                    :source-paths ["dev"]
                    :resource-paths ["test-resources"]
